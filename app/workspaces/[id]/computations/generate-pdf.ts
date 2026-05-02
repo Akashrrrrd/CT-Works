@@ -14,6 +14,7 @@ const s = (t: unknown) =>
 
 // ─────────────────────────────────────────────────────────────────────────────
 export async function downloadPDF(data: ReportData) {
+  if (typeof window === 'undefined') return;
   const [{ default: jsPDF }] = await Promise.all([import('jspdf')]);
 
   // ── Page constants (A4 portrait, mm) ──────────────────────────────────────
