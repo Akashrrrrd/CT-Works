@@ -1,25 +1,25 @@
 import { MongoClient, Db, ObjectId } from 'mongodb';
 
-const uri = process.env.DATABASE_URL!;
 const DB_NAME = process.env.DB_NAME || 'ct-adequacy';
-
-if (!uri) throw new Error('DATABASE_URL environment variable is not set');
 
 // Reuse client across hot-reloads in dev
 const globalForMongo = global as unknown as { _mongoClient?: MongoClient };
 
-let client: MongoClient;
+function getClient(): MongoClient {
+  const uri = process.env.DATABASE_URL;
+  if (!uri) throw new Error('DATABASE_URL environment variable is not set');
 
-if (process.env.NODE_ENV === 'development') {
-  if (!globalForMongo._mongoClient) {
-    globalForMongo._mongoClient = new MongoClient(uri);
+  if (process.env.NODE_ENV === 'development') {
+    if (!globalForMongo._mongoClient) {
+      globalForMongo._mongoClient = new MongoClient(uri);
+    }
+    return globalForMongo._mongoClient;
   }
-  client = globalForMongo._mongoClient;
-} else {
-  client = new MongoClient(uri);
+  return new MongoClient(uri);
 }
 
 export async function getDb(): Promise<Db> {
+  const client = getClient();
   await client.connect();
   return client.db(DB_NAME);
 }
