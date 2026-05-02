@@ -1,0 +1,300 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// USERS & ORGANISATIONS
+// ============================================================================
+
+model User {
+  id             String    @id @default(auto()) @map("_id") @db.ObjectId
+  email          String    @unique
+  passwordHash   String
+  name           String
+  role           UserRole  @default(ENGINEER)
+  organizationId String?   @db.ObjectId
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+
+  workspaceMembers    WorkspaceMember[]
+  createdWorkspaces   Workspace[]         @relation("createdBy")
+  createdTemplates    Template[]          @relation("createdBy")
+  createdComputations Computation[]       @relation("createdBy")
+  approvalRequests    ApprovalRequest[]   @relation("requestedBy")
+  approvalSteps       ApprovalStep[]      @relation("assignee")
+  auditLogs           AuditLog[]          @relation("user")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// ENGINEER  = field/design engineer — creates computations, submits for review
+/// ADMIN     = team lead             — reviews & approves/rejects computations, manages templates
+/// MANAGER   = project manager       — read-only dashboard, exports reports, manages users
+enum UserRole {
+  ENGINEER
+  ADMIN
+  MANAGER
+}
+
+model Organization {
+  id       String @id @default(auto()) @map("_id") @db.ObjectId
+  name     String
+  ownerId  String @db.ObjectId
+  settings Json   @default("{}")
+
+  users             User[]
+  workspaces        Workspace[]
+  auditLogs         AuditLog[]
+  approvalWorkflows ApprovalWorkflow[]
+  complianceReports ComplianceReport[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ============================================================================
+// WORKSPACES
+// ============================================================================
+
+model Workspace {
+  id             String  @id @default(auto()) @map("_id") @db.ObjectId
+  organizationId String  @db.ObjectId
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  name           String
+  description    String?
+  ownerId        String  @db.ObjectId
+  createdBy      User    @relation("createdBy", fields: [ownerId], references: [id])
+
+  members           WorkspaceMember[]
+  templates         Template[]
+  computations      Computation[]
+  approvalWorkflows ApprovalWorkflow[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model WorkspaceMember {
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  workspaceId String    @db.ObjectId
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  userId      String    @db.ObjectId
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role        MemberRole @default(ENGINEER)
+
+  createdAt DateTime @default(now())
+
+  @@unique([workspaceId, userId])
+}
+
+enum MemberRole {
+  ENGINEER
+  ADMIN
+  MANAGER
+}
+
+// ============================================================================
+// TEMPLATES (IED formula definitions)
+// ============================================================================
+
+model Template {
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  workspaceId String    @db.ObjectId
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  /// One of: differential | distance | breaker-failure | overcurrent | busbar
+  iedType     String    @default("differential")
+  formula     String
+  inputSchema Json
+  outputSchema Json
+  version     Int       @default(1)
+  createdById String    @db.ObjectId
+  createdBy   User      @relation("createdBy", fields: [createdById], references: [id])
+
+  computations Computation[]
+  history      TemplateHistory[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([workspaceId])
+}
+
+model TemplateHistory {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  templateId   String   @db.ObjectId
+  template     Template @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  version      Int
+  formula      String
+  inputSchema  Json
+  outputSchema Json
+  changes      Json
+
+  createdAt DateTime @default(now())
+
+  @@index([templateId])
+}
+
+// ============================================================================
+// COMPUTATIONS
+// ============================================================================
+
+model Computation {
+  id          String            @id @default(auto()) @map("_id") @db.ObjectId
+  templateId  String            @db.ObjectId
+  template    Template          @relation(fields: [templateId], references: [id])
+  workspaceId String            @db.ObjectId
+  workspace   Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  status      ComputationStatus @default(PENDING)
+  inputData   Json
+  outputData  Json?
+  error       String?
+  createdById String            @db.ObjectId
+  createdBy   User              @relation("createdBy", fields: [createdById], references: [id])
+
+  history         ComputationHistory[]
+  approvalRequest ApprovalRequest?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([workspaceId])
+  @@index([templateId])
+}
+
+enum ComputationStatus {
+  PENDING
+  EXECUTING
+  COMPLETED
+  FAILED
+  APPROVED
+  REJECTED
+}
+
+model ComputationHistory {
+  id            String      @id @default(auto()) @map("_id") @db.ObjectId
+  computationId String      @db.ObjectId
+  computation   Computation @relation(fields: [computationId], references: [id], onDelete: Cascade)
+  action        String
+  changes       Json
+  userId        String?     @db.ObjectId
+
+  createdAt DateTime @default(now())
+
+  @@index([computationId])
+}
+
+// ============================================================================
+// APPROVAL WORKFLOWS
+// ============================================================================
+
+model ApprovalWorkflow {
+  id             String       @id @default(auto()) @map("_id") @db.ObjectId
+  workspaceId    String       @db.ObjectId
+  workspace      Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  organizationId String       @db.ObjectId
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  name           String
+  description    String?
+  levels         Int          @default(1)
+  createdById    String       @db.ObjectId
+
+  approvalRequests ApprovalRequest[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([workspaceId])
+}
+
+model ApprovalRequest {
+  id            String          @id @default(auto()) @map("_id") @db.ObjectId
+  computationId String          @unique @db.ObjectId
+  computation   Computation     @relation(fields: [computationId], references: [id], onDelete: Cascade)
+  workflowId    String          @db.ObjectId
+  workflow      ApprovalWorkflow @relation(fields: [workflowId], references: [id])
+  status        ApprovalStatus  @default(PENDING)
+  requestedById String          @db.ObjectId
+  requestedBy   User            @relation("requestedBy", fields: [requestedById], references: [id])
+
+  steps ApprovalStep[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([workflowId])
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+model ApprovalStep {
+  id         String             @id @default(auto()) @map("_id") @db.ObjectId
+  requestId  String             @db.ObjectId
+  request    ApprovalRequest    @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  level      Int
+  assigneeId String             @db.ObjectId
+  assignee   User               @relation("assignee", fields: [assigneeId], references: [id])
+  status     ApprovalStepStatus @default(PENDING)
+  comments   String?
+  decidedAt  DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([requestId])
+  @@index([assigneeId])
+}
+
+enum ApprovalStepStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+// ============================================================================
+// AUDIT & COMPLIANCE
+// ============================================================================
+
+model AuditLog {
+  id             String       @id @default(auto()) @map("_id") @db.ObjectId
+  organizationId String       @db.ObjectId
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  userId         String?      @db.ObjectId
+  user           User?        @relation("user", fields: [userId], references: [id])
+  action         String
+  resourceType   String
+  resourceId     String?
+  changes        Json
+  ipAddress      String?
+
+  createdAt DateTime @default(now())
+
+  @@index([organizationId])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model ComplianceReport {
+  id             String       @id @default(auto()) @map("_id") @db.ObjectId
+  organizationId String       @db.ObjectId
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  period         String
+  data           Json
+  generatedById  String?      @db.ObjectId
+
+  createdAt DateTime @default(now())
+
+  @@index([organizationId])
+  @@index([period])
+}
