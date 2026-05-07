@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Templates API</title>
+</head>
+<body>
+    <h1>Templates API Test</h1>
+    <div id="result">Loading...</div>
+    
+    <script>
+        fetch('/api/workspaces/620b3dc510eb0ca4b25f4ed7d/templates', {
+            credentials: 'include'
+        })
+        .then(r => r.json())
+        .then(data => {
+            document.getElementById('result').innerHTML = '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+        })
+        .catch(e => {
+            document.getElementById('result').innerHTML = 'Error: ' + e.message;
+        });
+    </script>
+</body>
+</html>

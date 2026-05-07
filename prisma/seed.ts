@@ -15,12 +15,12 @@ const prisma = new PrismaClient();
 //   'tpl-differential' | 'tpl-distance' | 'tpl-breaker-failure'
 
 const IED_TEMPLATES = [
-  // ── Differential protection ──────────────────────────────────────────────
+  // ── From your PDF documents ──────────────────────────────────────────────
   {
-    name: 'RED670 – Transformer Differential',
-    description: 'ABB RED670 biased differential protection for power transformers. IEC 61869 PX class CT.',
-    iedType: 'tpl-differential',
-    formula: 'ct-adequacy:tpl-differential',
+    name: 'RED670 – Transformer Differential + Distance + Breaker Failure',
+    description: 'ABB RED670 complete protection relay as shown in Hitachi documents.',
+    iedType: 'tpl-red670',
+    formula: 'ct-adequacy:tpl-red670',
     inputSchema: {
       sheet1: {
         ct_ratio_primary:   { label: 'CT Primary (A)',          type: 'number', example: 600  },
@@ -48,8 +48,8 @@ const IED_TEMPLATES = [
   {
     name: 'REB670 – Busbar Differential',
     description: 'ABB REB670 busbar protection. High-impedance or low-impedance biased differential.',
-    iedType: 'tpl-differential',
-    formula: 'ct-adequacy:tpl-differential',
+    iedType: 'tpl-reb670',
+    formula: 'ct-adequacy:tpl-reb670',
     inputSchema: {
       sheet1: {
         ct_ratio_primary:   { label: 'CT Primary (A)',          type: 'number', example: 1200 },
@@ -77,8 +77,8 @@ const IED_TEMPLATES = [
   {
     name: 'REF615 – Feeder Differential (Line)',
     description: 'ABB REF615 feeder protection with differential element for cable feeders.',
-    iedType: 'tpl-differential',
-    formula: 'ct-adequacy:tpl-differential',
+    iedType: 'tpl-ref615',
+    formula: 'ct-adequacy:tpl-ref615',
     inputSchema: {
       sheet1: {
         ct_ratio_primary:   { label: 'CT Primary (A)',          type: 'number', example: 400  },
@@ -137,8 +137,8 @@ const IED_TEMPLATES = [
   {
     name: 'REL670 – Distance Protection (Transmission)',
     description: 'ABB REL670 distance relay for 132kV/220kV transmission lines.',
-    iedType: 'tpl-distance',
-    formula: 'ct-adequacy:tpl-distance',
+    iedType: 'tpl-rel670',
+    formula: 'ct-adequacy:tpl-rel670',
     inputSchema: {
       sheet1: {
         ct_ratio_primary:   { label: 'CT Primary (A)',          type: 'number', example: 1000 },
@@ -167,9 +167,9 @@ const IED_TEMPLATES = [
   // ── Breaker Failure protection ────────────────────────────────────────────
   {
     name: 'REQ650 – Breaker Failure Protection',
-    description: 'ABB REQ650 breaker failure relay. Uses 5× Iop factor per IEC 61869.',
-    iedType: 'tpl-breaker-failure',
-    formula: 'ct-adequacy:tpl-breaker-failure',
+    description: 'ABB REQ650 breaker failure relay as shown in Hitachi documents.',
+    iedType: 'tpl-req650',
+    formula: 'ct-adequacy:tpl-req650',
     inputSchema: {
       sheet1: {
         ct_ratio_primary:   { label: 'CT Primary (A)',          type: 'number', example: 600  },

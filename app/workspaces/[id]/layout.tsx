@@ -12,7 +12,7 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import {
   Zap, Menu, Home, FileText, CheckSquare, BookOpen,
   Settings, LogOut, ChevronDown, GitCompare, HardHat,
-  ShieldCheck, BarChart3, Calculator, Building2, TrendingUp, Activity, FlaskConical, Cpu,
+  ShieldCheck, BarChart3, Calculator, Building2, TrendingUp, Activity, FlaskConical, Cpu, Upload,
 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -67,6 +67,7 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
     { href: `/workspaces/${workspaceId}/computations`,  label: 'CT Checks',      icon: <Calculator className="h-4 w-4" />,    roles: ['ENGINEER','ADMIN','MANAGER'] },
     { href: `/workspaces/${workspaceId}/vt-check`,      label: 'VT Check',       icon: <Activity className="h-4 w-4" />,      roles: ['ENGINEER','ADMIN','MANAGER'] },
     { href: `/workspaces/${workspaceId}/templates`,     label: 'IED Templates',  icon: <FileText className="h-4 w-4" />,      roles: ['ENGINEER','ADMIN','MANAGER'] },
+    { href: `/workspaces/${workspaceId}/relay-templates`, label: 'Relay Templates', icon: <Upload className="h-4 w-4" />,     roles: ['ENGINEER','ADMIN','MANAGER'] },
     { href: `/workspaces/${workspaceId}/relay-formulas`,label: 'Relay Formulas', icon: <FlaskConical className="h-4 w-4" />,  roles: ['ENGINEER','ADMIN','MANAGER'] },
     { href: `/workspaces/${workspaceId}/compare`,       label: 'Compare',        icon: <GitCompare className="h-4 w-4" />,    roles: ['ENGINEER','ADMIN','MANAGER'] },
     { href: `/workspaces/${workspaceId}/analytics`,     label: 'Analytics',      icon: <TrendingUp className="h-4 w-4" />,    roles: ['ADMIN','MANAGER'] },

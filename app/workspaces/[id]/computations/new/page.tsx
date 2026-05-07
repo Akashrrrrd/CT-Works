@@ -99,18 +99,27 @@ export default function NewComputationPage() {
   const [iedName, setIedName] = useState('');
 
   useEffect(() => {
+    console.log('Fetching templates for workspace:', workspaceId);
     fetch(`/api/workspaces/${workspaceId}/templates`)
-      .then(r => r.json())
+      .then(r => {
+        console.log('Templates response status:', r.status);
+        return r.json();
+      })
       .then(data => {
+        console.log('Templates data received:', data);
         if (!Array.isArray(data)) {
           console.error('Templates API error:', data);
           setError(`Failed to load templates: ${data?.error ?? 'Unknown error'}`);
           return;
         }
+        console.log('Setting templates:', data.length, 'items');
         setTemplates(data);
         setSelectedTemplate(data[0] ?? null);
       })
-      .catch(e => setError(`Network error: ${e.message}`))
+      .catch(e => {
+        console.error('Templates fetch error:', e);
+        setError(`Network error: ${e.message}`);
+      })
       .finally(() => setLoading(false));
   }, [workspaceId]);
 

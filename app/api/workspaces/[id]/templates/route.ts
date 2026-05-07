@@ -3,9 +3,15 @@ import { getTemplates, ObjectId } from '@/lib/db';
 import { verifyJWT } from '@/lib/auth';
 
 const IED_META: Record<string, { function: string; relay: string }> = {
-  'tpl-differential':    { function: 'DIFFERENTIAL',   relay: 'RED 670 / REF 615 / REB 670' },
-  'tpl-distance':        { function: 'DISTANCE',        relay: 'SEL-421 / REL 670' },
-  'tpl-breaker-failure': { function: 'BREAKER_FAILURE', relay: 'REQ 650 / REB 500' },
+  'tpl-red670':     { function: 'DIFFERENTIAL + DISTANCE + BREAKER_FAILURE', relay: 'ABB RED670' },
+  'tpl-reb670':     { function: 'BUSBAR DIFFERENTIAL',                        relay: 'ABB REB670' },
+  'tpl-ref615':     { function: 'FEEDER DIFFERENTIAL',                        relay: 'ABB REF615' },
+  'tpl-rel670':     { function: 'DISTANCE PROTECTION',                        relay: 'ABB REL670' },
+  'tpl-req650':     { function: 'BREAKER FAILURE',                            relay: 'ABB REQ650' },
+  // Legacy support
+  'tpl-differential':    { function: 'DIFFERENTIAL',   relay: 'Generic Differential' },
+  'tpl-distance':        { function: 'DISTANCE',        relay: 'Generic Distance' },
+  'tpl-breaker-failure': { function: 'BREAKER_FAILURE', relay: 'Generic Breaker Failure' },
 };
 
 export async function GET(
@@ -31,16 +37,27 @@ export async function GET(
       return NextResponse.json({ error: 'Invalid workspace id' }, { status: 400 });
     }
 
-    const list = await templates
+    // First try workspace-specific templates
+    let result = await templates
       .find({ workspaceId: wsObjectId })
       .sort({ createdAt: 1 })
       .toArray();
 
-    // If nothing found by ObjectId, try string match as fallback
-    const result = list.length > 0 ? list : await templates
-      .find({ workspaceId: id })
-      .sort({ createdAt: 1 })
-      .toArray();
+    // If no workspace-specific templates, try string match as fallback
+    if (result.length === 0) {
+      result = await templates
+        .find({ workspaceId: id })
+        .sort({ createdAt: 1 })
+        .toArray();
+    }
+
+    // If still no results, return global templates (no workspaceId)
+    if (result.length === 0) {
+      result = await templates
+        .find({ workspaceId: { $exists: false } })
+        .sort({ createdAt: 1 })
+        .toArray();
+    }
 
     return NextResponse.json(result.map(t => ({
       id:          t._id.toString(),
