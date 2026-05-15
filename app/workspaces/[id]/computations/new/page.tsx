@@ -97,6 +97,7 @@ export default function NewComputationPage() {
   const [lastSheet1, setLastSheet1] = useState<Sheet1>(DEFAULT_SHEET1);
   const [lastSheet2, setLastSheet2] = useState<Sheet2>(DEFAULT_SHEET2);
   const [iedName, setIedName] = useState('');
+  const [importedFromExcel, setImportedFromExcel] = useState(false);
 
   useEffect(() => {
     console.log('Fetching templates for workspace:', workspaceId);
@@ -122,6 +123,69 @@ export default function NewComputationPage() {
       })
       .finally(() => setLoading(false));
   }, [workspaceId]);
+
+  // Handle Excel imported data
+  useEffect(() => {
+    const importedParam = searchParams?.get('imported');
+    const dataParam = searchParams?.get('data');
+    
+    if (importedParam === 'true' && dataParam) {
+      try {
+        const importedData = JSON.parse(decodeURIComponent(dataParam));
+        console.log('Imported Excel data:', importedData);
+        
+        // Fill Sheet 1 data
+        setSheet1({
+          ct_ratio_primary: String(importedData.ct_ratio_primary || DEFAULT_SHEET1.ct_ratio_primary),
+          ct_ratio_secondary: String(importedData.ct_ratio_secondary || DEFAULT_SHEET1.ct_ratio_secondary),
+          accuracy_class: importedData.accuracy_class || DEFAULT_SHEET1.accuracy_class,
+          rct: String(importedData.rct || DEFAULT_SHEET1.rct),
+          vk_available: String(importedData.vk_available || DEFAULT_SHEET1.vk_available),
+          io_at_vk: String(importedData.io_at_vk || DEFAULT_SHEET1.io_at_vk),
+        });
+        
+        // Fill Sheet 2 data
+        setSheet2({
+          frequency: String(importedData.frequency || DEFAULT_SHEET2.frequency),
+          bus_voltage_kv: String(importedData.bus_voltage_kv || DEFAULT_SHEET2.bus_voltage_kv),
+          max_bus_fault_mva: String(importedData.max_bus_fault_mva || DEFAULT_SHEET2.max_bus_fault_mva),
+          r1: String(importedData.r1 || DEFAULT_SHEET2.r1),
+          x1: String(importedData.x1 || DEFAULT_SHEET2.x1),
+          r0: String(importedData.r0 || DEFAULT_SHEET2.r0),
+          x0: String(importedData.x0 || DEFAULT_SHEET2.x0),
+          route_length_km: String(importedData.route_length_km || DEFAULT_SHEET2.route_length_km),
+          relay_burden_va: String(importedData.relay_burden_va || DEFAULT_SHEET2.relay_burden_va),
+          lead_resistance: String(importedData.lead_resistance || DEFAULT_SHEET2.lead_resistance),
+        });
+        
+        setImportedFromExcel(true);
+        setIedName(`${importedData.relay_type || 'Imported'} (from Excel)`);
+        
+        // Auto-select matching template based on relay type
+        if (templates.length > 0) {
+          const relayTypeMapping: Record<string, string> = {
+            'RED670': 'tpl-red670',
+            'REB670': 'tpl-reb670',
+            'REF615': 'tpl-ref615',
+            'REL670': 'tpl-rel670',
+            'REQ650': 'tpl-req650'
+          };
+          
+          const targetTemplate = relayTypeMapping[importedData.relay_type];
+          if (targetTemplate) {
+            const matchingTemplate = templates.find(t => t.iedType === targetTemplate);
+            if (matchingTemplate) {
+              setSelectedTemplate(matchingTemplate);
+            }
+          }
+        }
+        
+      } catch (error) {
+        console.error('Failed to parse imported data:', error);
+        setError('Failed to load imported Excel data');
+      }
+    }
+  }, [searchParams, templates]);
 
   // Pre-fill CT data from IED if iedId is provided
   useEffect(() => {
@@ -255,10 +319,15 @@ export default function NewComputationPage() {
         <p className="text-muted-foreground text-sm">Fill in CT datasheet and system parameters to compute adequacy</p>
       </div>
 
-      {iedName && (
+      {(iedName || importedFromExcel) && (
         <div className="flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 px-4 py-2 text-sm">
           <Zap className="h-4 w-4 text-primary shrink-0" />
-          <span>CT data pre-filled from IED: <span className="font-semibold">{iedName}</span></span>
+          <span>
+            {importedFromExcel 
+              ? `CT data imported from Excel: ${iedName}`
+              : `CT data pre-filled from IED: ${iedName}`
+            }
+          </span>
         </div>
       )}
 

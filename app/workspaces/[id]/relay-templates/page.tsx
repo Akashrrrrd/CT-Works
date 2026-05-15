@@ -75,6 +75,7 @@ export default function RelayTemplatesPage() {
   const [customTemplates, setCustomTemplates] = useState<RelayTemplate[]>([]);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
+  const [importedData, setImportedData] = useState<any>(null);
 
   // New template form state
   const [newTemplate, setNewTemplate] = useState({
@@ -87,7 +88,7 @@ export default function RelayTemplatesPage() {
     file: null as File | null,
   });
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -102,8 +103,53 @@ export default function RelayTemplatesPage() {
       return;
     }
 
-    setNewTemplate({ ...newTemplate, file });
-    setError('');
+    // If it's an Excel file, parse it for CT data
+    if (file.type.includes('excel') || file.type.includes('spreadsheetml')) {
+      setUploading(true);
+      setError('');
+      
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        const response = await fetch(`/api/workspaces/${workspaceId}/import-excel-ct`, {
+          method: 'POST',
+          body: formData,
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          setImportedData(result.data);
+          
+          // Auto-fill the form with extracted data
+          setNewTemplate({
+            name: result.data.relay_type || result.data.relay_model?.split(' ')[0] || '',
+            manufacturer: result.data.relay_model?.includes('ABB') ? 'ABB' : 
+                         result.data.relay_model?.includes('SEL') ? 'SEL' :
+                         result.data.relay_model?.includes('SIEMENS') ? 'SIEMENS' : 'ABB',
+            model: result.data.relay_model || 'Custom Relay',
+            differential: result.data.protection_functions?.includes('differential') || false,
+            distance: result.data.protection_functions?.includes('distance') || false,
+            breakerFailure: result.data.protection_functions?.includes('breaker_failure') || false,
+            file: file,
+          });
+          
+          setError('');
+        } else {
+          setError(result.error || 'Failed to parse Excel file');
+        }
+      } catch (err) {
+        setError('Failed to upload and parse Excel file');
+        console.error('Excel upload error:', err);
+      } finally {
+        setUploading(false);
+      }
+    } else {
+      // Handle PDF files (existing logic)
+      setNewTemplate({ ...newTemplate, file });
+      setError('');
+    }
   };
 
   const handleAddTemplate = () => {
@@ -142,6 +188,19 @@ export default function RelayTemplatesPage() {
       file: null,
     });
     setError('');
+    setImportedData(null);
+  };
+
+  const handleCreateComputation = () => {
+    if (!importedData) return;
+    
+    // Navigate to CT computation page with pre-filled data
+    const queryParams = new URLSearchParams({
+      imported: 'true',
+      data: JSON.stringify(importedData)
+    });
+    
+    window.location.href = `/workspaces/${workspaceId}/computations/new?${queryParams}`;
   };
 
   const handleDeleteTemplate = (id: string) => {
@@ -279,8 +338,44 @@ export default function RelayTemplatesPage() {
             <Upload className="h-4 w-4 mr-2" />
             Add Relay Template
           </Button>
+
+          {/* Excel Import Success - Show Extracted Data */}
+          {importedData && (
+            <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+              <h4 className="font-semibold text-green-800 mb-2">✅ Excel Data Extracted Successfully!</h4>
+              <div className="grid grid-cols-2 gap-2 text-sm text-green-700 mb-3">
+                <div>CT Ratio: {importedData.ct_ratio_primary}/{importedData.ct_ratio_secondary}</div>
+                <div>Accuracy: {importedData.accuracy_class}</div>
+                <div>Vk Available: {importedData.vk_available}V</div>
+                <div>Bus Voltage: {importedData.bus_voltage_kv}kV</div>
+                <div>Fault Level: {importedData.max_bus_fault_mva}MVA</div>
+                <div>Relay: {importedData.relay_type || 'Custom'}</div>
+              </div>
+              <div className="flex gap-2">
+                <Button onClick={handleCreateComputation} className="flex-1" variant="default">
+                  <CheckCircle2 className="h-4 w-4 mr-2" />
+                  Create CT Computation
+                </Button>
+                <Button onClick={() => setImportedData(null)} variant="outline" size="sm">
+                  <XCircle className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
+
+      {/* Loading State */}
+      {uploading && (
+        <Card className="mb-8">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-center space-x-2">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+              <span>Parsing Excel file...</span>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Predefined Templates */}
       <div className="mb-8">
