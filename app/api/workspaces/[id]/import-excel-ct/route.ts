@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { parseExcelCTData } from '@/lib/services/excel-parser';
+import { ExcelProcessor } from '@/lib/services/excel-processor';
 
 export async function POST(
   request: NextRequest,
@@ -19,33 +19,39 @@ export async function POST(
       );
     }
     
-    // Validate file type
-    const allowedTypes = [
-      'application/vnd.ms-excel',
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-    ];
+    // Process the Excel file using the new standardized processor
+    const result = await ExcelProcessor.processExcelFile(file);
     
-    if (!allowedTypes.includes(file.type)) {
+    if (!result.isValid) {
       return NextResponse.json(
-        { error: 'Invalid file type. Please upload an Excel file (.xls or .xlsx)' },
+        { 
+          success: false,
+          error: 'Excel file validation failed',
+          errors: result.errors,
+          warnings: result.warnings
+        },
         { status: 400 }
       );
     }
     
-    // Parse the Excel file
-    const extractedData = await parseExcelCTData(file);
-    
-    // Return the extracted data
+    // Return the extracted data with detailed structure
     return NextResponse.json({
       success: true,
-      data: extractedData,
-      message: 'Excel file parsed successfully'
+      data: result.data,
+      message: `Excel file parsed successfully. Found ${result.data?.total_devices} devices with 17 standard parameters.`,
+      summary: {
+        standard_parameters_found: Object.keys(result.data?.standard_parameters || {}).length,
+        devices_found: result.data?.total_devices || 0,
+        device_types: result.data?.device_types || [],
+        warnings: result.warnings
+      }
     });
     
   } catch (error) {
     console.error('Excel import error:', error);
     return NextResponse.json(
       { 
+        success: false,
         error: 'Failed to parse Excel file',
         details: error instanceof Error ? error.message : 'Unknown error'
       },

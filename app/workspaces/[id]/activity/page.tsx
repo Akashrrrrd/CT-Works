@@ -50,82 +50,8 @@ export default function ActivityPage() {
         const data = await response.json();
         setActivities(data);
       } else {
-        // Mock data for development
-        const mockActivities: ActivityItem[] = [
-          {
-            id: '1',
-            type: 'computation',
-            description: 'CT adequacy check completed for 33kV Feeder Bay 1',
-            timestamp: new Date(Date.now() - 5 * 60 * 1000),
-            user: 'John Smith',
-            status: 'success',
-            details: 'All CT parameters within acceptable limits'
-          },
-          {
-            id: '2',
-            type: 'approval',
-            description: 'Computation approved by team lead',
-            timestamp: new Date(Date.now() - 15 * 60 * 1000),
-            user: 'Sarah Johnson',
-            status: 'success',
-            details: 'Approved computation ID: COMP-2024-001'
-          },
-          {
-            id: '3',
-            type: 'template',
-            description: 'New IED template added: Siemens 7SA522',
-            timestamp: new Date(Date.now() - 30 * 60 * 1000),
-            user: 'Mike Chen',
-            status: 'info',
-            details: 'Template includes protection and metering functions'
-          },
-          {
-            id: '4',
-            type: 'computation',
-            description: 'CT check failed - insufficient knee point voltage',
-            timestamp: new Date(Date.now() - 45 * 60 * 1000),
-            user: 'Emma Wilson',
-            status: 'error',
-            details: 'Required: 800V, Available: 650V'
-          },
-          {
-            id: '5',
-            type: 'user',
-            description: 'New user added to workspace',
-            timestamp: new Date(Date.now() - 60 * 60 * 1000),
-            user: 'Admin',
-            status: 'info',
-            details: 'User: alex.brown@company.com with Engineer role'
-          },
-          {
-            id: '6',
-            type: 'system',
-            description: 'Workspace backup completed successfully',
-            timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000),
-            user: 'System',
-            status: 'success',
-            details: 'Backup size: 45.2 MB'
-          },
-          {
-            id: '7',
-            type: 'approval',
-            description: 'Computation rejected - requires revision',
-            timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000),
-            user: 'David Lee',
-            status: 'warning',
-            details: 'Reason: CT ratio mismatch detected'
-          },
-          {
-            id: '8',
-            type: 'computation',
-            description: 'VT adequacy analysis started for 132kV Bus',
-            timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000),
-            user: 'Lisa Wang',
-            status: 'info',
-            details: 'Processing 8 VT connections'
-          }
-        ];
-        setActivities(mockActivities);
+        console.error('Failed to fetch activities:', response.statusText);
+        setActivities([]);
       }
       
       setLastUpdated(new Date());

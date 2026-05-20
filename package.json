@@ -7,7 +7,14 @@
     "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint .",
-    "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
+    "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts",
+    "db:init": "node scripts/db-setup.js init",
+    "db:drop": "node scripts/db-setup.js drop",
+    "db:reset": "node scripts/db-setup.js reset",
+    "db:status": "node scripts/db-setup.js status",
+    "db:seed-relay-templates": "node scripts/seed-relay-templates.js",
+    "db:seed-sample-data": "node scripts/seed-sample-data.js",
+    "db:seed-all": "npm run db:seed-relay-templates && npm run db:seed-sample-data"
   },
   "prisma": {
     "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
@@ -79,6 +86,7 @@
     "postcss": "^8.5",
     "prisma": "^5.20.0",
     "tailwindcss": "^4.2.0",
+    "ts-node": "^10.9.2",
     "tw-animate-css": "1.3.3",
     "typescript": "5.7.3"
   }

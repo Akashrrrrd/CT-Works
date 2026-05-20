@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getComputations, getTemplates, getUsers, getWorkspaces, getApprovals, ObjectId } from '@/lib/db';
+import { getComputations, getTemplates, getUsers, getWorkspaces, getApprovals, getSubstations, getActivityLogs, ObjectId } from '@/lib/db';
 import { verifyJWT } from '@/lib/auth';
 
 async function auth(request: NextRequest) {
@@ -23,11 +23,13 @@ export async function GET(
     if (!currentUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     // Fetch all data in parallel
-    const [computations, templates, users, approvals] = await Promise.all([
+    const [computations, templates, users, approvals, substations, activityLogs] = await Promise.all([
       getComputations(),
       getTemplates(),
       getUsers(),
-      getApprovals()
+      getApprovals(),
+      getSubstations(),
+      getActivityLogs()
     ]);
 
     // Get computations for this workspace
@@ -45,14 +47,32 @@ export async function GET(
       .find({ workspaceId: new ObjectId(id) })
       .toArray();
 
+    // Get substations for this workspace
+    const workspaceSubstations = await substations
+      .find({ workspaceId: new ObjectId(id) })
+      .toArray();
+
+    // Get activity logs for this workspace
+    const workspaceActivityLogs = await activityLogs
+      .find({ workspaceId: new ObjectId(id) })
+      .sort({ timestamp: -1 })
+      .limit(100)
+      .toArray();
+
     // Get all users (for active user count)
     const allUsers = await users.find({}).toArray();
 
     // Calculate computation statistics
     const totalComputations = workspaceComputations.length;
-    const adequateComputations = workspaceComputations.filter(c => c.verdict === 'SUITABLY DIMENSIONED').length;
-    const inadequateComputations = workspaceComputations.filter(c => c.verdict === 'UNDER DIMENSIONED').length;
-    const pendingComputations = totalComputations - adequateComputations - inadequateComputations;
+    const adequateComputations = workspaceComputations.filter(c => 
+      c.result?.verdict === 'SUITABLY DIMENSIONED'
+    ).length;
+    const inadequateComputations = workspaceComputations.filter(c => 
+      c.result?.verdict === 'UNDER DIMENSIONED'
+    ).length;
+    const pendingComputations = workspaceComputations.filter(c => 
+      c.approvalStatus === 'PENDING'
+    ).length;
 
     // Today's computations
     const today = new Date();
@@ -84,25 +104,42 @@ export async function GET(
     const rejectedApprovals = workspaceApprovals.filter(a => a.status === 'REJECTED').length;
 
     // User statistics
-    const activeUsers = allUsers.length;
-    const onlineUsers = Math.floor(activeUsers * 0.3); // Mock online users (30% of active)
+    const activeUsers = allUsers.filter(u => u.isActive).length;
+    const onlineUsers = workspaceActivityLogs.filter(log => {
+      const oneHourAgo = new Date();
+      oneHourAgo.setHours(oneHourAgo.getHours() - 1);
+      return new Date(log.timestamp) >= oneHourAgo;
+    }).length;
     
     const roleDistribution = allUsers.reduce((acc, user) => {
       acc[user.role] = (acc[user.role] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
 
-    // Substation statistics (mock data for now)
-    const totalSubstations = 12;
-    const analyzedSubstations = Math.floor(totalSubstations * 0.67); // 67% analyzed
+    // Substation statistics (real data)
+    const totalSubstations = workspaceSubstations.length;
+    const analyzedSubstations = workspaceSubstations.filter(s => {
+      // Check if substation has any completed computations
+      return workspaceComputations.some(c => 
+        c.result?.verdict && c.result.verdict !== 'PENDING'
+      );
+    }).length;
     const pendingSubstations = totalSubstations - analyzedSubstations;
 
-    // System health (mock data)
+    // System health (calculated from real data)
+    const errorLogs = workspaceActivityLogs.filter(log => log.type === 'ERROR').length;
+    const totalLogs = workspaceActivityLogs.length;
+    const errorRate = totalLogs > 0 ? (errorLogs / totalLogs) * 100 : 0;
+    
+    let health: 'good' | 'warning' | 'critical' = 'good';
+    if (errorRate > 5) health = 'critical';
+    else if (errorRate > 2) health = 'warning';
+    
     const systemHealth = {
-      health: 'good' as const,
-      uptime: 99.8,
-      responseTime: Math.floor(Math.random() * 100) + 200, // 200-300ms
-      errorRate: Math.random() * 0.5 // 0-0.5%
+      health,
+      uptime: Math.max(95, 100 - errorRate), // Uptime based on error rate
+      responseTime: Math.floor(Math.random() * 100) + 200, // 200-300ms (still simulated)
+      errorRate: Math.round(errorRate * 10) / 10
     };
 
     const overviewStats = {

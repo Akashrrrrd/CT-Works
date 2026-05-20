@@ -93,77 +93,8 @@ export default function WorkspaceOverview() {
       setLastUpdated(new Date());
     } catch (error) {
       console.error('Failed to fetch overview data:', error);
-      // Set mock data for development
-      setStats({
-        computations: {
-          total: 156,
-          adequate: 134,
-          inadequate: 22,
-          pending: 8,
-          todayCount: 12
-        },
-        templates: {
-          total: 8,
-          mostUsed: 'ABB RED670',
-          recentlyAdded: 2
-        },
-        approvals: {
-          pending: 5,
-          approved: 89,
-          rejected: 3
-        },
-        users: {
-          active: 24,
-          online: 7,
-          roles: { ENGINEER: 15, ADMIN: 6, MANAGER: 3 }
-        },
-        substations: {
-          total: 12,
-          analyzed: 8,
-          pending: 4
-        },
-        system: {
-          health: 'good',
-          uptime: 99.8,
-          responseTime: 245,
-          errorRate: 0.2
-        }
-      });
-
-      setRecentActivity([
-        {
-          id: '1',
-          type: 'computation',
-          description: 'CT adequacy check completed for 33kV Feeder Bay 1',
-          timestamp: new Date(Date.now() - 5 * 60 * 1000),
-          user: 'John Smith',
-          status: 'success'
-        },
-        {
-          id: '2',
-          type: 'approval',
-          description: 'Computation approved by team lead',
-          timestamp: new Date(Date.now() - 15 * 60 * 1000),
-          user: 'Sarah Johnson',
-          status: 'success'
-        },
-        {
-          id: '3',
-          type: 'template',
-          description: 'New IED template added: Siemens 7SA522',
-          timestamp: new Date(Date.now() - 30 * 60 * 1000),
-          user: 'Mike Chen',
-          status: 'success'
-        },
-        {
-          id: '4',
-          type: 'computation',
-          description: 'CT check failed - insufficient knee point voltage',
-          timestamp: new Date(Date.now() - 45 * 60 * 1000),
-          user: 'Emma Wilson',
-          status: 'warning'
-        }
-      ]);
+      setStats(null); // Set to null instead of mock data
+      setRecentActivity([]);
     } finally {
       setLoading(false);
     }

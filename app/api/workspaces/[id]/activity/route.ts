@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getComputations, getTemplates, getUsers, getApprovals, getAuditLogs, ObjectId } from '@/lib/db';
+import { getComputations, getTemplates, getUsers, getApprovals, getAuditLogs, getActivityLogs, ObjectId } from '@/lib/db';
 import { verifyJWT } from '@/lib/auth';
 
 async function auth(request: NextRequest) {
@@ -25,49 +25,83 @@ export async function GET(
     const url = new URL(request.url);
     const limit = parseInt(url.searchParams.get('limit') || '20');
 
-    // Fetch recent activity from audit logs
-    const auditLogs = await getAuditLogs();
-    const recentLogs = await auditLogs
+    // Fetch recent activity from multiple sources
+    const [auditLogs, activityLogs, computations, approvals, users] = await Promise.all([
+      getAuditLogs(),
+      getActivityLogs(),
+      getComputations(),
+      getApprovals(),
+      getUsers()
+    ]);
+
+    // Get activity logs for this workspace
+    const workspaceActivityLogs = await activityLogs
+      .find({ workspaceId: new ObjectId(id) })
+      .sort({ timestamp: -1 })
+      .limit(limit)
+      .toArray();
+
+    // Get recent audit logs
+    const recentAuditLogs = await auditLogs
       .find({ workspaceId: new ObjectId(id) })
       .sort({ createdAt: -1 })
       .limit(limit)
       .toArray();
 
     // Also get recent computations and approvals for activity
-    const [computations, approvals] = await Promise.all([
-      getComputations(),
-      getApprovals()
+    const [recentComputations, recentApprovals] = await Promise.all([
+      computations
+        .find({ workspaceId: new ObjectId(id) })
+        .sort({ createdAt: -1 })
+        .limit(10)
+        .toArray(),
+      approvals
+        .find({ workspaceId: new ObjectId(id) })
+        .sort({ createdAt: -1 })
+        .limit(10)
+        .toArray()
     ]);
 
-    const recentComputations = await computations
-      .find({ workspaceId: new ObjectId(id) })
-      .sort({ createdAt: -1 })
-      .limit(10)
-      .toArray();
-
-    const recentApprovals = await approvals
-      .find({ workspaceId: new ObjectId(id) })
-      .sort({ createdAt: -1 })
-      .limit(10)
-      .toArray();
+    // Get user lookup map
+    const allUsers = await users.find({}).toArray();
+    const userMap = new Map(allUsers.map(u => [u._id.toString(), u]));
 
     // Combine and format activity data
     const activities: any[] = [];
 
+    // Add activity log entries (primary source)
+    workspaceActivityLogs.forEach(log => {
+      const user = userMap.get(log.userId?.toString()) || { name: 'Unknown User' };
+      
+      activities.push({
+        id: `activity_${log._id}`,
+        type: log.type.toLowerCase(),
+        description: log.description,
+        timestamp: new Date(log.timestamp),
+        user: user.name,
+        status: getStatusFromType(log.type),
+        details: log.metadata ? JSON.stringify(log.metadata) : undefined
+      });
+    });
+
     // Add computation activities
     recentComputations.forEach(comp => {
+      const user = userMap.get(comp.createdBy?.toString()) || { name: 'Unknown User' };
+      
       activities.push({
         id: `comp_${comp._id}`,
         type: 'computation',
-        description: `CT adequacy check ${comp.verdict === 'SUITABLY DIMENSIONED' ? 'passed' : 'failed'} for ${comp.templateName}`,
+        description: `CT adequacy check ${comp.result?.verdict === 'SUITABLY DIMENSIONED' ? 'passed' : 'failed'} for ${comp.templateName}`,
         timestamp: new Date(comp.createdAt),
-        user: comp.createdBy?.name || 'Unknown User',
-        status: comp.verdict === 'SUITABLY DIMENSIONED' ? 'success' : 'warning'
+        user: user.name,
+        status: comp.result?.verdict === 'SUITABLY DIMENSIONED' ? 'success' : 'warning',
+        details: `Template: ${comp.templateName}, Status: ${comp.approvalStatus}`
       });
     });
 
     // Add approval activities
     recentApprovals.forEach(approval => {
+      const user = userMap.get(approval.approver?.toString()) || { name: 'System' };
       let description = '';
       let status = 'success';
       
@@ -93,13 +127,14 @@ export async function GET(
         type: 'approval',
         description,
         timestamp: new Date(approval.createdAt),
-        user: 'System', // Would need to track who made the approval
-        status
+        user: user.name,
+        status,
+        details: approval.comments || `Resource: ${approval.resourceType}`
       });
     });
 
     // Add audit log activities
-    recentLogs.forEach(log => {
+    recentAuditLogs.forEach(log => {
       let type = 'user';
       let status = 'success';
       
@@ -123,7 +158,8 @@ export async function GET(
         description: log.details || log.action.replace(/_/g, ' ').toLowerCase(),
         timestamp: new Date(log.createdAt),
         user: log.userName || 'System',
-        status
+        status,
+        details: `Action: ${log.action}, Resource: ${log.resourceType}`
       });
     });
 
@@ -136,51 +172,23 @@ export async function GET(
 
   } catch (error) {
     console.error('Activity API error:', error);
-    
-    // Return mock data for development
-    const mockActivities = [
-      {
-        id: '1',
-        type: 'computation',
-        description: 'CT adequacy check completed for 33kV Feeder Bay 1',
-        timestamp: new Date(Date.now() - 5 * 60 * 1000),
-        user: 'John Smith',
-        status: 'success'
-      },
-      {
-        id: '2',
-        type: 'approval',
-        description: 'Computation approved by team lead',
-        timestamp: new Date(Date.now() - 15 * 60 * 1000),
-        user: 'Sarah Johnson',
-        status: 'success'
-      },
-      {
-        id: '3',
-        type: 'template',
-        description: 'New IED template added: Siemens 7SA522',
-        timestamp: new Date(Date.now() - 30 * 60 * 1000),
-        user: 'Mike Chen',
-        status: 'success'
-      },
-      {
-        id: '4',
-        type: 'computation',
-        description: 'CT check failed - insufficient knee point voltage',
-        timestamp: new Date(Date.now() - 45 * 60 * 1000),
-        user: 'Emma Wilson',
-        status: 'warning'
-      },
-      {
-        id: '5',
-        type: 'user',
-        description: 'New user registered: Alex Thompson',
-        timestamp: new Date(Date.now() - 60 * 60 * 1000),
-        user: 'System',
-        status: 'success'
-      }
-    ];
+    return NextResponse.json({ error: 'Failed to load activity data' }, { status: 500 });
+  }
+}
 
-    return NextResponse.json(mockActivities);
+// Helper function to determine status from activity type
+function getStatusFromType(type: string): string {
+  switch (type.toUpperCase()) {
+    case 'CREATE':
+    case 'UPDATE':
+    case 'LOGIN':
+      return 'success';
+    case 'DELETE':
+    case 'LOGOUT':
+      return 'warning';
+    case 'ERROR':
+      return 'error';
+    default:
+      return 'info';
   }
 }

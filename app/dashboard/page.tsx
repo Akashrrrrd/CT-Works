@@ -30,7 +30,7 @@ const ROLE_META: Record<UserRole, { label: string; icon: React.ReactNode; color:
     label: 'Admin / Team Lead',
     icon: <ShieldCheck className="h-4 w-4" />,
     color: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
-    hint: 'Import Excel data, review computations, and manage relay templates with approval workflows.',
+    hint: 'Import Excel data, process CT/VT adequacy files, and manage Excel-based computations with approval workflows.',
   },
   MANAGER: {
     label: 'Manager',

@@ -118,7 +118,7 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
     },
     { 
       href: `/workspaces/${workspaceId}/relay-templates`, 
-      label: 'Relay Templates', 
+      label: 'Excel Processing', 
       icon: <Upload className="h-4 w-4" />, 
       roles: ['ENGINEER','ADMIN','MANAGER'],
       badge: null
