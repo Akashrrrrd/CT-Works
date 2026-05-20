@@ -120,23 +120,32 @@ export default function RelayTemplatesPage() {
         const result = await response.json();
         
         if (result.success) {
+          console.log('Excel parsing successful:', result.data);
           setImportedData(result.data);
           
           // Auto-fill the form with extracted data
           setNewTemplate({
-            name: result.data.relay_type || result.data.relay_model?.split(' ')[0] || '',
-            manufacturer: result.data.relay_model?.includes('ABB') ? 'ABB' : 
-                         result.data.relay_model?.includes('SEL') ? 'SEL' :
-                         result.data.relay_model?.includes('SIEMENS') ? 'SIEMENS' : 'ABB',
-            model: result.data.relay_model || 'Custom Relay',
-            differential: result.data.protection_functions?.includes('differential') || false,
-            distance: result.data.protection_functions?.includes('distance') || false,
-            breakerFailure: result.data.protection_functions?.includes('breaker_failure') || false,
+            name: (result.data?.detected_devices && result.data.detected_devices.length > 0) 
+                  ? result.data.detected_devices[0].type 
+                  : (result.data?.relay_type || result.data?.relay_model?.split(' ')[0] || ''),
+            manufacturer: result.data?.relay_model?.includes('ABB') ? 'ABB' : 
+                         result.data?.relay_model?.includes('SEL') ? 'SEL' :
+                         result.data?.relay_model?.includes('SIEMENS') ? 'SIEMENS' : 'ABB',
+            model: (result.data?.detected_devices && result.data.detected_devices.length > 0)
+                   ? result.data.detected_devices[0].name
+                   : (result.data?.relay_model || 'Custom Relay'),
+            differential: result.data?.protection_functions?.includes('differential') || 
+                         (result.data?.detected_devices && result.data.detected_devices[0]?.functions.includes('differential')) || false,
+            distance: result.data?.protection_functions?.includes('distance') || 
+                     (result.data?.detected_devices && result.data.detected_devices[0]?.functions.includes('distance')) || false,
+            breakerFailure: result.data?.protection_functions?.includes('breaker_failure') || 
+                           (result.data?.detected_devices && result.data.detected_devices[0]?.functions.includes('breaker_failure')) || false,
             file: file,
           });
           
           setError('');
         } else {
+          console.error('Excel parsing failed:', result);
           setError(result.error || 'Failed to parse Excel file');
         }
       } catch (err) {
@@ -152,7 +161,7 @@ export default function RelayTemplatesPage() {
     }
   };
 
-  const handleAddTemplate = () => {
+  const handleAddTemplate = async () => {
     if (!newTemplate.name || !newTemplate.manufacturer) {
       setError('Please fill in relay name and manufacturer');
       return;
@@ -163,36 +172,124 @@ export default function RelayTemplatesPage() {
       return;
     }
 
-    const template: RelayTemplate = {
-      id: `custom-${Date.now()}`,
-      name: newTemplate.name,
-      manufacturer: newTemplate.manufacturer,
-      model: newTemplate.model || 'Custom Relay',
-      functions: {
-        differential: newTemplate.differential,
-        distance: newTemplate.distance,
-        breakerFailure: newTemplate.breakerFailure,
-      },
-      uploadedFile: newTemplate.file?.name,
-      createdAt: new Date().toISOString(),
-    };
+    try {
+      console.log('Creating template:', newTemplate);
+      
+      // Create the template object
+      const template = {
+        name: newTemplate.name,
+        description: `${newTemplate.manufacturer} ${newTemplate.model || 'Custom Relay'}`,
+        relay: newTemplate.manufacturer,
+        iedType: `tpl-${newTemplate.name.toLowerCase().replace(/[^a-z0-9]/g, '')}`,
+        functions: []
+      };
 
-    setCustomTemplates([...customTemplates, template]);
-    setNewTemplate({
-      name: '',
-      manufacturer: '',
-      model: '',
-      differential: false,
-      distance: false,
-      breakerFailure: false,
-      file: null,
-    });
-    setError('');
-    setImportedData(null);
+      if (newTemplate.differential) template.functions.push('differential');
+      if (newTemplate.distance) template.functions.push('distance');
+      if (newTemplate.breakerFailure) template.functions.push('breaker_failure');
+
+      console.log('Template payload:', template);
+
+      // Save to database via API
+      const response = await fetch(`/api/workspaces/${workspaceId}/templates`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(template),
+      });
+
+      const result = await response.json();
+      console.log('Template creation response:', response.status, result);
+
+      if (!response.ok) {
+        throw new Error(result.error || `HTTP ${response.status}: Failed to save template`);
+      }
+
+      // Add to local state for immediate UI update
+      const localTemplate: RelayTemplate = {
+        id: result.id || `custom-${Date.now()}`,
+        name: template.name,
+        manufacturer: template.relay,
+        model: template.description,
+        functions: {
+          differential: newTemplate.differential,
+          distance: newTemplate.distance,
+          breakerFailure: newTemplate.breakerFailure,
+        },
+        uploadedFile: newTemplate.file?.name,
+        createdAt: new Date().toISOString(),
+      };
+
+      setCustomTemplates([...customTemplates, localTemplate]);
+      
+      // Reset form
+      setNewTemplate({
+        name: '',
+        manufacturer: '',
+        model: '',
+        differential: false,
+        distance: false,
+        breakerFailure: false,
+        file: null,
+      });
+      setError('');
+      setImportedData(null);
+
+      // Show success message
+      alert(`Template "${template.name}" saved successfully! It will now appear in the CT computation dropdown.`);
+      
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      setError('Failed to save template: ' + errorMessage);
+      console.error('Template save error:', err);
+      alert('Failed to save template: ' + errorMessage);
+    }
   };
 
-  const handleCreateComputation = () => {
+  const handleCreateComputation = async () => {
     if (!importedData) return;
+    
+    try {
+      // First, save the template if it has been filled out
+      if (newTemplate.name && newTemplate.manufacturer) {
+        console.log('Saving template:', newTemplate);
+        
+        const template = {
+          name: newTemplate.name,
+          description: `${newTemplate.manufacturer} ${newTemplate.model || 'Custom Relay'}`,
+          relay: newTemplate.manufacturer,
+          iedType: `tpl-${newTemplate.name.toLowerCase().replace(/[^a-z0-9]/g, '')}`,
+          functions: []
+        };
+
+        if (newTemplate.differential) template.functions.push('differential');
+        if (newTemplate.distance) template.functions.push('distance');
+        if (newTemplate.breakerFailure) template.functions.push('breaker_failure');
+
+        console.log('Template payload:', template);
+
+        const response = await fetch(`/api/workspaces/${workspaceId}/templates`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(template),
+        });
+
+        const result = await response.json();
+        console.log('Template save response:', result);
+
+        if (!response.ok) {
+          console.error('Failed to save template:', result);
+          alert('Failed to save template: ' + (result.error || 'Unknown error'));
+          return;
+        } else {
+          console.log('Template saved successfully:', result);
+          alert('Template saved successfully! Redirecting to computation page...');
+        }
+      }
+    } catch (err) {
+      console.error('Template save failed:', err);
+      alert('Template save failed: ' + (err instanceof Error ? err.message : 'Unknown error'));
+      return;
+    }
     
     // Navigate to CT computation page with pre-filled data
     const queryParams = new URLSearchParams({
@@ -343,14 +440,70 @@ export default function RelayTemplatesPage() {
           {importedData && (
             <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
               <h4 className="font-semibold text-green-800 mb-2">✅ Excel Data Extracted Successfully!</h4>
+              
+              {/* Show detected devices */}
+              {importedData?.detected_devices && importedData.detected_devices.length > 0 && (
+                <div className="mb-3">
+                  <h5 className="font-medium text-green-700 mb-2">Detected Devices ({importedData.detected_devices.length}):</h5>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    {importedData.detected_devices.map((device: any, index: number) => (
+                      <div key={index} className="bg-white p-2 rounded border">
+                        <div className="font-medium">{device.name}</div>
+                        <div className="text-xs text-gray-600">{device.protection_type}</div>
+                        <div className="text-xs text-blue-600">
+                          {device.functions.join(', ')}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              {/* Show extracted parameters */}
               <div className="grid grid-cols-2 gap-2 text-sm text-green-700 mb-3">
-                <div>CT Ratio: {importedData.ct_ratio_primary}/{importedData.ct_ratio_secondary}</div>
-                <div>Accuracy: {importedData.accuracy_class}</div>
-                <div>Vk Available: {importedData.vk_available}V</div>
-                <div>Bus Voltage: {importedData.bus_voltage_kv}kV</div>
-                <div>Fault Level: {importedData.max_bus_fault_mva}MVA</div>
-                <div>Relay: {importedData.relay_type || 'Custom'}</div>
+                <div>CT Ratio: {importedData?.ct_ratio_primary || 'N/A'}/{importedData?.ct_ratio_secondary || 'N/A'}</div>
+                <div>Accuracy: {importedData?.accuracy_class || 'N/A'}</div>
+                <div>Vk Available: {importedData?.vk_available || 'N/A'}V</div>
+                <div>Bus Voltage: {importedData?.bus_voltage_kv || 'N/A'}kV</div>
+                <div>Fault Level: {importedData?.max_bus_fault_mva || 'N/A'}MVA</div>
+                <div>Primary Relay: {importedData?.relay_type || 'Custom'}</div>
               </div>
+              
+              {/* Device Selection for Template Creation */}
+              {importedData?.detected_devices && importedData.detected_devices.length > 1 && (
+                <div className="mb-3">
+                  <label className="block text-sm font-medium text-green-700 mb-1">
+                    Select Device for Template:
+                  </label>
+                  <select 
+                    className="w-full p-2 border border-green-300 rounded text-sm"
+                    value={newTemplate.name}
+                    onChange={(e) => {
+                      const selectedDevice = importedData.detected_devices?.find((d: any) => d.type === e.target.value);
+                      if (selectedDevice) {
+                        setNewTemplate({
+                          ...newTemplate,
+                          name: selectedDevice.type,
+                          manufacturer: selectedDevice.name.includes('ABB') ? 'ABB' : 
+                                      selectedDevice.name.includes('SEL') ? 'SEL' : 'ABB',
+                          model: selectedDevice.name,
+                          differential: selectedDevice.functions.includes('differential'),
+                          distance: selectedDevice.functions.includes('distance'),
+                          breakerFailure: selectedDevice.functions.includes('breaker_failure'),
+                        });
+                      }
+                    }}
+                  >
+                    <option value="">Choose a device...</option>
+                    {importedData.detected_devices.map((device: any, index: number) => (
+                      <option key={index} value={device.type}>
+                        {device.name} - {device.protection_type}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              
               <div className="flex gap-2">
                 <Button onClick={handleCreateComputation} className="flex-1" variant="default">
                   <CheckCircle2 className="h-4 w-4 mr-2" />

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -98,6 +98,7 @@ export default function NewComputationPage() {
   const [lastSheet2, setLastSheet2] = useState<Sheet2>(DEFAULT_SHEET2);
   const [iedName, setIedName] = useState('');
   const [importedFromExcel, setImportedFromExcel] = useState(false);
+  const processedImportRef = useRef<string | null>(null);
 
   useEffect(() => {
     console.log('Fetching templates for workspace:', workspaceId);
@@ -129,10 +130,18 @@ export default function NewComputationPage() {
     const importedParam = searchParams?.get('imported');
     const dataParam = searchParams?.get('data');
     
-    if (importedParam === 'true' && dataParam) {
+    if (importedParam === 'true' && dataParam && templates.length > 0) {
+      // Prevent processing the same data multiple times
+      if (processedImportRef.current === dataParam) {
+        return;
+      }
+      
       try {
         const importedData = JSON.parse(decodeURIComponent(dataParam));
         console.log('Imported Excel data:', importedData);
+        
+        // Mark this data as processed
+        processedImportRef.current = dataParam;
         
         // Fill Sheet 1 data
         setSheet1({
@@ -162,21 +171,19 @@ export default function NewComputationPage() {
         setIedName(`${importedData.relay_type || 'Imported'} (from Excel)`);
         
         // Auto-select matching template based on relay type
-        if (templates.length > 0) {
-          const relayTypeMapping: Record<string, string> = {
-            'RED670': 'tpl-red670',
-            'REB670': 'tpl-reb670',
-            'REF615': 'tpl-ref615',
-            'REL670': 'tpl-rel670',
-            'REQ650': 'tpl-req650'
-          };
-          
-          const targetTemplate = relayTypeMapping[importedData.relay_type];
-          if (targetTemplate) {
-            const matchingTemplate = templates.find(t => t.iedType === targetTemplate);
-            if (matchingTemplate) {
-              setSelectedTemplate(matchingTemplate);
-            }
+        const relayTypeMapping: Record<string, string> = {
+          'RED670': 'tpl-red670',
+          'REB670': 'tpl-reb670',
+          'REF615': 'tpl-ref615',
+          'REL670': 'tpl-rel670',
+          'REQ650': 'tpl-req650'
+        };
+        
+        const targetTemplate = relayTypeMapping[importedData.relay_type];
+        if (targetTemplate) {
+          const matchingTemplate = templates.find(t => t.iedType === targetTemplate);
+          if (matchingTemplate) {
+            setSelectedTemplate(matchingTemplate);
           }
         }
         
@@ -185,7 +192,7 @@ export default function NewComputationPage() {
         setError('Failed to load imported Excel data');
       }
     }
-  }, [searchParams, templates]);
+  }, [searchParams, templates.length]); // Use templates.length instead of templates object
 
   // Pre-fill CT data from IED if iedId is provided
   useEffect(() => {
@@ -218,7 +225,7 @@ export default function NewComputationPage() {
           }
         }
       });
-  }, [iedId, workspaceId, templates]);
+  }, [iedId, workspaceId, templates.length]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

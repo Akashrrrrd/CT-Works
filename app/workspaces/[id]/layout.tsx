@@ -45,12 +45,25 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
   const [loading,   setLoading]   = useState(true);
   const [workspace, setWorkspace] = useState<WorkspaceData | null>(null);
   const [user,      setUser]      = useState<UserData | null>(null);
+  const [pendingApprovals, setPendingApprovals] = useState(0);
 
   useEffect(() => {
-    fetch(`/api/workspaces/${workspaceId}`)
-      .then(r => r.json())
-      .then(d => { if (d.workspace) { setWorkspace(d.workspace); setUser(d.user); } })
-      .catch(console.error)
+    Promise.all([
+      fetch(`/api/workspaces/${workspaceId}`),
+      fetch(`/api/workspaces/${workspaceId}/approvals`)
+    ]).then(([workspaceRes, approvalsRes]) => Promise.all([
+      workspaceRes.json(),
+      approvalsRes.json()
+    ])).then(([workspaceData, approvalsData]) => {
+      if (workspaceData.workspace) { 
+        setWorkspace(workspaceData.workspace); 
+        setUser(workspaceData.user); 
+      }
+      if (Array.isArray(approvalsData)) {
+        const pending = approvalsData.filter(a => a.status === 'PENDING').length;
+        setPendingApprovals(pending);
+      }
+    }).catch(console.error)
       .finally(() => setLoading(false));
   }, [workspaceId]);
 
@@ -59,21 +72,106 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
     router.push('/auth/login');
   };
 
-  // Build nav based on role
+  // Build nav based on role with real-time status indicators
   const allLinks = [
-    { href: `/workspaces/${workspaceId}`,               label: 'Overview',       icon: <Home className="h-4 w-4" />,          roles: ['ENGINEER','ADMIN','MANAGER'] },
-    { href: `/workspaces/${workspaceId}/substations`,   label: 'Substations',    icon: <Building2 className="h-4 w-4" />,     roles: ['ENGINEER','ADMIN','MANAGER'] },
-    { href: `/workspaces/${workspaceId}/analysis`,      label: 'Full Analysis',  icon: <Cpu className="h-4 w-4" />,           roles: ['ENGINEER','ADMIN','MANAGER'] },
-    { href: `/workspaces/${workspaceId}/computations`,  label: 'CT Checks',      icon: <Calculator className="h-4 w-4" />,    roles: ['ENGINEER','ADMIN','MANAGER'] },
-    { href: `/workspaces/${workspaceId}/vt-check`,      label: 'VT Check',       icon: <Activity className="h-4 w-4" />,      roles: ['ENGINEER','ADMIN','MANAGER'] },
-    { href: `/workspaces/${workspaceId}/templates`,     label: 'IED Templates',  icon: <FileText className="h-4 w-4" />,      roles: ['ENGINEER','ADMIN','MANAGER'] },
-    { href: `/workspaces/${workspaceId}/relay-templates`, label: 'Relay Templates', icon: <Upload className="h-4 w-4" />,     roles: ['ENGINEER','ADMIN','MANAGER'] },
-    { href: `/workspaces/${workspaceId}/relay-formulas`,label: 'Relay Formulas', icon: <FlaskConical className="h-4 w-4" />,  roles: ['ENGINEER','ADMIN','MANAGER'] },
-    { href: `/workspaces/${workspaceId}/compare`,       label: 'Compare',        icon: <GitCompare className="h-4 w-4" />,    roles: ['ENGINEER','ADMIN','MANAGER'] },
-    { href: `/workspaces/${workspaceId}/analytics`,     label: 'Analytics',      icon: <TrendingUp className="h-4 w-4" />,    roles: ['ADMIN','MANAGER'] },
-    { href: `/workspaces/${workspaceId}/approvals`,     label: 'Approvals',      icon: <CheckSquare className="h-4 w-4" />,   roles: ['ADMIN','MANAGER'] },
-    { href: `/workspaces/${workspaceId}/audit`,         label: 'Audit Logs',     icon: <BookOpen className="h-4 w-4" />,      roles: ['MANAGER'] },
-    { href: `/workspaces/${workspaceId}/settings`,      label: 'Settings',       icon: <Settings className="h-4 w-4" />,      roles: ['ADMIN','MANAGER'] },
+    { 
+      href: `/workspaces/${workspaceId}`, 
+      label: 'Overview', 
+      icon: <Home className="h-4 w-4" />, 
+      roles: ['ENGINEER','ADMIN','MANAGER'],
+      badge: null
+    },
+    { 
+      href: `/workspaces/${workspaceId}/substations`, 
+      label: 'Substations', 
+      icon: <Building2 className="h-4 w-4" />, 
+      roles: ['ENGINEER','ADMIN','MANAGER'],
+      badge: null
+    },
+    { 
+      href: `/workspaces/${workspaceId}/analysis`, 
+      label: 'Full Analysis', 
+      icon: <Cpu className="h-4 w-4" />, 
+      roles: ['ENGINEER','ADMIN','MANAGER'],
+      badge: null
+    },
+    { 
+      href: `/workspaces/${workspaceId}/computations`, 
+      label: 'CT Checks', 
+      icon: <Calculator className="h-4 w-4" />, 
+      roles: ['ENGINEER','ADMIN','MANAGER'],
+      badge: null
+    },
+    { 
+      href: `/workspaces/${workspaceId}/vt-check`, 
+      label: 'VT Check', 
+      icon: <Activity className="h-4 w-4" />, 
+      roles: ['ENGINEER','ADMIN','MANAGER'],
+      badge: null
+    },
+    { 
+      href: `/workspaces/${workspaceId}/templates`, 
+      label: 'IED Templates', 
+      icon: <FileText className="h-4 w-4" />, 
+      roles: ['ENGINEER','ADMIN','MANAGER'],
+      badge: null
+    },
+    { 
+      href: `/workspaces/${workspaceId}/relay-templates`, 
+      label: 'Relay Templates', 
+      icon: <Upload className="h-4 w-4" />, 
+      roles: ['ENGINEER','ADMIN','MANAGER'],
+      badge: null
+    },
+    { 
+      href: `/workspaces/${workspaceId}/relay-formulas`, 
+      label: 'Relay Formulas', 
+      icon: <FlaskConical className="h-4 w-4" />, 
+      roles: ['ENGINEER','ADMIN','MANAGER'],
+      badge: null
+    },
+    { 
+      href: `/workspaces/${workspaceId}/compare`, 
+      label: 'Compare', 
+      icon: <GitCompare className="h-4 w-4" />, 
+      roles: ['ENGINEER','ADMIN','MANAGER'],
+      badge: null
+    },
+    { 
+      href: `/workspaces/${workspaceId}/activity`, 
+      label: 'Activity Log', 
+      icon: <TrendingUp className="h-4 w-4" />, 
+      roles: ['ENGINEER','ADMIN','MANAGER'],
+      badge: null
+    },
+    { 
+      href: `/workspaces/${workspaceId}/analytics`, 
+      label: 'Analytics', 
+      icon: <BarChart3 className="h-4 w-4" />, 
+      roles: ['ADMIN','MANAGER'],
+      badge: null
+    },
+    { 
+      href: `/workspaces/${workspaceId}/approvals`, 
+      label: 'Approvals', 
+      icon: <CheckSquare className="h-4 w-4" />, 
+      roles: ['ADMIN','MANAGER'],
+      badge: 'pending' // Will show pending count
+    },
+    { 
+      href: `/workspaces/${workspaceId}/audit`, 
+      label: 'Audit Logs', 
+      icon: <BookOpen className="h-4 w-4" />, 
+      roles: ['MANAGER'],
+      badge: null
+    },
+    { 
+      href: `/workspaces/${workspaceId}/settings`, 
+      label: 'Settings', 
+      icon: <Settings className="h-4 w-4" />, 
+      roles: ['ADMIN','MANAGER'],
+      badge: null
+    },
   ];
 
   const visibleLinks = user
@@ -82,7 +180,7 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
 
   const NavItems = () => (
     <>
-      {visibleLinks.map(({ href, label, icon }) => {
+      {visibleLinks.map(({ href, label, icon, badge }) => {
         const isActive = href === `/workspaces/${workspaceId}`
           ? pathname === href
           : pathname.startsWith(href);
@@ -92,7 +190,13 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
               variant={isActive ? 'secondary' : 'ghost'}
               className={`w-full justify-start gap-2 ${isActive ? 'font-semibold' : ''}`}
             >
-              {icon}{label}
+              {icon}
+              <span className="flex-1 text-left">{label}</span>
+              {badge === 'pending' && pendingApprovals > 0 && (
+                <Badge variant="destructive" className="ml-auto text-xs">
+                  {pendingApprovals}
+                </Badge>
+              )}
             </Button>
           </Link>
         );
@@ -102,16 +206,14 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
-        <div className="grid grid-cols-12 h-screen">
-          <div className="col-span-3 border-r border-border p-6 hidden lg:block space-y-4">
-            {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
-          </div>
-          <div className="col-span-12 lg:col-span-9">
-            <Skeleton className="h-16 w-full" />
-            <div className="p-6 space-y-4">
-              {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-24 w-full" />)}
-            </div>
+      <div className="min-h-screen bg-background flex">
+        <div className="hidden lg:block w-64 border-r border-border p-6 space-y-4">
+          {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
+        </div>
+        <div className="flex-1">
+          <Skeleton className="h-16 w-full" />
+          <div className="p-6 space-y-4">
+            {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-24 w-full" />)}
           </div>
         </div>
       </div>
@@ -121,9 +223,9 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
   const roleMeta = user ? ROLE_META[user.role] : null;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex">
       {/* Sidebar — Desktop */}
-      <aside className="hidden lg:flex fixed left-0 top-0 w-64 h-screen bg-sidebar border-r border-sidebar-border p-6 flex-col">
+      <aside className="hidden lg:flex w-64 h-screen bg-sidebar border-r border-sidebar-border p-6 flex-col fixed left-0 top-0 z-50">
         <Link href="/dashboard" className="flex items-center gap-2 mb-8">
           <Zap className="h-6 w-6 text-sidebar-primary" />
           <span className="font-bold text-lg">CT Adequacy</span>
@@ -193,31 +295,33 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
       </div>
 
       {/* Main Content */}
-      <main className="lg:ml-64 lg:pt-0 pt-20">
-        <div className="bg-card border-b border-border px-6 py-4 flex justify-between items-center sticky top-20 lg:top-0 z-30">
-          <div>
-            <h1 className="text-xl font-bold">{workspace?.name}</h1>
-            <p className="text-xs text-muted-foreground">{workspace?.organization?.name}</p>
+      <div className="flex-1 lg:ml-64">
+        <main className="min-h-screen lg:pt-0 pt-20">
+          <div className="bg-card border-b border-border px-6 py-4 flex justify-between items-center sticky top-20 lg:top-0 z-30">
+            <div>
+              <h1 className="text-xl font-bold">{workspace?.name}</h1>
+              <p className="text-xs text-muted-foreground">{workspace?.organization?.name}</p>
+            </div>
+            <div className="hidden md:flex items-center gap-2">
+              <ThemeToggle />
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-2">
+                    {roleMeta && <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded border ${roleMeta.color}`}>{roleMeta.icon}{roleMeta.label}</span>}
+                    {user?.name}
+                    <ChevronDown className="h-3 w-3" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem disabled><span className="text-xs">{user?.email}</span></DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleLogout}><LogOut className="h-4 w-4 mr-2" />Logout</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
-          <div className="hidden md:flex items-center gap-2">
-            <ThemeToggle />
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-2">
-                  {roleMeta && <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded border ${roleMeta.color}`}>{roleMeta.icon}{roleMeta.label}</span>}
-                  {user?.name}
-                  <ChevronDown className="h-3 w-3" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem disabled><span className="text-xs">{user?.email}</span></DropdownMenuItem>
-                <DropdownMenuItem onClick={handleLogout}><LogOut className="h-4 w-4 mr-2" />Logout</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </div>
-        <div className="p-6">{children}</div>
-      </main>
+          <div className="p-6 w-full max-w-none">{children}</div>
+        </main>
+      </div>
     </div>
   );
 }

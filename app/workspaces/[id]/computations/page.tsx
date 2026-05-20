@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, CheckCircle, AlertTriangle, Download, Search, Clock, ShieldCheck, XCircle } from 'lucide-react';
+import { Plus, CheckCircle, AlertTriangle, Download, Search, Clock, ShieldCheck, XCircle, Upload } from 'lucide-react';
 
 interface Computation {
   id: string; templateId: string; templateName: string;
@@ -80,9 +80,20 @@ export default function ComputationsPage() {
           <h2 className="text-2xl font-bold">Computations</h2>
           <p className="text-sm text-muted-foreground">{computations.length} total · {computations.filter(c => c.verdict === 'SUITABLY DIMENSIONED').length} suitable</p>
         </div>
-        <Link href={`/workspaces/${workspaceId}/computations/new`}>
-          <Button className="gap-2"><Plus className="h-4 w-4" />New Check</Button>
-        </Link>
+        <div className="flex gap-2">
+          <Link href={`/workspaces/${workspaceId}/import-excel`}>
+            <Button variant="outline" className="gap-2">
+              <Upload className="h-4 w-4" />
+              Import Excel
+            </Button>
+          </Link>
+          <Link href={`/workspaces/${workspaceId}/computations/new`}>
+            <Button className="gap-2">
+              <Plus className="h-4 w-4" />
+              New Check
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Filters */}

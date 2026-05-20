@@ -24,34 +24,34 @@ const ROLE_META: Record<UserRole, { label: string; icon: React.ReactNode; color:
     label: 'Engineer',
     icon: <HardHat className="h-4 w-4" />,
     color: 'bg-blue-500/15 text-blue-400 border-blue-500/30',
-    hint: 'You can create CT adequacy computations and submit them for review.',
+    hint: 'Import Excel files to extract CT data and create adequacy computations automatically.',
   },
   ADMIN: {
     label: 'Admin / Team Lead',
     icon: <ShieldCheck className="h-4 w-4" />,
     color: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
-    hint: 'You can review, approve or reject computations and manage IED templates.',
+    hint: 'Import Excel data, review computations, and manage relay templates with approval workflows.',
   },
   MANAGER: {
     label: 'Manager',
     icon: <BarChart3 className="h-4 w-4" />,
     color: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
-    hint: 'You have full read access, can export PDF reports and view audit logs.',
+    hint: 'Access Excel import features, view all computations, and export comprehensive PDF reports.',
   },
 };
 
 const ROLE_QUICK_ACTIONS: Record<UserRole, { label: string; icon: React.ReactNode; href: (id: string) => string }[]> = {
   ENGINEER: [
+    { label: 'Import Excel Data', icon: <FileText className="h-4 w-4" />, href: id => `/workspaces/${id}/relay-templates` },
     { label: 'New Computation', icon: <Calculator className="h-4 w-4" />, href: id => `/workspaces/${id}/computations/new` },
-    { label: 'IED Templates',   icon: <FileText className="h-4 w-4" />,   href: id => `/workspaces/${id}/templates` },
   ],
   ADMIN: [
+    { label: 'Import Excel Data', icon: <FileText className="h-4 w-4" />, href: id => `/workspaces/${id}/relay-templates` },
     { label: 'Pending Approvals', icon: <CheckSquare className="h-4 w-4" />, href: id => `/workspaces/${id}/approvals` },
-    { label: 'IED Templates',     icon: <FileText className="h-4 w-4" />,    href: id => `/workspaces/${id}/templates` },
   ],
   MANAGER: [
+    { label: 'Import Excel Data', icon: <FileText className="h-4 w-4" />, href: id => `/workspaces/${id}/relay-templates` },
     { label: 'All Computations', icon: <Calculator className="h-4 w-4" />, href: id => `/workspaces/${id}/computations` },
-    { label: 'Audit Logs',       icon: <BookOpen className="h-4 w-4" />,   href: id => `/workspaces/${id}/audit` },
   ],
 };
 

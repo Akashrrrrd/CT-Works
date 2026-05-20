@@ -75,3 +75,77 @@ export async function GET(
     return NextResponse.json({ error: 'Failed to load templates' }, { status: 500 });
   }
 }
+
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+
+    // Auth check
+    const token = request.cookies.get('auth-token')?.value;
+    if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const currentUser = await verifyJWT(token);
+    if (!currentUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    const body = await request.json();
+    const { name, description, relay, iedType, functions } = body;
+
+    if (!name || !iedType) {
+      return NextResponse.json({ error: 'Name and iedType are required' }, { status: 400 });
+    }
+
+    // Convert workspace ID to ObjectId
+    let wsObjectId: ObjectId;
+    try {
+      wsObjectId = new ObjectId(id);
+    } catch {
+      return NextResponse.json({ error: 'Invalid workspace id' }, { status: 400 });
+    }
+
+    // Create the template document
+    const template = {
+      name,
+      description: description || '',
+      iedType,
+      relay: relay || '',
+      functions: functions || [],
+      workspaceId: wsObjectId,
+      createdAt: new Date(),
+      createdBy: currentUser.id,
+      inputSchema: {
+        type: 'object',
+        properties: {
+          sheet1: { type: 'object' },
+          sheet2: { type: 'object' }
+        }
+      }
+    };
+
+    // Insert into database
+    const templates = await getTemplates();
+    const result = await templates.insertOne(template);
+
+    // Update IED_META for this new template
+    const functionName = functions.join(' + ').toUpperCase() || 'CUSTOM';
+    IED_META[iedType] = { 
+      function: functionName, 
+      relay: relay || 'Custom Relay' 
+    };
+
+    return NextResponse.json({
+      id: result.insertedId.toString(),
+      name: template.name,
+      description: template.description,
+      iedType: template.iedType,
+      function: functionName,
+      relay: template.relay,
+      createdAt: template.createdAt,
+    });
+
+  } catch (error) {
+    console.error('Template creation error:', error);
+    return NextResponse.json({ error: 'Failed to create template' }, { status: 500 });
+  }
+}

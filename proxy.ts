@@ -16,10 +16,10 @@ const ADMIN_ROUTES = [
   /^\/workspaces\/[^/]+\/settings/,
 ];
 
-// Template POST (create) is restricted to ADMIN — checked per-method in middleware
-const ADMIN_POST_ROUTES = [
-  /^\/api\/workspaces\/[^/]+\/templates$/,
-];
+// Template POST (create) - Allow all authenticated users to create templates
+// const ADMIN_POST_ROUTES = [
+//   /^\/api\/workspaces\/[^/]+\/templates$/,
+// ];
 
 // Patterns that require at least MANAGER
 const MANAGER_ROUTES = [
@@ -35,6 +35,7 @@ const PUBLIC_ROUTES = [
   /^\/api\/auth\/logout/,
   /^\/api\/auth\/me/,
   /^\/api\/auth\/refresh/,
+  /^\/api\/debug/, // Allow debug endpoint for testing
 ];
 
 function isPublic(path: string) {
@@ -44,8 +45,8 @@ function isPublic(path: string) {
 function requiredLevel(path: string, method: string): number {
   if (MANAGER_ROUTES.some(r => r.test(path))) return ROLE_LEVEL.MANAGER;
   if (ADMIN_ROUTES.some(r => r.test(path)))   return ROLE_LEVEL.ADMIN;
-  // Template creation restricted to ADMIN, but GET is open to all
-  if (method === 'POST' && ADMIN_POST_ROUTES.some(r => r.test(path))) return ROLE_LEVEL.ADMIN;
+  // Template creation now allowed for all authenticated users
+  // if (method === 'POST' && ADMIN_POST_ROUTES.some(r => r.test(path))) return ROLE_LEVEL.ADMIN;
   return ROLE_LEVEL.ENGINEER;
 }
 

@@ -3,10 +3,10 @@ import { parseExcelCTData } from '@/lib/services/excel-parser';
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const workspaceId = params.id;
+    const { id: workspaceId } = await params;
     
     // Get the uploaded file from FormData
     const formData = await request.formData();

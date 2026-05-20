@@ -1,14 +1,17 @@
 // CT Adequacy Calculation Engine
-// Based on IEC 61869-2 and relay manufacturer application guides
-// (ABB RED670, REL670, REQ650 / SEL-421)
+// Based on IEC 61869-2, IEEE C37.110, and relay manufacturer application guides
+// Supports multiple international standards and enhanced validation
 
 export interface Sheet1Inputs {
   ct_ratio_primary:   number;  // Ipn — A
   ct_ratio_secondary: number;  // Isn — A
-  accuracy_class:     string;  // e.g. PX, 5P20
+  accuracy_class:     string;  // e.g. PX, 5P20, TPX, TPY, TPZ
   rct:                number;  // CT secondary winding resistance — Ω
   vk_available:       number;  // Knee point voltage from datasheet — V
   io_at_vk:           number;  // Magnetising current at Vk — mA
+  ct_type?:           'wound' | 'bar' | 'window';  // CT construction type
+  insulation_level?:  number;  // kV - for validation
+  temperature_rise?:  number;  // °C - for thermal validation
 }
 
 export interface Sheet2Inputs {
@@ -22,6 +25,10 @@ export interface Sheet2Inputs {
   route_length_km:    number;  // Cable route length — km
   relay_burden_va:    number;  // Relay burden Sr — VA (at Isn)
   lead_resistance:    number;  // Total loop lead resistance Rl — Ω
+  standard?:          'IEC' | 'IEEE' | 'ANSI';  // Calculation standard
+  safety_factor?:     number;  // Custom safety factor (default 0.8)
+  ambient_temp?:      number;  // °C - for temperature correction
+  altitude?:          number;  // m - for altitude correction
 }
 
 export interface CTAdequacyResult {
