@@ -144,11 +144,16 @@ export function calculateDeviceCTAdequacy(
 ): DeviceResult {
   const deviceType = detectDeviceType(device.device_name);
 
-  // --- Parse CT parameters from device ---
-  const ctRatioStr = device.ct_ratio || '800/1A';
-  const ctParts = ctRatioStr.replace(/A/gi, '').split('/');
-  const Ipn = ctParts.length === 2 ? parseNum(ctParts[0]) : 800;
-  const Isn = ctParts.length === 2 ? parseNum(ctParts[1]) : 1;
+  // --- Parse CT parameters from device — use EXACTLY what Excel provided ---
+  const ctRatioStr = (device.ct_ratio && device.ct_ratio !== 'N/A') ? device.ct_ratio : null;
+  let Ipn = 0, Isn = 0;
+  if (ctRatioStr) {
+    const ctParts = ctRatioStr.replace(/A$/i, '').split('/');
+    if (ctParts.length === 2) {
+      Ipn = parseNum(ctParts[0]);
+      Isn = parseNum(ctParts[1]);
+    }
+  }
   const Rct = parseNum(device.ct_resistance);
   const Vk  = parseNum(device.vk_knee_point_voltage);
   const Sr  = parseNum(device.burden);
@@ -209,10 +214,33 @@ export function calculateDeviceCTAdequacy(
   const Zseq   = Math.sqrt(Zseq_r ** 2 + Zseq_x ** 2);
   const Ik_z1_1ph = Zseq > 0 ? (3 * Vph) / Zseq : 0;
 
+  // ratio — guard against division by zero if CT ratio wasn't in Excel
+  const ratio = (Ipn > 0 && Isn > 0) ? Isn / Ipn : 0;
+
+  // If critical inputs are missing, return a clear error result
+  if (Ipn === 0 || Isn === 0) {
+    return {
+      device_name:  device.device_name,
+      device_index: deviceIndex,
+      device_type:  deviceType,
+      verdict:      'NOT APPLICABLE',
+      vk_available: Vk,
+      vk_required:  0,
+      ealreq_max:   0,
+      vk_breakdown: [],
+      intermediates: { 'ERROR': `CT Ratio missing or invalid ("${device.ct_ratio}"). Cannot calculate.` },
+      inputs: {
+        ct_ratio_primary: Ipn, ct_ratio_secondary: Isn, accuracy_class: device.accuracy_class || 'N/A',
+        rct: Rct, lead_resistance: 0, relay_burden_va: Sr,
+        frequency: freq, bus_voltage_kv: Vbus, max_bus_fault_kA: Ikmax_kA,
+        r1, x1, r0, x0, route_length_km: routeLen,
+      },
+    };
+  }
+
   // Burden calculation
   const Rb     = Isn > 0 ? Sr / (Isn * Isn) : 0;
   const burden = Rct + Rl + Rb;
-  const ratio  = Ipn > 0 ? Isn / Ipn : 0.00125;
 
   const intermediates: Record<string, number | string> = {
     'CT Ratio (Ipn/Isn)':               `${Ipn}/${Isn}`,
