@@ -1,284 +1,339 @@
-// Browser-only module — always use dynamic import() from client components
-import type { Sheet1Inputs, Sheet2Inputs, CTAdequacyResult } from './ct-adequacy';
+// Browser-only — always use dynamic import() from client components
+import type { DeviceResult, SystemParameters } from './ct-adequacy';
 
+// Legacy types kept for backward compatibility
+import type { Sheet1Inputs, Sheet2Inputs, CTAdequacyResult } from './ct-adequacy';
 export interface ReportData {
-  templateName: string;
-  createdAt:    string;
-  createdBy:    string;
-  sheet1:       Sheet1Inputs;
-  sheet2:       Sheet2Inputs;
-  result:       CTAdequacyResult;
-  // Optional branding / project metadata
-  companyName?:   string;
-  projectName?:   string;
-  contractNo?:    string;
-  substationName?:string;
-  revisionNo?:    string;
+  templateName: string; createdAt: string; createdBy: string;
+  sheet1: Sheet1Inputs; sheet2: Sheet2Inputs; result: CTAdequacyResult;
+  companyName?: string; projectName?: string; contractNo?: string;
+  substationName?: string; revisionNo?: string;
 }
 
+// Safe ASCII encoder for jsPDF
 const safe = (t: string) =>
   String(t)
-    .replace(/≥/g,'>=').replace(/≤/g,'<=').replace(/→/g,'=>').replace(/←/g,'<-')
-    .replace(/×/g,'x').replace(/√/g,'sqrt').replace(/Ω/g,'Ohm')
-    .replace(/⁶/g,'^6').replace(/³/g,'^3').replace(/²/g,'^2')
-    .replace(/—/g,'-').replace(/[^\x00-\xFF]/g,'?');
+    .replace(/≥/g,'>=').replace(/≤/g,'<=').replace(/Ω/g,'Ohm').replace(/×/g,'x')
+    .replace(/√/g,'sqrt').replace(/[^\x00-\xFF]/g,'?');
 
-export async function generatePDFReport(data: ReportData): Promise<void> {
-  const jsPDFModule   = await import('jspdf');
-  const autoTableMod  = await import('jspdf-autotable');
-  const jsPDF         = jsPDFModule.default;
-  const autoTable     = autoTableMod.default;
+// ── helpers ──────────────────────────────────────────────────────────────────
+function colorFor(verdict: DeviceResult['verdict']): [number,number,number] {
+  return verdict === 'SUITABLY DIMENSIONED' ? [22,163,74]
+       : verdict === 'UNDER DIMENSIONED'    ? [220,38,38]
+       : [107,114,128];
+}
+
+// ── Per-device PDF ────────────────────────────────────────────────────────────
+export async function generateDevicePDFReport(
+  result: DeviceResult,
+  sysParams: SystemParameters
+): Promise<void> {
+  const { default: jsPDF }     = await import('jspdf');
+  const { default: autoTable } = await import('jspdf-autotable');
 
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   const W = doc.internal.pageSize.getWidth();
-  const H = doc.internal.pageSize.getHeight();
-  let y = 20;
+  let y = 15;
 
-  // Black and white colors only - matching Hitachi document
-  const BLACK = [0, 0, 0] as [number, number, number];
-  const WHITE = [255, 255, 255] as [number, number, number];
+  const BLACK: [number,number,number] = [0,0,0];
+  const LIGHT_GRAY: [number,number,number] = [245,245,245];
 
-  // Helper functions
-  const txt = (text: string, x: number, yPos: number, options?: { 
-    size?: number; 
-    bold?: boolean; 
-    align?: 'left' | 'center' | 'right' 
-  }) => {
-    doc.setFontSize(options?.size || 10);
-    doc.setFont('helvetica', options?.bold ? 'bold' : 'normal');
-    doc.setTextColor(...BLACK);
-    const alignOptions: any = {};
-    if (options?.align) alignOptions.align = options.align;
-    doc.text(safe(text), x, yPos, alignOptions);
+  const h1 = (text: string, yy: number) => {
+    doc.setFontSize(14); doc.setFont('helvetica','bold'); doc.setTextColor(...BLACK);
+    doc.text(safe(text), 15, yy);
+  };
+  const h2 = (text: string, yy: number) => {
+    doc.setFontSize(11); doc.setFont('helvetica','bold'); doc.setTextColor(...BLACK);
+    doc.text(safe(text), 15, yy);
+  };
+  const body = (text: string, x: number, yy: number, size = 9) => {
+    doc.setFontSize(size); doc.setFont('helvetica','normal'); doc.setTextColor(...BLACK);
+    doc.text(safe(text), x, yy);
   };
 
-  const drawBox = (x: number, yPos: number, width: number, height: number, fill = false) => {
-    doc.setDrawColor(...BLACK);
-    doc.setLineWidth(0.5);
-    if (fill) {
-      doc.setFillColor(...WHITE);
-      doc.rect(x, yPos, width, height, 'FD');
-    } else {
-      doc.rect(x, yPos, width, height);
+  // ── Header ──
+  doc.setFillColor(30,30,30);
+  doc.rect(0, 0, W, 20, 'F');
+  doc.setFontSize(13); doc.setFont('helvetica','bold'); doc.setTextColor(255,255,255);
+  doc.text('CT ADEQUACY ANALYSIS REPORT', 15, 13);
+  doc.setFontSize(8); doc.setFont('helvetica','normal');
+  doc.text(`Generated: ${new Date().toLocaleString()}`, W - 15, 13, { align: 'right' });
+
+  y = 28;
+
+  // ── Device info ──
+  h1(`Device: ${result.device_name}`, y); y += 7;
+  body(`Type: ${result.device_type.replace(/_/g,' ')}   |   Core: ${sysParams ? '' : 'N/A'}`, 15, y); y += 10;
+
+  // ── Verdict banner ──
+  const vc = colorFor(result.verdict);
+  doc.setFillColor(...vc);
+  doc.roundedRect(15, y, W - 30, 18, 3, 3, 'F');
+  doc.setFontSize(13); doc.setFont('helvetica','bold'); doc.setTextColor(255,255,255);
+  doc.text(safe(result.verdict), 20, y + 7);
+  doc.setFontSize(9); doc.setFont('helvetica','normal');
+  doc.text(`Vk Required: ${result.vk_required} V   |   Vk Available: ${result.vk_available > 0 ? result.vk_available + ' V' : 'N/A'}`, 20, y + 14);
+  y += 24;
+
+  // ── CT Input Parameters ──
+  h2('CT Input Parameters', y); y += 6;
+  autoTable(doc, {
+    startY: y,
+    margin: { left: 15, right: 15 },
+    headStyles: { fillColor: [50,50,50], textColor: 255, fontSize: 9 },
+    bodyStyles: { fontSize: 9 },
+    alternateRowStyles: { fillColor: LIGHT_GRAY },
+    head: [['Parameter', 'Value', 'Parameter', 'Value']],
+    body: [
+      ['CT Ratio', `${result.inputs.ct_ratio_primary}/${result.inputs.ct_ratio_secondary} A`,
+       'Accuracy Class', result.inputs.accuracy_class],
+      ['CT Resistance (Rct)', `${result.inputs.rct} Ohm`,
+       'Lead Resistance (Rl)', `${result.inputs.lead_resistance} Ohm`],
+      ['Relay Burden (Sr)', `${result.inputs.relay_burden_va} VA`,
+       'Bus Voltage', `${result.inputs.bus_voltage_kv} kV`],
+      ['Bus Fault Level', `${result.inputs.max_bus_fault_kA} kA`,
+       'Route Length', `${result.inputs.route_length_km} km`],
+      ['R1', `${result.inputs.r1} Ohm/km`,
+       'X1', `${result.inputs.x1} Ohm/km`],
+      ['R0', `${result.inputs.r0} Ohm/km`,
+       'X0', `${result.inputs.x0} Ohm/km`],
+    ],
+  });
+  y = (doc as any).lastAutoTable.finalY + 8;
+
+  // ── System Parameters ──
+  if (sysParams) {
+    h2('System Parameters (17 Standard Inputs)', y); y += 6;
+    const sysPairs = Object.entries(sysParams)
+      .filter(([,v]) => v && v !== 'N/A')
+      .map(([k, v]) => [k.replace(/_/g,' '), String(v)]);
+    const sysRows: string[][] = [];
+    for (let i = 0; i < sysPairs.length; i += 2) {
+      sysRows.push([
+        ...(sysPairs[i]   ?? ['','']),
+        ...(sysPairs[i+1] ?? ['','']),
+      ]);
     }
-  };
+    autoTable(doc, {
+      startY: y,
+      margin: { left: 15, right: 15 },
+      headStyles: { fillColor: [70,130,180], textColor: 255, fontSize: 9 },
+      bodyStyles: { fontSize: 8 },
+      alternateRowStyles: { fillColor: LIGHT_GRAY },
+      head: [['Parameter', 'Value', 'Parameter', 'Value']],
+      body: sysRows,
+    });
+    y = (doc as any).lastAutoTable.finalY + 8;
+  }
 
-  // Calculate values from the adequacy result
-  const burden = +(data.sheet1.rct + data.sheet2.lead_resistance + 
-    data.sheet2.relay_burden_va / (data.sheet1.ct_ratio_secondary ** 2)).toFixed(4);
-  const ikmax = +(data.result.intermediates['Ikmax (A)'] || 0);
-  const verdict = data.result.verdict === 'SUITABLY DIMENSIONED' ? 'SUITABLY DIMENSIONED' : 'UNDER DIMENSIONED';
+  // ── Calculation Breakdown ──
+  h2('Calculation Breakdown (per fault condition)', y); y += 6;
+  autoTable(doc, {
+    startY: y,
+    margin: { left: 15, right: 15 },
+    headStyles: { fillColor: [50,50,50], textColor: 255, fontSize: 9 },
+    bodyStyles: { fontSize: 8 },
+    alternateRowStyles: { fillColor: LIGHT_GRAY },
+    head: [['Fault Condition', 'Formula Used', 'Ealreq (V)', 'Vk Req (V)', '']],
+    body: result.vk_breakdown.map(row => [
+      row.label,
+      row.formula,
+      row.ealreq.toString(),
+      row.vk.toString(),
+      row.isMax ? 'MAX' : '',
+    ]),
+    didParseCell: (data: any) => {
+      if (data.column.index === 4 && data.cell.raw === 'MAX') {
+        data.cell.styles.fillColor = [255,251,204];
+        data.cell.styles.fontStyle = 'bold';
+      }
+    },
+  });
+  y = (doc as any).lastAutoTable.finalY + 8;
 
-  // ═══ HEADER SECTION - Exact Hitachi Format ═══
-  
-  // Company box (top left)
-  drawBox(15, 15, 50, 25, true);
-  txt('HITACHI', 40, 30, { size: 12, bold: true, align: 'center' });
-
-  // CT/VT Adequacy Check title (top center)
-  drawBox(70, 15, 80, 25, true);
-  txt('CT / VT', 110, 25, { size: 10, bold: true, align: 'center' });
-  txt('ADEQUACY CHECK', 110, 32, { size: 10, bold: true, align: 'center' });
-
-  // Contract details (top right)
-  drawBox(155, 15, 40, 25, true);
-  txt('Contract No.', 160, 22, { size: 8 });
-  txt('N-19957.1-DF5W', 160, 27, { size: 8 });
-  txt('Date', 160, 32, { size: 8 });
-  txt(new Date().toLocaleDateString(), 160, 37, { size: 8 });
-
-  // Project details row
-  y = 45;
-  drawBox(15, y, 50, 15, true);
-  txt('Prep. By', 18, y + 5, { size: 8 });
-  txt('AP', 18, y + 10, { size: 8, bold: true });
-
-  drawBox(70, y, 80, 15, true);
-  txt('33kV DF5W SS', 110, y + 5, { size: 10, bold: true, align: 'center' });
-  txt('Parameters & Fault Calculations', 110, y + 10, { size: 8, align: 'center' });
-
-  drawBox(155, y, 40, 15, true);
-  txt('Document No.', 160, y + 5, { size: 8 });
-  txt('A', 160, y + 10, { size: 8, bold: true });
-  txt('Revision No.', 160, y + 12, { size: 8 });
-
-  // Substation details
-  y = 65;
-  drawBox(15, y, 180, 10, true);
-  txt('33kV CABLE FEEDERS', 105, y + 7, { size: 10, bold: true, align: 'center' });
-
-  // ═══ CT DATA TABLE - Exact Hitachi Layout ═══
-  y = 85;
-  
-  // Table headers
-  drawBox(15, y, 30, 8, true);
-  txt('T1', 30, y + 6, { size: 9, bold: true, align: 'center' });
-  
-  drawBox(45, y, 25, 8, true);
-  txt('Conn', 57.5, y + 6, { size: 9, bold: true, align: 'center' });
-  
-  drawBox(70, y, 35, 8, true);
-  txt('(Diff + Dist)', 87.5, y + 6, { size: 8, align: 'center' });
-  
-  drawBox(105, y, 40, 8, true);
-  txt('Connected devices:', 125, y + 6, { size: 8, align: 'center' });
-  
-  drawBox(145, y, 25, 8, true);
-  txt(data.templateName.includes('REQ650') ? 'REQ650' : 'REQ650', 157.5, y + 6, { size: 9, bold: true, align: 'center' });
-
-  // Second row
-  y += 8;
-  drawBox(45, y, 25, 8, true);
-  txt('Tab-2', 57.5, y + 6, { size: 8, align: 'center' });
-  
-  drawBox(70, y, 35, 8, true);
-  txt('Tab-3', 87.5, y + 6, { size: 8, align: 'center' });
-
-  // CT Parameters Section
-  y += 20;
-  
-  // CT Ratio
-  txt('CT Ratio:', 20, y, { size: 9 });
-  drawBox(50, y - 4, 25, 8, true);
-  txt(data.sheet1.ct_ratio_primary.toString(), 62.5, y, { size: 9, align: 'center' });
-  txt(':', 75, y, { size: 9 });
-  drawBox(80, y - 4, 15, 8, true);
-  txt('1', 87.5, y, { size: 9, align: 'center' });
-  txt('A', 100, y, { size: 9 });
-
-  y += 12;
-  
-  // Class of Accuracy
-  txt('Class of Accuracy:', 20, y, { size: 9 });
-  drawBox(70, y - 4, 20, 8, true);
-  txt(data.sheet1.accuracy_class, 80, y, { size: 9, align: 'center' });
-
-  y += 12;
-  
-  // CT Resistance
-  txt('CT Resistance:', 20, y, { size: 9 });
-  txt('Rct =', 70, y, { size: 9 });
-  drawBox(85, y - 4, 20, 8, true);
-  txt(data.sheet1.rct.toString(), 95, y, { size: 9, align: 'center' });
-  txt('Ohm', 110, y, { size: 9 });
-
-  y += 12;
-  
-  // Knee Point Voltage
-  txt('Knee Point Voltage:', 20, y, { size: 9 });
-  txt('Vk =', 70, y, { size: 9 });
-  drawBox(85, y - 4, 20, 8, true);
-  txt(data.sheet1.vk_available.toString(), 95, y, { size: 9, align: 'center' });
-  txt('V', 110, y, { size: 9 });
-
-  y += 12;
-  
-  // Magnetizing Current
-  txt('Magnetizing Current:', 20, y, { size: 9 });
-  txt('Io =', 70, y, { size: 9 });
-  drawBox(85, y - 4, 20, 8, true);
-  txt(data.sheet1.io_at_vk.toString(), 95, y, { size: 9, align: 'center' });
-  txt('mA at Vk', 110, y, { size: 9 });
-
-  // ═══ OTHER BURDENS SECTION ═══
-  y += 20;
-  txt('Other Burdens on same CT core:', 20, y, { size: 9, bold: true });
-
-  y += 10;
-  
-  // Burden table - exact format from Hitachi document
-  const burdenRows = [
-    ['Burden of REQ650', 'Sr', '=', data.sheet2.relay_burden_va.toFixed(2), 'VA'],
-    ['Burden of', '', '=', '', 'VA'],
-    ['Burden of', '', '=', '', 'VA'],
-    ['Total lead burden:', '', '=', data.sheet2.lead_resistance.toString(), 'VA'],
-    ['Total load + Other burden:', 'St', '=', burden.toString(), 'VA']
-  ];
-
-  burdenRows.forEach((row, i) => {
-    y += 8;
-    txt(row[0], 20, y, { size: 8 });
-    txt(row[1], 90, y, { size: 8 });
-    txt(row[2], 105, y, { size: 8 });
-    drawBox(115, y - 4, 25, 6, true);
-    txt(row[3], 127.5, y, { size: 8, align: 'center' });
-    txt(row[4], 145, y, { size: 8 });
+  // ── Intermediates ──
+  if (y > 240) { doc.addPage(); y = 15; }
+  h2('Intermediate Calculation Values', y); y += 6;
+  const intPairs = Object.entries(result.intermediates).map(([k, v]) => [k, String(v)]);
+  const intRows: string[][] = [];
+  for (let i = 0; i < intPairs.length; i += 2) {
+    intRows.push([
+      ...(intPairs[i]   ?? ['','']),
+      ...(intPairs[i+1] ?? ['','']),
+    ]);
+  }
+  autoTable(doc, {
+    startY: y,
+    margin: { left: 15, right: 15 },
+    headStyles: { fillColor: [80,80,80], textColor: 255, fontSize: 9 },
+    bodyStyles: { fontSize: 8 },
+    alternateRowStyles: { fillColor: LIGHT_GRAY },
+    head: [['Parameter', 'Value', 'Parameter', 'Value']],
+    body: intRows,
   });
 
-  // Load + Other resistance calculation (right side)
-  const rightY = y - 32;
-  txt('Load + Other resistance connected', 120, rightY, { size: 8 });
-  txt('Rl = Sr / ( Isn x Isn )', 120, rightY + 8, { size: 8 });
-  txt('= 0.47 ( 1 x 1 )', 120, rightY + 16, { size: 8 });
-  txt('= 0.47 Ohm', 120, rightY + 24, { size: 8 });
+  const fname = safe(result.device_name).replace(/[^a-z0-9]/gi,'_').toLowerCase();
+  doc.save(`ct_adequacy_${fname}.pdf`);
+}
 
-  // ═══ CT ADEQUACY CHECK SECTION ═══
-  y += 20;
-  txt('A. CT ADEQUACY CHECK FOR DIFFERENTIAL FUNCTION:', 20, y, { size: 10, bold: true });
+// ── Consolidated PDF (all devices) ───────────────────────────────────────────
+export async function generateConsolidatedPDFReport(
+  results: DeviceResult[],
+  sysParams: SystemParameters
+): Promise<void> {
+  const { default: jsPDF }     = await import('jspdf');
+  const { default: autoTable } = await import('jspdf-autotable');
 
-  y += 10;
-  txt('The CT adequacy limiting term (Eal) should meet the following requirements as per Relay manufacturer', 20, y, { size: 9 });
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+  const W = doc.internal.pageSize.getWidth();
+  const BLACK: [number,number,number] = [0,0,0];
+  const LIGHT_GRAY: [number,number,number] = [245,245,245];
+  let y = 15;
 
-  y += 15;
-  
-  // Close-in faults calculation
-  txt('For Close-in faults:', 20, y, { size: 9 });
-  txt('Isn', 100, y, { size: 9 });
-  txt('Sr', 120, y, { size: 9 });
-  y += 8;
-  txt('Ealreq = Ikmax x', 20, y, { size: 9 });
-  txt('x ( Rct + Rl + )', 80, y, { size: 9 });
-  txt('(1)', 180, y, { size: 9 });
-  
-  // Subscripts
-  doc.setFontSize(7);
-  txt('Ipn', 100, y + 3, { size: 7 });
-  txt('Isn', 120, y + 3, { size: 7 });
-  
-  y += 8;
-  txt('Isn', 100, y, { size: 9 });
-  const ikmax_calc = ikmax.toFixed(0);
-  const ratio = (data.sheet1.ct_ratio_secondary / data.sheet1.ct_ratio_primary).toFixed(6);
-  txt(`= ${ikmax_calc} x ${ratio} x ${burden}`, 80, y, { size: 9 });
-  doc.setFontSize(7);
-  txt('Ipn', 100, y + 3, { size: 7 });
+  // ── Cover header ──
+  doc.setFillColor(20,20,20);
+  doc.rect(0,0,W,22,'F');
+  doc.setFontSize(15); doc.setFont('helvetica','bold'); doc.setTextColor(255,255,255);
+  doc.text('CT ADEQUACY ANALYSIS — CONSOLIDATED REPORT', 15, 14);
+  doc.setFontSize(8); doc.setFont('helvetica','normal');
+  doc.text(`${results.length} devices evaluated  |  ${new Date().toLocaleString()}`, W-15, 14, { align:'right' });
 
-  y += 15;
-  
-  // Through faults calculation  
-  txt('For Through faults:', 20, y, { size: 9 });
-  txt('Isn', 100, y, { size: 9 });
-  txt('Sr', 120, y, { size: 9 });
-  y += 8;
-  txt('Ealreq = 2 x Ikmax x', 20, y, { size: 9 });
-  txt('x ( Rct + Rl + )', 80, y, { size: 9 });
-  txt('(2)', 180, y, { size: 9 });
-  
-  // Subscripts
-  doc.setFontSize(7);
-  txt('Ipn', 100, y + 3, { size: 7 });
-  txt('Isn', 120, y + 3, { size: 7 });
+  y = 30;
 
-  // Add calculation results
-  y += 15;
-  const maxEalreq = data.result.ealreq_max;
-  const vkRequired = data.result.vk_required;
-  
-  txt(`Therefore, X/R ratio = ${data.result.intermediates['X/R ratio'] || 'N/A'}`, 20, y, { size: 9 });
-  y += 8;
-  txt(`Hence, 3-ph fault current for Endzone-1 faults = ${ikmax_calc} x 1.0`, 20, y, { size: 9 });
-  y += 8;
-  txt(`= ${ikmax_calc} A`, 20, y, { size: 9 });
+  // ── System Parameters summary ──
+  doc.setFontSize(11); doc.setFont('helvetica','bold'); doc.setTextColor(...BLACK);
+  doc.text('System Parameters (17 Standard Inputs — Same for All Devices)', 15, y); y += 6;
 
-  // Final verdict box
-  y += 20;
-  drawBox(20, y, 160, 25, true);
-  txt('FINAL VERDICT:', 25, y + 8, { size: 10, bold: true });
-  txt(verdict, 25, y + 16, { size: 12, bold: true });
-  txt(`Vk Required: ${vkRequired} V`, 25, y + 22, { size: 9 });
-  txt(`Vk Available: ${data.result.vk_available} V`, 100, y + 22, { size: 9 });
+  const sysPairs = Object.entries(sysParams)
+    .filter(([,v]) => v && v !== 'N/A')
+    .map(([k,v]) => [k.replace(/_/g,' '), String(v)]);
+  const sysRows: string[][] = [];
+  for (let i = 0; i < sysPairs.length; i += 3) {
+    sysRows.push([
+      ...(sysPairs[i]   ?? ['','']),
+      ...(sysPairs[i+1] ?? ['','']),
+      ...(sysPairs[i+2] ?? ['','']),
+    ]);
+  }
+  autoTable(doc, {
+    startY: y,
+    margin: { left: 15, right: 15 },
+    headStyles: { fillColor: [50,100,160], textColor: 255, fontSize: 8 },
+    bodyStyles: { fontSize: 7.5 },
+    alternateRowStyles: { fillColor: LIGHT_GRAY },
+    head: [['Parameter','Value','Parameter','Value','Parameter','Value']],
+    body: sysRows,
+  });
+  y = (doc as any).lastAutoTable.finalY + 10;
 
-  const fname = safe(data.templateName).replace(/[^a-z0-9]/gi,'_').toLowerCase();
-  const date = new Date(data.createdAt).toISOString().split('T')[0];
-  doc.save(`ct_adequacy_${fname}_${date}.pdf`);
+  // ── Summary table ──
+  doc.setFontSize(11); doc.setFont('helvetica','bold'); doc.setTextColor(...BLACK);
+  doc.text('Devices Summary', 15, y); y += 6;
+
+  autoTable(doc, {
+    startY: y,
+    margin: { left: 15, right: 15 },
+    headStyles: { fillColor: [50,50,50], textColor: 255, fontSize: 9 },
+    bodyStyles: { fontSize: 8.5 },
+    alternateRowStyles: { fillColor: LIGHT_GRAY },
+    head: [['#','Device Name','Type','CT Ratio','Rct(Ω)','Vk Avail(V)','Vk Req(V)','Ealreq Max(V)','Verdict']],
+    body: results.map((r,i) => [
+      i+1,
+      r.device_name,
+      r.device_type.replace(/_/g,' '),
+      `${r.inputs.ct_ratio_primary}/${r.inputs.ct_ratio_secondary}`,
+      r.inputs.rct,
+      r.vk_available > 0 ? r.vk_available : 'N/A',
+      r.vk_required,
+      r.ealreq_max,
+      r.verdict,
+    ]),
+    didParseCell: (data: any) => {
+      if (data.column.index === 8) {
+        const val = data.cell.raw;
+        if (val === 'SUITABLY DIMENSIONED')  { data.cell.styles.fillColor = [209,250,229]; data.cell.styles.textColor = [22,101,52]; }
+        if (val === 'UNDER DIMENSIONED')     { data.cell.styles.fillColor = [254,226,226]; data.cell.styles.textColor = [153,27,27]; }
+        if (val === 'NOT APPLICABLE')        { data.cell.styles.fillColor = [243,244,246]; data.cell.styles.textColor = [75,85,99]; }
+      }
+    },
+  });
+  y = (doc as any).lastAutoTable.finalY + 10;
+
+  // ── Detailed breakdown per device (one section each) ──
+  for (const result of results) {
+    if (y > 155) { doc.addPage(); y = 15; }
+
+    const vc = colorFor(result.verdict);
+    doc.setFillColor(...vc);
+    doc.roundedRect(15, y, W-30, 10, 2, 2, 'F');
+    doc.setFontSize(10); doc.setFont('helvetica','bold'); doc.setTextColor(255,255,255);
+    doc.text(
+      safe(`Device ${result.device_index+1}: ${result.device_name} — ${result.verdict}  |  Vk Req: ${result.vk_required} V  |  Vk Avail: ${result.vk_available > 0 ? result.vk_available + ' V' : 'N/A'}`),
+      20, y+7
+    );
+    y += 14;
+
+    autoTable(doc, {
+      startY: y,
+      margin: { left: 15, right: 15 },
+      headStyles: { fillColor: [80,80,80], textColor: 255, fontSize: 8 },
+      bodyStyles: { fontSize: 7.5 },
+      alternateRowStyles: { fillColor: LIGHT_GRAY },
+      head: [['Fault Condition','Formula','Ealreq (V)','Vk Req (V)','']],
+      body: result.vk_breakdown.map(row => [
+        row.label, row.formula, row.ealreq, row.vk, row.isMax ? 'MAX' : '',
+      ]),
+      didParseCell: (data: any) => {
+        if (data.column.index === 4 && data.cell.raw === 'MAX') {
+          data.cell.styles.fillColor = [255,251,204];
+          data.cell.styles.fontStyle = 'bold';
+        }
+      },
+    });
+    y = (doc as any).lastAutoTable.finalY + 8;
+  }
+
+  doc.save(`ct_adequacy_consolidated_${Date.now()}.pdf`);
+}
+
+// ── Legacy PDF (single-device via old ReportData shape) ──────────────────────
+export async function generatePDFReport(data: ReportData): Promise<void> {
+  // Wrap legacy data into the new per-device format
+  const fakeResult: DeviceResult = {
+    device_name:  data.templateName,
+    device_index: 0,
+    device_type:  'GENERIC',
+    verdict:      data.result.verdict as DeviceResult['verdict'],
+    vk_available: data.result.vk_available,
+    vk_required:  data.result.vk_required,
+    ealreq_max:   data.result.ealreq_max,
+    vk_breakdown: data.result.vk_breakdown.map(v => ({ ...v, formula: v.label })),
+    intermediates: data.result.intermediates,
+    inputs: {
+      ct_ratio_primary:   data.sheet1.ct_ratio_primary,
+      ct_ratio_secondary: data.sheet1.ct_ratio_secondary,
+      accuracy_class:     data.sheet1.accuracy_class,
+      rct:                data.sheet1.rct,
+      lead_resistance:    data.sheet2.lead_resistance,
+      relay_burden_va:    data.sheet2.relay_burden_va,
+      frequency:          data.sheet2.frequency,
+      bus_voltage_kv:     data.sheet2.bus_voltage_kv,
+      max_bus_fault_kA:   data.sheet2.max_bus_fault_mva,
+      r1: data.sheet2.r1, x1: data.sheet2.x1,
+      r0: data.sheet2.r0, x0: data.sheet2.x0,
+      route_length_km:    data.sheet2.route_length_km,
+    },
+  };
+  const sys: SystemParameters = {
+    bus_fault_level: String(data.sheet2.max_bus_fault_mva),
+    system_frequency: String(data.sheet2.frequency),
+    bus_voltage_level: `${data.sheet2.bus_voltage_kv}kV`,
+    xr_ratio: 'N/A',
+    route_length: String(data.sheet2.route_length_km),
+    positive_seq_resistance_r1: String(data.sheet2.r1),
+    positive_seq_reactance_z1: String(data.sheet2.x1),
+    negative_seq_resistance_r0: String(data.sheet2.r0),
+    negative_seq_reactance_z0: String(data.sheet2.x0),
+  };
+  await generateDevicePDFReport(fakeResult, sys);
 }
