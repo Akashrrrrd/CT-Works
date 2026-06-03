@@ -108,25 +108,32 @@ export function detectDeviceType(name: string): DeviceType {
 
 function parseNum(val: string | undefined): number {
   if (!val || val === 'N/A' || val === '-') return 0;
-  const cleaned = val.replace(/[^\d.-]/g, '');
-  const n = parseFloat(cleaned);
+  // Match the FIRST numeric token only (handles "31.5kA/3sec" → 31.5, "33kV" → 33, "0.20" → 0.2)
+  const match = val.match(/^[^0-9]*([+-]?\d+\.?\d*)/);
+  if (!match) return 0;
+  const n = parseFloat(match[1]);
   return isNaN(n) ? 0 : n;
 }
 
 // Calculate lead resistance from system parameters
+// Excel stores lead length in METRES; resistance in Ω/km
 function calcLeadResistance(sys: SystemParameters): number {
   let rl = 0;
-  if (sys.lead_length_vt_to_relay_1 && sys.resistance_w_km_20c_1) {
-    const len1 = parseNum(sys.lead_length_vt_to_relay_1) / 1000; // m → km
-    const res1 = parseNum(sys.resistance_w_km_20c_1);
-    rl += len1 * res1;
+
+  const len1m  = parseNum(sys.lead_length_vt_to_relay_1);  // metres
+  const res1   = parseNum(sys.resistance_w_km_20c_1);       // Ω/km
+  if (len1m > 0 && res1 > 0) {
+    rl += (len1m / 1000) * res1;   // convert m → km then × Ω/km
   }
-  if (sys.lead_length_vt_to_relay_2 && sys.resistance_w_km_20c_2) {
-    const len2 = parseNum(sys.lead_length_vt_to_relay_2) / 1000;
-    const res2 = parseNum(sys.resistance_w_km_20c_2);
-    rl += len2 * res2;
+
+  const len2m  = parseNum(sys.lead_length_vt_to_relay_2);
+  const res2   = parseNum(sys.resistance_w_km_20c_2);
+  if (len2m > 0 && res2 > 0) {
+    rl += (len2m / 1000) * res2;
   }
-  return rl > 0 ? rl : 0.1; // default fallback
+
+  // Fallback only when NOTHING is available
+  return rl > 0 ? rl : 0.1;
 }
 
 // Main per-device calculation function
@@ -150,18 +157,21 @@ export function calculateDeviceCTAdequacy(
   // --- Parse system parameters ---
   const freq     = parseNum(sys.system_frequency) || 50;
   const Vbus     = parseNum(sys.bus_voltage_level) || 33;  // kV
-  const Ikmax_kA = parseNum(sys.bus_fault_level);          // kA from "31.5kA/3sec"
+
+  // Parse bus fault level — handles "31.5kA/3sec", "31500A", "31.5" etc.
+  // parseNum already takes the FIRST number, so "31.5kA/3sec" → 31.5
+  const faultRaw = sys.bus_fault_level || '';
+  const faultNum = parseNum(faultRaw);
+  // If value looks like it's in kA (< 500), multiply ×1000 to get Amperes
+  const Ikmax_kA = faultNum < 500 ? faultNum : faultNum / 1000;
+  const Ikmax    = Ikmax_kA * 1000;   // always in Amperes for calculation
+
   const r1       = parseNum(sys.positive_seq_resistance_r1);
   const x1       = parseNum(sys.positive_seq_reactance_z1);
   const r0       = parseNum(sys.negative_seq_resistance_r0);
   const x0       = parseNum(sys.negative_seq_reactance_z0);
   const routeLen = parseNum(sys.route_length);             // km
   const Rl       = calcLeadResistance(sys);
-
-  // Max fault current at bus (directly from kA parameter)
-  const Ikmax = Ikmax_kA > 0 ? Ikmax_kA * 1000 : // convert kA → A
-    // fallback: derive from fault MVA
-    (parseNum(sys.bus_fault_level) * 1e6) / (Math.sqrt(3) * Vbus * 1e3);
 
   // Phase voltage
   const Vph = (Vbus * 1e3) / Math.sqrt(3);

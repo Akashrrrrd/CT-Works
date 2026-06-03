@@ -656,19 +656,19 @@ export class ExcelProcessor {
       result.x0 = this.parseNumber(params.negative_seq_reactance_z0);
     }
 
-    // Calculate lead resistance from CT wiring parameters
+    // Calculate lead resistance (lead_length is in METRES, resistance in Ω/km)
     let leadResistance = 0;
     if (params.lead_length_vt_to_relay_1 && params.resistance_w_km_20c_1) {
-      const length1 = this.parseNumber(params.lead_length_vt_to_relay_1) / 1000; // Convert m to km
-      const resistance1 = this.parseNumber(params.resistance_w_km_20c_1);
-      leadResistance += length1 * resistance1;
+      const lenMetres1   = this.parseNumber(params.lead_length_vt_to_relay_1); // metres
+      const resPerKm1    = this.parseNumber(params.resistance_w_km_20c_1);     // Ω/km
+      leadResistance    += (lenMetres1 / 1000) * resPerKm1;
     }
     if (params.lead_length_vt_to_relay_2 && params.resistance_w_km_20c_2) {
-      const length2 = this.parseNumber(params.lead_length_vt_to_relay_2) / 1000; // Convert m to km
-      const resistance2 = this.parseNumber(params.resistance_w_km_20c_2);
-      leadResistance += length2 * resistance2;
+      const lenMetres2   = this.parseNumber(params.lead_length_vt_to_relay_2);
+      const resPerKm2    = this.parseNumber(params.resistance_w_km_20c_2);
+      leadResistance    += (lenMetres2 / 1000) * resPerKm2;
     }
-    result.lead_resistance = leadResistance;
+    result.lead_resistance = leadResistance > 0 ? leadResistance : 0.1;
 
     // CT parameters from first device
     if (firstDevice) {
@@ -743,11 +743,11 @@ export class ExcelProcessor {
 
   private static parseNumber(value: string): number {
     if (!value || value === 'N/A' || value === '-') return 0;
-    
-    // Remove units and non-numeric characters except decimal point and minus
-    const cleaned = value.replace(/[^\d.-]/g, '');
-    const parsed = parseFloat(cleaned);
-    return isNaN(parsed) ? 0 : parsed;
+    // Take the FIRST numeric token only — avoids "31.5kA/3sec" → 31.53 bug
+    const match = value.match(/^[^0-9]*([+-]?\d+\.?\d*)/);
+    if (!match) return 0;
+    const n = parseFloat(match[1]);
+    return isNaN(n) ? 0 : n;
   }
 
   private static inferProtectionType(deviceName: string): string {
