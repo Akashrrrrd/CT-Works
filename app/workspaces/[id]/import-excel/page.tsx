@@ -13,42 +13,57 @@ import {
   AlertCircle, Loader2, Download, FileText, Zap 
 } from 'lucide-react';
 
-interface ParsedData {
-  parsed: {
-    ct: {
-      ratio_primary?: number;
-      ratio_secondary?: number;
+interface ImportResponse {
+  success: boolean;
+  data?: {
+    standard_parameters: any;
+    devices: Array<{
+      device_name: string;
+      core?: string;
+      ct_core_used_for: string;
+      ct_ratio?: string;
       accuracy_class?: string;
-      rct?: number;
-      vk_available?: number;
-      io_at_vk?: number;
-    };
-    system: {
-      frequency?: number;
-      bus_voltage_kv?: number;
-      fault_current_ka?: number;
-    };
-    line: {
-      r1?: number;
-      x1?: number;
-      r0?: number;
-      x0?: number;
-      length_km?: number;
-    };
-    wiring: {
-      cable_length_m?: number;
-      cores?: number;
-    };
-    ieds: Array<{
-      name: string;
-      burden_va: number;
-      type: string;
+      ct_resistance?: string;
+      vk_knee_point_voltage?: string;
+      burden?: string;
+      magnetizing_current?: string;
     }>;
+    total_devices: number;
+    device_types: string[];
+    // Legacy compatibility fields
+    ct_ratio_primary?: number;
+    ct_ratio_secondary?: number;
+    accuracy_class?: string;
+    rct?: number;
+    vk_available?: number;
+    io_at_vk?: number;
+    frequency?: number;
+    bus_voltage_kv?: number;
+    max_bus_fault_mva?: number;
+    r1?: number;
+    x1?: number;
+    r0?: number;
+    x0?: number;
+    route_length_km?: number;
+    relay_burden_va?: number;
+    lead_resistance?: number;
+    relay_type?: string;
+    relay_model?: string;
   };
-  missing: string[];
-  rowCount: number;
-  iedCount: number;
-  warnings: string[];
+  message?: string;
+  summary?: {
+    standard_parameters_found: number;
+    devices_found: number;
+    device_types: string[];
+    warnings: string[];
+  };
+  errors?: string[];
+  warnings?: string[];
+  fileInfo?: {
+    name: string;
+    size: number;
+    lastModified: string;
+  };
 }
 
 export default function ImportExcelPage() {
@@ -59,7 +74,7 @@ export default function ImportExcelPage() {
 
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
-  const [parsedData, setParsedData] = useState<ParsedData | null>(null);
+  const [importResponse, setImportResponse] = useState<ImportResponse | null>(null);
   const [error, setError] = useState('');
   const [uploadProgress, setUploadProgress] = useState(0);
 
@@ -82,7 +97,7 @@ export default function ImportExcelPage() {
 
     setUploading(true);
     setError('');
-    setParsedData(null);
+    setImportResponse(null);
     setUploadProgress(0);
 
     try {
@@ -94,7 +109,7 @@ export default function ImportExcelPage() {
         setUploadProgress(prev => Math.min(prev + 10, 90));
       }, 200);
 
-      const response = await fetch(`/api/workspaces/${workspaceId}/import-excel`, {
+      const response = await fetch(`/api/workspaces/${workspaceId}/import-excel-ct`, {
         method: 'POST',
         body: formData,
       });
@@ -105,10 +120,17 @@ export default function ImportExcelPage() {
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.error || 'Failed to process Excel file');
+        const errorResult = await response.json();
+        throw new Error(errorResult.error || 'Failed to process Excel file');
       }
 
-      setParsedData(result);
+      const result: ImportResponse = await response.json();
+      
+      if (!result.success) {
+        throw new Error(result.errors?.join(', ') || 'Failed to process Excel file');
+      }
+
+      setImportResponse(result);
       
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred while processing the file');
@@ -138,28 +160,32 @@ export default function ImportExcelPage() {
   };
 
   const proceedToComputation = () => {
-    if (!parsedData) return;
+    if (!importResponse?.data) return;
 
-    // Convert parsed data to computation format
+    const data = importResponse.data;
+
+    // Convert new structured data to computation format - use first device if multiple devices
+    const firstDevice = data.devices?.[0];
+    const ctRatioMatch = firstDevice?.ct_ratio?.match(/(\d+)\/(\d+)/);
+    
     const computationData = {
-      ct_ratio_primary: parsedData.parsed.ct.ratio_primary || 800,
-      ct_ratio_secondary: parsedData.parsed.ct.ratio_secondary || 1,
-      accuracy_class: parsedData.parsed.ct.accuracy_class || 'PX',
-      rct: parsedData.parsed.ct.rct || 3.5,
-      vk_available: parsedData.parsed.ct.vk_available || 540,
-      io_at_vk: parsedData.parsed.ct.io_at_vk || 20,
-      frequency: parsedData.parsed.system.frequency || 50,
-      bus_voltage_kv: parsedData.parsed.system.bus_voltage_kv || 33,
-      max_bus_fault_mva: parsedData.parsed.system.fault_current_ka ? 
-        (parsedData.parsed.system.fault_current_ka * parsedData.parsed.system.bus_voltage_kv! * Math.sqrt(3) / 1000) : 1800,
-      r1: parsedData.parsed.line.r1 || 0.16,
-      x1: parsedData.parsed.line.x1 || 0.13,
-      r0: parsedData.parsed.line.r0 || 0.96,
-      x0: parsedData.parsed.line.x0 || 0.32,
-      route_length_km: parsedData.parsed.line.length_km || 0.2,
-      relay_burden_va: parsedData.parsed.ieds[0]?.burden_va || 0.02,
-      lead_resistance: (parsedData.parsed.wiring.cable_length_m || 200) * 0.00235, // Approximate lead resistance
-      relay_type: parsedData.parsed.ieds[0]?.name || 'Imported Relay'
+      ct_ratio_primary: data.ct_ratio_primary || (ctRatioMatch ? parseInt(ctRatioMatch[1]) : 800),
+      ct_ratio_secondary: data.ct_ratio_secondary || (ctRatioMatch ? parseInt(ctRatioMatch[2]) : 1),
+      accuracy_class: data.accuracy_class || firstDevice?.accuracy_class || 'PX',
+      rct: data.rct || (firstDevice?.ct_resistance ? parseFloat(firstDevice.ct_resistance) : 3.5),
+      vk_available: data.vk_available || (firstDevice?.vk_knee_point_voltage ? parseFloat(firstDevice.vk_knee_point_voltage) : 540),
+      io_at_vk: data.io_at_vk || (firstDevice?.magnetizing_current ? parseFloat(firstDevice.magnetizing_current) : 20),
+      frequency: data.frequency || 50,
+      bus_voltage_kv: data.bus_voltage_kv || 33,
+      max_bus_fault_mva: data.max_bus_fault_mva || 1800,
+      r1: data.r1 || 0.16,
+      x1: data.x1 || 0.13,
+      r0: data.r0 || 0.96,
+      x0: data.x0 || 0.32,
+      route_length_km: data.route_length_km || 0.2,
+      relay_burden_va: data.relay_burden_va || 0.02,
+      lead_resistance: data.lead_resistance || 0.47,
+      relay_type: data.relay_type || firstDevice?.device_name || 'Imported Relay'
     };
 
     // Navigate to computation page with imported data

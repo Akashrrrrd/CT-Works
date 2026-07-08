@@ -26,23 +26,49 @@ export default function ExcelProcessingPage() {
   // ── file pick ────────────────────────────────────────────────────────────
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
-    if (f) { setFile(f); setProcessedData(null); setDeviceResults(null); setError(''); }
+    if (f) { 
+      console.log(`🔄 New file selected: ${f.name} (${f.size} bytes, last modified: ${new Date(f.lastModified).toISOString()})`);
+      setFile(f); 
+      setProcessedData(null); 
+      setDeviceResults(null); 
+      setError(''); 
+    }
   };
 
   // ── process Excel ────────────────────────────────────────────────────────
   const processExcel = async () => {
     if (!file) return;
+    
+    console.log('🔄 ═══════════════════════════════════════════════════════════');
+    console.log(`🔄 FRONTEND: Processing file ${file.name}`);
+    console.log(`🔄 File last modified: ${new Date(file.lastModified).toISOString()}`);
+    console.log('🔄 ═══════════════════════════════════════════════════════════');
+    
     setLoading(true);
     setError('');
     setDeviceResults(null);
+    
     try {
       const fd = new FormData();
       fd.append('file', file);
-      const res  = await fetch(`/api/workspaces/${workspaceId}/import-excel-ct`, { method: 'POST', body: fd });
+      
+      // Add timestamp to prevent caching
+      const timestamp = Date.now();
+      const res  = await fetch(`/api/workspaces/${workspaceId}/import-excel-ct?t=${timestamp}`, { 
+        method: 'POST', 
+        body: fd,
+        headers: {
+          'Cache-Control': 'no-cache'
+        }
+      });
+      
       const data = await res.json();
+      console.log('📨 API Response:', data);
+      
       setProcessedData(data);
       if (!data.success) setError(data.error || 'Failed to process Excel file');
     } catch (err) {
+      console.error('❌ Frontend processing error:', err);
       setError('Failed to process Excel file');
     } finally {
       setLoading(false);
@@ -145,11 +171,17 @@ export default function ExcelProcessingPage() {
           )}
 
           <div className="space-y-2">
-            <Input type="file" accept=".xlsx,.xls" onChange={handleFileUpload} className="cursor-pointer" />
+            <Input 
+              type="file" 
+              accept=".xlsx,.xls" 
+              onChange={handleFileUpload} 
+              className="cursor-pointer"
+              key={`file-input-${Date.now()}`}  // Force re-render to clear any cached file references
+            />
             {file && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <FileText className="h-4 w-4" />
-                {file.name} ({(file.size / 1024).toFixed(1)} KB)
+                {file.name} ({(file.size / 1024).toFixed(1)} KB) - Modified: {new Date(file.lastModified).toLocaleString()}
               </div>
             )}
           </div>
@@ -158,6 +190,32 @@ export default function ExcelProcessingPage() {
             {loading
               ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Processing…</>
               : <><Upload className="h-4 w-4 mr-2" />Process Excel Data</>}
+          </Button>
+          
+          {/* Debug Button */}
+          <Button 
+            onClick={async () => {
+              if (!file) return;
+              console.log('🔍 DEBUG: Starting raw Excel analysis...');
+              const fd = new FormData();
+              fd.append('file', file);
+              try {
+                const res = await fetch(`/api/workspaces/${workspaceId}/debug-excel`, { 
+                  method: 'POST', 
+                  body: fd 
+                });
+                const debugData = await res.json();
+                console.log('🔍 DEBUG RESULTS:', debugData);
+                alert('Debug results logged to console. Press F12 to view.');
+              } catch (err) {
+                console.error('Debug failed:', err);
+              }
+            }}
+            disabled={!file} 
+            variant="outline" 
+            className="w-full"
+          >
+            🔍 Debug Raw Excel Data
           </Button>
         </CardContent>
       </Card>
@@ -172,9 +230,43 @@ export default function ExcelProcessingPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <pre className="bg-muted p-4 rounded text-xs overflow-auto max-h-72 border">
-              {JSON.stringify(processedData, null, 2)}
-            </pre>
+            {/* Quick Device Summary */}
+            {processedData.data?.devices && processedData.data.devices.length > 0 && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                <h4 className="font-semibold text-sm mb-2 text-blue-900">📋 Extracted Devices Summary</h4>
+                <div className="space-y-2">
+                  {processedData.data.devices.map((device: any, idx: number) => (
+                    <div key={idx} className="bg-white rounded p-3 text-sm border border-blue-100">
+                      <div className="font-semibold text-blue-900 mb-1">
+                        {idx + 1}. {device.device_name}
+                      </div>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+                        <div><span className="text-muted-foreground">CT Ratio:</span> <strong>{device.ct_ratio}</strong></div>
+                        <div><span className="text-muted-foreground">Accuracy:</span> <strong>{device.accuracy_class}</strong></div>
+                        <div><span className="text-muted-foreground">Rct:</span> <strong>{device.ct_resistance}Ω</strong></div>
+                        <div><span className="text-muted-foreground">Vk:</span> <strong>{device.vk_knee_point_voltage}V</strong></div>
+                        <div><span className="text-muted-foreground">Burden:</span> <strong>{device.burden}VA</strong></div>
+                        <div><span className="text-muted-foreground">Io:</span> <strong>{device.magnetizing_current}mA</strong></div>
+                        <div><span className="text-muted-foreground">Core:</span> <strong>{device.core}</strong></div>
+                        <div><span className="text-muted-foreground">Used For:</span> <strong>{device.ct_core_used_for}</strong></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-3 text-xs text-blue-700">
+                  ⚠️ If these values don't match your Excel file, check the browser console (F12) for detailed extraction logs
+                </div>
+              </div>
+            )}
+
+            <details>
+              <summary className="cursor-pointer text-sm font-medium text-muted-foreground hover:text-foreground mb-2">
+                View Complete JSON Response
+              </summary>
+              <pre className="bg-muted p-4 rounded text-xs overflow-auto max-h-72 border">
+                {JSON.stringify(processedData, null, 2)}
+              </pre>
+            </details>
 
             <Button
               onClick={computeAllDevices}

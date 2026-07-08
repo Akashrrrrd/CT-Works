@@ -113,15 +113,29 @@ export class ExcelProcessor {
 
   static async processExcelFile(file: File): Promise<ExcelValidationResult> {
     try {
+      console.log('🔄 ═══════════════════════════════════════════════════════════');
+      console.log(`🔄 PROCESSING FRESH EXCEL FILE: ${file.name}`);
+      console.log(`🔄 File size: ${file.size} bytes | Last modified: ${new Date(file.lastModified).toISOString()}`);
+      console.log('🔄 ═══════════════════════════════════════════════════════════');
+
       // Validate file format
       const formatValidation = this.validateFileFormat(file);
       if (!formatValidation.isValid) {
         return formatValidation;
       }
 
-      // Read Excel file
+      // Read Excel file - force fresh read without caching
+      console.log('📖 Reading Excel file into memory...');
       const arrayBuffer = await file.arrayBuffer();
-      const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+      console.log(`📊 ArrayBuffer size: ${arrayBuffer.byteLength} bytes`);
+      
+      const workbook = XLSX.read(arrayBuffer, { 
+        type: 'array',
+        cellDates: false,
+        cellNF: false,
+        cellText: false
+      });
+      console.log(`📄 Workbook loaded with ${workbook.SheetNames.length} sheets: ${workbook.SheetNames.join(', ')}`);
 
       // Extract data using the standardized structure
       const extractedData = await this.extractStandardizedData(workbook);
@@ -427,98 +441,186 @@ export class ExcelProcessor {
   }
 
   private static extractDeviceParameters(data: any[][]): DeviceParameters[] {
-    // ── Step 1: Find the device table header row ───────────────────────────────
-    // The device table header contains multiple non-empty cells in columns 2+
-    // that are device names. We look for a row that has ≥2 non-empty cells
-    // in the data columns (col ≥ 2) AND at least one parameter-name row follows.
+    console.log('\n🔍 ═══════════════════════════════════════════════════════════');
+    console.log('🔍 STARTING DEVICE PARAMETER EXTRACTION');
+    console.log('🔍 ═══════════════════════════════════════════════════════════\n');
 
-    let deviceHeaderRow = -1;
-    let paramStartRow   = -1;
+    // SPECIAL DEBUG: Look for CT Ratio values first
+    console.log('🎯 SPECIAL CT RATIO DEBUG - SCANNING ALL ROWS:');
+    for (let i = 0; i < Math.min(data.length, 30); i++) {
+      const row = data[i];
+      if (!row || row.length < 2) continue;
+      const firstCell = String(row[0] || '').toLowerCase().trim();
+      if (firstCell.includes('ct ratio') || firstCell.includes('ratio')) {
+        console.log(`🎯 CT RATIO ROW ${i}:`, row.slice(0, 8).map((cell, j) => `col${j}="${cell}"`).join(' | '));
+        
+        // Check for values like 700/1A, 2000/1A, etc.
+        for (let col = 1; col < Math.min(row.length, 8); col++) {
+          const cellValue = String(row[col] || '').trim();
+          if (cellValue.includes('/1A') || cellValue.includes('/1') || /^\d+\/\d/.test(cellValue)) {
+            console.log(`    🎯 FOUND CT RATIO VALUE: col${col} = "${cellValue}"`);
+          }
+        }
+      }
+    }
 
-    // Map: column index → accumulated device name (may span multiple header rows)
-    const deviceColMap = new Map<number, string>();
+    // ── Step 1: Find the exact row where the device table begins ──────────────
+    let sectionHeaderRow = -1;
+    let deviceNameRow    = -1;
+    let paramStartRow    = -1;
 
-    // Scan every row of the sheet — no row limit
+    // Pass 1 — look for section header like "PROTECTION PURPOSE / DEVICES"
+    console.log('🔎 Pass 1: Looking for section header row...');
     for (let i = 0; i < data.length; i++) {
+      const row = data[i];
+      if (!row) continue;
+      const firstCell = String(row[0] ?? '').toLowerCase();
+      const joined = row.map((c: any) => String(c ?? '').toLowerCase()).join(' ');
+      
+      if (
+        (joined.includes('protection') && (joined.includes('purpose') || joined.includes('device'))) ||
+        (joined.includes('connected') && joined.includes('device'))
+      ) {
+        sectionHeaderRow = i;
+        console.log(`✅ Found section header at row ${i}: "${row[0]}"`);
+        break;
+      }
+    }
+    
+    if (sectionHeaderRow === -1) {
+      console.log('⚠️  No explicit section header found, will scan from beginning');
+    }
+
+    // Pass 2 — find the row that carries device names
+    console.log('\n🔎 Pass 2: Looking for device name row...');
+    const startSearch = sectionHeaderRow >= 0 ? sectionHeaderRow : 0;
+    
+    for (let i = startSearch; i < Math.min(startSearch + 20, data.length); i++) {
       const row = data[i];
       if (!row || row.length < 3) continue;
 
-      const rowText = row.map((c: any) => String(c ?? '').toLowerCase()).join(' ');
-
-      // When we see "core" or "ct ratio" or "accuracy" as first cell, we've
-      // passed the header section and are into parameter rows.
       const firstCell = String(row[0] ?? '').toLowerCase().trim();
-      if (
+      
+      // Skip if this looks like a parameter row
+      if (firstCell.includes('core') || firstCell.includes('ratio') || 
+          firstCell.includes('accuracy') || firstCell.includes('resistance') ||
+          firstCell.includes('vk') || firstCell.includes('knee') || 
+          firstCell.includes('burden') || firstCell.includes('magnetizing')) {
+        console.log(`   Row ${i}: SKIPPED (parameter keyword in first cell: "${firstCell}")`);
+        continue;
+      }
+
+      // Count device-like cells in columns 2+
+      let deviceLikeCells = 0;
+      const cellsPreview: string[] = [];
+      
+      for (let j = 2; j < Math.min(row.length, 10); j++) {  // Check up to column 10
+        const cell = row[j];
+        if (cell === null || cell === undefined) continue;
+        const s = String(cell).trim();
+        if (!s || s === '-') continue;
+        
+        const lc = s.toLowerCase();
+        const isUnit   = /^(ohm|va|ma|mw|kva|kw|kv|hz|a|v|km|mm|%|-)$/i.test(s);
+        const isNumber = /^\d+\.?\d*$/.test(s);
+        const isPureSymbol = /^[\/\-_]+$/.test(s);
+        
+        if (!isUnit && !isNumber && !isPureSymbol && s.length >= 2) {
+          deviceLikeCells++;
+          cellsPreview.push(`col${j}="${s}"`);
+        }
+      }
+
+      console.log(`   Row ${i}: Found ${deviceLikeCells} device-like cells [${cellsPreview.join(', ')}]`);
+      
+      if (deviceLikeCells >= 2) {
+        deviceNameRow = i;
+        console.log(`✅ Selected row ${i} as device name row`);
+        break;
+      }
+    }
+
+    if (deviceNameRow === -1) {
+      console.log('❌ ERROR: No device name row found!');
+      return [];
+    }
+
+    console.log(`\n📍 Device name row identified: ${deviceNameRow}`);
+
+    // ── Step 2: Collect device names from up to 4 header rows ────────────────
+    console.log('\n🔎 Pass 3: Collecting device names from header rows...');
+    const deviceColMap = new Map<number, string[]>();  // col → [fragments]
+
+    for (let i = deviceNameRow; i < Math.min(deviceNameRow + 4, data.length); i++) {
+      const row = data[i];
+      if (!row) continue;
+
+      const firstCell = String(row[0] ?? '').toLowerCase().trim();
+
+      // Stop collecting names once we're in the parameter section
+      if (i > deviceNameRow && (
         firstCell.includes('core') ||
         firstCell.includes('ct ratio') || firstCell.includes('ratio') ||
         firstCell.includes('accuracy') ||
         firstCell.includes('ct resistance') ||
+        firstCell.includes('resistance') ||
         firstCell.includes('vk') || firstCell.includes('knee') ||
         firstCell.includes('burden') ||
         firstCell.includes('magnetizing')
-      ) {
-        if (deviceColMap.size > 0 && deviceHeaderRow !== -1) {
-          paramStartRow = i;
-          break;
-        }
+      )) {
+        paramStartRow = i;
+        console.log(`   ⛔ Row ${i}: STOP - parameter row detected: "${firstCell}"`);
+        break;
       }
 
-      // Collect device-name fragments from columns 2 onwards
-      for (let j = 2; j < row.length; j++) {
+      console.log(`   📝 Row ${i}: Processing for device name fragments...`);
+      
+      for (let j = 2; j < Math.min(row.length, 10); j++) {  // Limit to first 10 columns
         const cell = row[j];
         if (cell === null || cell === undefined) continue;
-        const cellStr = String(cell).trim();
-        if (!cellStr || cellStr === '-') continue;
+        const s = String(cell).trim();
+        if (!s || s === '-') continue;
 
-        // Accept any non-trivial text as part of the device name for this column
-        // We'll merge multi-row names (e.g. "DISTANCE +" on row N, "DIFFERENTIAL" on row N+1)
-        const existing = deviceColMap.get(j);
-        if (existing) {
-          // Append only if different content (avoid duplicate words)
-          if (!existing.toUpperCase().includes(cellStr.toUpperCase())) {
-            deviceColMap.set(j, existing + ' ' + cellStr);
-          }
-        } else {
-          deviceColMap.set(j, cellStr);
+        const isUnit   = /^(ohm|va|ma|mw|kva|kw|kv|hz|a|v|km|mm|%|-)$/i.test(s);
+        const isNumber = /^\d+\.?\d*$/.test(s);
+        const isPureSymbol = /^[\/\-_]+$/.test(s);
+        
+        if (isUnit || isNumber || isPureSymbol) {
+          console.log(`      col${j}: SKIPPED "${s}" (unit/number/symbol)`);
+          continue;
         }
 
-        if (deviceHeaderRow === -1) {
-          deviceHeaderRow = i;
+        if (!deviceColMap.has(j)) deviceColMap.set(j, []);
+        const existing = deviceColMap.get(j)!;
+        if (!existing.some(f => f.toUpperCase() === s.toUpperCase())) {
+          existing.push(s);
+          console.log(`      col${j}: Added fragment "${s}"`);
         }
       }
     }
 
-    if (deviceColMap.size === 0) {
-      console.log('No device columns found');
-      return [];
-    }
-
-    // ── Step 2: Filter columns to those that actually look like device names ──
-    // A column qualifies if its accumulated name has at least 3 characters and
-    // is not just a unit or number string.
+    // Build final device-name list, sorted by column
     const validDeviceCols: Array<{ name: string; column: number }> = [];
-    for (const [col, name] of deviceColMap.entries()) {
-      const trimmed = name.trim();
-      if (trimmed.length < 2) continue;
-      // Skip if it looks like a unit column (e.g. "ohm", "VA", "mA", "A", "kA")
-      const lc = trimmed.toLowerCase();
-      if (/^(ohm|va|ma|mw|kva|kw|kv|hz|a|v|km|mm|%)$/.test(lc)) continue;
-      // Skip pure numbers
-      if (/^\d+\.?\d*$/.test(trimmed)) continue;
-      validDeviceCols.push({ name: trimmed, column: col });
+    for (const [col, fragments] of deviceColMap.entries()) {
+      const name = fragments.join(' ').trim();
+      if (name.length >= 2) {
+        validDeviceCols.push({ name, column: col });
+      }
     }
-
-    // Sort by column index so devices appear left-to-right
     validDeviceCols.sort((a, b) => a.column - b.column);
 
-    console.log(`Found ${validDeviceCols.length} device columns:`, validDeviceCols.map(d => `col${d.column}="${d.name}"`));
+    console.log(`\n✅ Device name collection complete: ${validDeviceCols.length} devices found`);
+    validDeviceCols.forEach((d, i) => {
+      console.log(`   [${i+1}] Column ${d.column}: "${d.name}"`);
+    });
 
     if (validDeviceCols.length === 0) {
-      console.log('No valid device columns after filtering');
+      console.log('❌ ERROR: No valid device columns after filtering!');
       return [];
     }
 
     // ── Step 3: Build device objects ──────────────────────────────────────────
+    console.log('\n🔎 Pass 4: Building device objects...');
     const devices: DeviceParametersInternal[] = validDeviceCols.map(({ name, column }) => ({
       device_name:           name,
       core:                  'N/A',
@@ -531,34 +633,68 @@ export class ExcelProcessor {
       magnetizing_current:   'N/A',
       _column:               column,
     }));
+    console.log(`✅ Created ${devices.length} device objects (all parameters initialized to N/A)`);
 
-    // ── Step 4: Scan ALL remaining rows for parameter values ──────────────────
-    // No 20-row limit — scan from paramStartRow to end of sheet.
-    const scanFrom = paramStartRow !== -1 ? paramStartRow : deviceHeaderRow + 1;
+    // ── Step 4: Scan parameter rows — no row limit ────────────────────────────
+    console.log('\n🔎 Pass 5: Extracting parameter values...');
+    
+    // If paramStartRow wasn't found during header scan, search forward
+    if (paramStartRow === -1) {
+      console.log('   Searching for parameter section start...');
+      for (let i = deviceNameRow + 1; i < Math.min(deviceNameRow + 10, data.length); i++) {
+        const row = data[i];
+        if (!row) continue;
+        const fc = String(row[0] ?? '').toLowerCase().trim();
+        if (fc.includes('core') || fc.includes('ct ratio') || fc.includes('ratio') ||
+            fc.includes('accuracy') || fc.includes('ct resistance') ||
+            fc.includes('vk') || fc.includes('knee') ||
+            fc.includes('burden') || fc.includes('magnetizing')) {
+          paramStartRow = i;
+          console.log(`   ✅ Found parameter start at row ${i}: "${fc}"`);
+          break;
+        }
+      }
+    }
 
-    for (let i = scanFrom; i < data.length; i++) {
+    if (paramStartRow === -1) {
+      console.log('❌ ERROR: Could not find parameter rows!');
+      console.log('\n📊 Final extracted devices (with N/A values):');
+      devices.forEach((d, i) => {
+        console.log(`  [${i+1}] ${d.device_name} - All parameters: N/A`);
+      });
+      return devices;
+    }
+
+    console.log(`📍 Parameter section starts at row ${paramStartRow}`);
+    console.log(`   Will scan from row ${paramStartRow} to end of sheet (${data.length} total rows)`);
+
+    let parametersFound = 0;
+    
+    for (let i = paramStartRow; i < data.length; i++) {
       const row = data[i];
       if (!row || row.length < 2) continue;
 
       const firstCell = String(row[0] ?? '').toLowerCase().trim();
       if (!firstCell) continue;
 
-      // Determine which device parameter this row maps to
       let paramKey: keyof DeviceParameters | '' = '';
 
+      // Match parameter name with enhanced logging
       if (firstCell.includes('core') && !firstCell.includes('used') && !firstCell.includes('ct core')) {
         paramKey = 'core';
       } else if (firstCell.includes('ct core used') || firstCell.includes('used for') || firstCell.includes('core used')) {
         paramKey = 'ct_core_used_for';
       } else if (firstCell.includes('ct ratio') || (firstCell.includes('ratio') && !firstCell.includes('x/r'))) {
         paramKey = 'ct_ratio';
-      } else if (firstCell.includes('accuracy class') || (firstCell.includes('accuracy') && !firstCell.includes('class of'))) {
-        paramKey = 'accuracy_class';
-      } else if (firstCell.includes('class of accuracy')) {
+        console.log(`   🎯 CRITICAL: CT RATIO ROW DETECTED`);
+      } else if (firstCell.includes('class of accuracy') || firstCell.includes('accuracy class') || firstCell.includes('accuracy')) {
         paramKey = 'accuracy_class';
       } else if (
         firstCell.includes('ct resistance') ||
-        (firstCell.includes('resistance') && !firstCell.includes('seq') && !firstCell.includes('specific') && !firstCell.includes('w/km') && !firstCell.includes('copper'))
+        (firstCell.includes('resistance') &&
+          !firstCell.includes('seq') && !firstCell.includes('specific') &&
+          !firstCell.includes('w/km') && !firstCell.includes('copper') &&
+          !firstCell.includes('lead'))
       ) {
         paramKey = 'ct_resistance';
       } else if (firstCell.includes('vk') || firstCell.includes('knee point') || firstCell.includes('knee-point')) {
@@ -571,38 +707,70 @@ export class ExcelProcessor {
 
       if (!paramKey) continue;
 
+      parametersFound++;
+      console.log(`\n   📋 Row ${i}: Parameter "${firstCell}" → ${paramKey}`);
+
       // Assign value for each device from its column
       for (const device of devices) {
         const col = device._column!;
-        // Try the exact column first, then adjacent columns if empty
         let raw: any = col < row.length ? row[col] : undefined;
 
-        // If the exact cell is empty, check one column left or right
-        // (handles merged cells in Excel that XLSX reads as empty adjacents)
+        // Log raw cell value for CT Ratio specifically
+        if (paramKey === 'ct_ratio') {
+          console.log(`   🎯 RAW CELL VALUE for "${device.device_name}" at row ${i}, col ${col}:`, raw);
+          console.log(`   🎯 Full row data:`, row);
+        }
+
+        // Handle merged cells — check adjacent columns if exact is empty
         if (raw === null || raw === undefined || String(raw).trim() === '') {
-          if (col - 1 >= 2 && row[col - 1] !== null && row[col - 1] !== undefined && String(row[col - 1]).trim() !== '') {
+          if (col - 1 >= 2 && row[col-1] != null && String(row[col-1]).trim() !== '') {
             raw = row[col - 1];
-          } else if (col + 1 < row.length && row[col + 1] !== null && row[col + 1] !== undefined && String(row[col + 1]).trim() !== '') {
+            console.log(`      Device "${device.device_name}" (col${col}): Empty, using col${col-1}`);
+          } else if (col + 1 < row.length && row[col+1] != null && String(row[col+1]).trim() !== '') {
             raw = row[col + 1];
+            console.log(`      Device "${device.device_name}" (col${col}): Empty, using col${col+1}`);
           }
         }
 
         const value = this.normalizeValue(raw);
+        const oldValue = (device as any)[paramKey];
         (device as any)[paramKey] = value;
-        console.log(`  Device "${device.device_name}" col${col}: ${paramKey} = "${value}"`);
+        
+        // Extra logging for CT Ratio
+        if (paramKey === 'ct_ratio') {
+          console.log(`   🎯 FINAL CT RATIO for "${device.device_name}": raw="${raw}" → normalized="${value}"`);
+        }
+        
+        console.log(`      ✓ Device "${device.device_name}" (col${col}): ${paramKey} = "${value}"${oldValue !== 'N/A' && oldValue !== value ? ` [was: ${oldValue}]` : ''}`);
       }
     }
 
+    console.log(`\n✅ Parameter extraction complete: ${parametersFound} parameters extracted`);
+
     // ── Step 5: Clean up and return ────────────────────────────────────────────
+    console.log('\n🔎 Pass 6: Final validation and cleanup...');
+    
     const finalDevices: DeviceParameters[] = devices.map(d => {
       const clean = { ...d };
       delete clean._column;
       return clean;
     });
 
-    console.log('✅ Final devices:');
+    console.log('\n✅ ═══════════════════════════════════════════════════════════');
+    console.log(`✅ EXTRACTION COMPLETE: ${finalDevices.length} DEVICES`);
+    console.log('✅ ═══════════════════════════════════════════════════════════\n');
+    
     finalDevices.forEach((d, i) => {
-      console.log(`  [${i + 1}] ${d.device_name}: CT=${d.ct_ratio}, Rct=${d.ct_resistance}, Vk=${d.vk_knee_point_voltage}, Burden=${d.burden}, Io=${d.magnetizing_current}`);
+      console.log(`📦 Device [${i+1}]: ${d.device_name}`);
+      console.log(`   ├─ Core: ${d.core}`);
+      console.log(`   ├─ CT Core Used For: ${d.ct_core_used_for}`);
+      console.log(`   ├─ CT Ratio: ${d.ct_ratio}`);
+      console.log(`   ├─ Accuracy Class: ${d.accuracy_class}`);
+      console.log(`   ├─ CT Resistance: ${d.ct_resistance}Ω`);
+      console.log(`   ├─ Vk (Knee Point): ${d.vk_knee_point_voltage}V`);
+      console.log(`   ├─ Burden: ${d.burden}VA`);
+      console.log(`   └─ Magnetizing Current: ${d.magnetizing_current}mA`);
+      console.log('');
     });
 
     return finalDevices;

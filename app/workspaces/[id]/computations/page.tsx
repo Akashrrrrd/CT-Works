@@ -48,27 +48,53 @@ export default function ComputationsPage() {
   }), [computations, search, verdict, approval]);
 
   const handleDownload = async (comp: Computation) => {
-    const { downloadPDF } = await import('./generate-pdf');
-    await downloadPDF({
-      templateName:    comp.templateName,
-      createdAt:       comp.createdAt,
-      createdBy:       comp.createdBy?.name ?? 'Unknown',
-      companyName:     (typeof window !== 'undefined' && localStorage.getItem('pdf_company'))    || undefined,
-      projectName:     (typeof window !== 'undefined' && localStorage.getItem('pdf_project'))    || undefined,
-      contractNo:      (typeof window !== 'undefined' && localStorage.getItem('pdf_contract'))   || undefined,
-      substationName:  (typeof window !== 'undefined' && localStorage.getItem('pdf_substation')) || undefined,
-      revisionNo:      (typeof window !== 'undefined' && localStorage.getItem('pdf_revision'))   || undefined,
-      sheet1: comp.sheet1,
-      sheet2: comp.sheet2,
-      result: {
-        verdict:      comp.verdict,
-        ealreq_max:   comp.ealreq_max,
-        vk_required:  comp.vk_required,
-        vk_available: comp.vk_available,
-        vk_breakdown: comp.vk_breakdown,
-        intermediates:comp.intermediates,
-      },
-    });
+    console.log('🚀 PROFESSIONAL PDF GENERATOR ACTIVATED FROM COMPUTATIONS LIST');
+    
+    // Use the new professional PDF generator instead of the old HITACHI one
+    const { generateDevicePDFReport } = await import('@/lib/services/pdf-report');
+    
+    // Convert computation to DeviceResult format
+    const deviceResult = {
+      device_name: comp.templateName,
+      device_index: 0,
+      device_type: 'COMPUTATION_DEVICE' as any,
+      verdict: comp.verdict as any,
+      vk_available: comp.vk_available,
+      vk_required: comp.vk_required,
+      ealreq_max: comp.ealreq_max,
+      vk_breakdown: comp.vk_breakdown.map(v => ({ ...v, formula: v.formula || v.label })),
+      intermediates: comp.intermediates,
+      inputs: {
+        ct_ratio_primary: comp.sheet1.ct_ratio_primary,
+        ct_ratio_secondary: comp.sheet1.ct_ratio_secondary,
+        accuracy_class: comp.sheet1.accuracy_class,
+        rct: comp.sheet1.rct,
+        lead_resistance: comp.sheet2.lead_resistance,
+        relay_burden_va: comp.sheet2.relay_burden_va,
+        frequency: comp.sheet2.frequency,
+        bus_voltage_kv: comp.sheet2.bus_voltage_kv,
+        max_bus_fault_kA: comp.sheet2.max_bus_fault_mva,
+        r1: comp.sheet2.r1,
+        x1: comp.sheet2.x1,
+        r0: comp.sheet2.r0,
+        x0: comp.sheet2.x0,
+        route_length_km: comp.sheet2.route_length_km
+      }
+    };
+    
+    const systemParams = {
+      bus_fault_level: `${comp.sheet2.max_bus_fault_mva}MVA`,
+      system_frequency: `${comp.sheet2.frequency}Hz`,
+      bus_voltage_level: `${comp.sheet2.bus_voltage_kv}kV`,
+      xr_ratio: 'N/A',
+      route_length: `${comp.sheet2.route_length_km}km`,
+      positive_seq_resistance_r1: `${comp.sheet2.r1}`,
+      positive_seq_reactance_z1: `${comp.sheet2.x1}`,
+      negative_seq_resistance_r0: `${comp.sheet2.r0}`,
+      negative_seq_reactance_z0: `${comp.sheet2.x0}`
+    };
+    
+    await generateDevicePDFReport(deviceResult, systemParams);
   };
 
   if (loading) return <div className="space-y-4">{[...Array(3)].map((_, i) => <Skeleton key={i} className="h-40" />)}</div>;
