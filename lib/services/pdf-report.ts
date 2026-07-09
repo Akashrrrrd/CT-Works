@@ -33,7 +33,7 @@ export async function generateDevicePDFReport(
   const pageWidth = 210;
   const margin = 20;
 
-  // � CORPORATE HEADER (Black text only)
+  // 🏢 CORPORATE HEADER (Black text only)
   doc.setFontSize(18);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(0, 0, 0);
@@ -95,7 +95,7 @@ export async function generateDevicePDFReport(
   
   y += verdictBoxHeight + 25;
 
-  // � INPUT PARAMETERS TABLE (Black borders)
+  // 🏢 INPUT PARAMETERS TABLE (Black borders)
   doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
   doc.text('INPUT PARAMETERS', margin, y);
@@ -164,7 +164,7 @@ export async function generateDevicePDFReport(
     y = 30;
   }
 
-  // � CALCULATION BREAKDOWN (Simple black text table)
+  // 🏢 CALCULATION BREAKDOWN (Simple black text table)
   doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
   doc.text('CALCULATION BREAKDOWN', margin, y);
@@ -220,7 +220,7 @@ export async function generateDevicePDFReport(
   doc.setFont('helvetica', 'bold');
   doc.text(`FINAL RESULT: Ealreq Max = ${device.ealreq_max}V, Vk Required = ${device.vk_required}V`, margin + 2, y + 10);
 
-  // � CORPORATE FOOTER (Black line)
+  // 🏢 CORPORATE FOOTER (Black line)
   const footerY = 270;
   doc.setLineWidth(0.5);
   doc.line(margin, footerY, pageWidth - margin, footerY);
@@ -256,7 +256,7 @@ export async function generateConsolidatedPDFReport(
   const margin = 20;
   let y = 25;
 
-  // � CORPORATE HEADER (Black text only)
+  // 🏢 CORPORATE HEADER (Black text only)
   doc.setFontSize(18);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(0, 0, 0);
