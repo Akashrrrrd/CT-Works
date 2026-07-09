@@ -12,8 +12,8 @@ export class WebSocketService {
   private static instance: WebSocketService;
   private ws: WebSocket | null = null;
   private reconnectAttempts = 0;
-  private maxReconnectAttempts = 5;
-  private reconnectDelay = 1000;
+  private maxReconnectAttempts = 2; // Reduced from 5 to 2
+  private reconnectDelay = 3000; // Increased delay to 3 seconds
   private listeners = new Map<string, Set<(message: WebSocketMessage) => void>>();
   private isConnected = false;
 
@@ -63,7 +63,10 @@ export class WebSocketService {
       };
 
       this.ws.onerror = (error) => {
-        console.error('WebSocket error:', error);
+        // Reduced logging to avoid spam
+        if (this.reconnectAttempts < 2) {
+          console.warn('WebSocket connection issue - will retry');
+        }
         this.isConnected = false;
       };
 
@@ -75,7 +78,7 @@ export class WebSocketService {
 
   private attemptReconnect(workspaceId: string): void {
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-      console.error('Max reconnection attempts reached');
+      console.warn('WebSocket: Real-time features disabled (connection failed)');
       return;
     }
 

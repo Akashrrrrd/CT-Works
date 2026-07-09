@@ -2,398 +2,405 @@ import { DeviceResult } from './ct-adequacy';
 import { StandardParameters } from './excel-processor';
 
 /**
- * 🏢 PROFESSIONAL BLACK & WHITE PDF REPORT GENERATOR FOR MNC COMPANIES
- * Clean, corporate design with no colors - only black text on white background
+ * PROFESSIONAL BLACK & WHITE PDF REPORT GENERATOR
+ * Classic corporate design: black text/lines on white background only.
+ * Light grayscale fills (no hue) are used sparingly for table headers,
+ * which reads as "monochrome/professional" rather than "colored".
  */
 
-// Clean text function
-const clean = (text: string): string => String(text || '').replace(/[^\x00-\xFF]/g, '?');
+// ---------- shared constants ----------
+
+const BLACK: [number, number, number] = [0, 0, 0];
+const HEADER_FILL: [number, number, number] = [235, 235, 235]; // grayscale only
+const RULE_WIDTH = 0.4;
+const MARGIN = 20;
+
+// Strip anything outside basic Latin-1 so jsPDF's core fonts don't choke
+const clean = (text: unknown): string =>
+  String(text ?? '').replace(/[^\x00-\xFF]/g, '');
+
+const today = () =>
+  new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+const reportRef = (prefix: string) =>
+  `${prefix}-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}`;
+
+// ---------- generic drawing helpers ----------
+
+/** Classic letterhead-style header used on the first page of every report. */
+function drawLetterhead(doc: any, pageWidth: number, title: string, subtitle: string, ref: string) {
+  const margin = MARGIN;
+
+  doc.setTextColor(...BLACK);
+  doc.setFont('times', 'bold');
+  doc.setFontSize(9);
+  doc.text('CT ANALYSIS SYSTEM', margin, 16);
+
+  doc.setFont('times', 'normal');
+  doc.setFontSize(8);
+  doc.text('Engineering Report', pageWidth - margin, 16, { align: 'right' });
+
+  doc.setDrawColor(...BLACK);
+  doc.setLineWidth(0.8);
+  doc.line(margin, 20, pageWidth - margin, 20);
+
+  doc.setFont('times', 'bold');
+  doc.setFontSize(17);
+  doc.text(title, margin, 32);
+
+  doc.setFont('times', 'normal');
+  doc.setFontSize(11);
+  doc.text(subtitle, margin, 40);
+
+  doc.setFontSize(9);
+  doc.text(`Report Ref: ${ref}`, margin, 47);
+  doc.text(`Date Issued: ${today()}`, pageWidth - margin, 47, { align: 'right' });
+
+  doc.setLineWidth(RULE_WIDTH);
+  doc.line(margin, 51, pageWidth - margin, 51);
+
+  return 60; // next available y
+}
+
+/** Footer with a rule, system name, page number and timestamp. Call once per page. */
+function drawFooter(doc: any, pageWidth: number, pageHeight: number, pageNum: number) {
+  const margin = MARGIN;
+  const y = pageHeight - 15;
+
+  doc.setDrawColor(...BLACK);
+  doc.setLineWidth(RULE_WIDTH);
+  doc.line(margin, y, pageWidth - margin, y);
+
+  doc.setFont('times', 'italic');
+  doc.setFontSize(8);
+  doc.setTextColor(...BLACK);
+  doc.text('CT Analysis System \u2014 Confidential Engineering Report', margin, y + 5);
+  doc.text(`Page ${pageNum}`, pageWidth / 2, y + 5, { align: 'center' });
+  doc.text(new Date().toLocaleString(), pageWidth - margin, y + 5, { align: 'right' });
+}
+
+interface Column {
+  header: string;
+  width: number;
+  align?: 'left' | 'center' | 'right';
+  bold?: boolean; // bold this column's data cells
+}
 
 /**
- * ✨ Generate Professional Corporate Device Report (Black & White Only)
+ * Draws a simple ruled table (header row + data rows) starting at (x, y).
+ * Returns the y position immediately below the table.
+ * Caller is responsible for page-break checks between rows if needed;
+ * use drawTablePaged for automatic pagination.
  */
+function drawTableHeader(doc: any, x: number, y: number, columns: Column[], rowHeight: number) {
+  const totalWidth = columns.reduce((s, c) => s + c.width, 0);
+
+  doc.setFillColor(...HEADER_FILL);
+  doc.setDrawColor(...BLACK);
+  doc.setLineWidth(RULE_WIDTH);
+  doc.rect(x, y, totalWidth, rowHeight, 'FD');
+
+  doc.setFont('times', 'bold');
+  doc.setFontSize(9);
+  doc.setTextColor(...BLACK);
+
+  let cx = x;
+  columns.forEach((col) => {
+    if (cx > x) doc.line(cx, y, cx, y + rowHeight);
+    const tx = col.align === 'right' ? cx + col.width - 2
+      : col.align === 'center' ? cx + col.width / 2
+      : cx + 2;
+    doc.text(col.header, tx, y + rowHeight * 0.68, { align: col.align ?? 'left' });
+    cx += col.width;
+  });
+
+  return y + rowHeight;
+}
+
+function drawTableRow(
+  doc: any,
+  x: number,
+  y: number,
+  columns: Column[],
+  values: string[],
+  rowHeight: number,
+  emphasize = false
+) {
+  const totalWidth = columns.reduce((s, c) => s + c.width, 0);
+
+  doc.setDrawColor(...BLACK);
+  doc.setLineWidth(RULE_WIDTH);
+  doc.rect(x, y, totalWidth, rowHeight, 'S');
+
+  doc.setFontSize(9);
+  let cx = x;
+  columns.forEach((col, i) => {
+    if (cx > x) doc.line(cx, y, cx, y + rowHeight);
+    doc.setFont('times', emphasize || col.bold ? 'bold' : 'normal');
+    const tx = col.align === 'right' ? cx + col.width - 2
+      : col.align === 'center' ? cx + col.width / 2
+      : cx + 2;
+    doc.text(clean(values[i]), tx, y + rowHeight * 0.68, { align: col.align ?? 'left' });
+    cx += col.width;
+  });
+
+  return y + rowHeight;
+}
+
+function sectionTitle(doc: any, text: string, x: number, y: number) {
+  doc.setFont('times', 'bold');
+  doc.setFontSize(12);
+  doc.setTextColor(...BLACK);
+  doc.text(text.toUpperCase(), x, y);
+  doc.setLineWidth(RULE_WIDTH);
+  doc.line(x, y + 2, x + doc.getTextWidth(text.toUpperCase()), y + 2);
+  return y + 10;
+}
+
+// ==================================================================
+// SINGLE DEVICE REPORT
+// ==================================================================
+
 export async function generateDevicePDFReport(
   device: DeviceResult,
   systemParams: StandardParameters
 ): Promise<void> {
-  console.log('🏢 PROFESSIONAL CORPORATE PDF GENERATOR ACTIVATED');
-  
-  // Simple jsPDF import
   const jsPDFModule = await import('jspdf');
   const jsPDF = jsPDFModule.default;
   const doc = new jsPDF('portrait', 'mm', 'a4');
-  
-  // Document setup
+
+  const pageWidth = 210;
+  const pageHeight = 297;
+  const margin = MARGIN;
+  const boxWidth = pageWidth - margin * 2;
+  let pageNum = 1;
+
   doc.setProperties({
     title: `CT Adequacy Report - ${device.device_name}`,
-    creator: 'CT Analysis System'
+    creator: 'CT Analysis System',
   });
 
-  let y = 25;
-  const pageWidth = 210;
-  const margin = 20;
+  const newPage = () => {
+    drawFooter(doc, pageWidth, pageHeight, pageNum);
+    doc.addPage();
+    pageNum += 1;
+    return 25;
+  };
 
-  // 🏢 CORPORATE HEADER (Black text only)
-  doc.setFontSize(18);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(0, 0, 0);
-  doc.text('CT ADEQUACY ANALYSIS REPORT', margin, y);
-  
-  // Underline
-  doc.setLineWidth(0.5);
-  doc.line(margin, y + 2, pageWidth - margin, y + 2);
-  
-  y += 15;
+  const ensureSpace = (y: number, needed: number) =>
+    y + needed > pageHeight - 25 ? newPage() : y;
 
-  // Device name
-  doc.setFontSize(14);
-  doc.setFont('helvetica', 'bold');
-  doc.text(`Device: ${clean(device.device_name)}`, margin, y);
-  
-  y += 10;
+  let y = drawLetterhead(
+    doc,
+    pageWidth,
+    'CT ADEQUACY ANALYSIS REPORT',
+    `Device: ${clean(device.device_name)}`,
+    reportRef('CTA')
+  );
 
-  // Report date
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'normal');
-  doc.text(`Report Generated: ${new Date().toLocaleDateString('en-US', { 
-    year: 'numeric', 
-    month: 'long', 
-    day: 'numeric' 
-  })}`, margin, y);
-  
-  y += 20;
+  // ---- verdict block ----
+  const verdictHeight = device.verdict !== 'NOT APPLICABLE' ? 28 : 16;
+  doc.setDrawColor(...BLACK);
+  doc.setLineWidth(0.8);
+  doc.rect(margin, y, boxWidth, verdictHeight, 'S');
 
-  // 🏢 VERDICT SECTION (Black border box)
-  const verdictBoxHeight = 25;
-  const boxWidth = pageWidth - (margin * 2);
-  
-  // Draw verdict box with black border
-  doc.setDrawColor(0, 0, 0);
-  doc.setLineWidth(1);
-  doc.rect(margin, y, boxWidth, verdictBoxHeight, 'S');
-  
-  // Verdict text
-  doc.setFontSize(16);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(0, 0, 0);
-  doc.text(device.verdict, margin + boxWidth/2, y + 10, { align: 'center' });
-  
-  // Technical details
+  doc.setFont('times', 'bold');
+  doc.setFontSize(15);
+  doc.text(device.verdict, margin + boxWidth / 2, y + 10, { align: 'center' });
+
   if (device.verdict !== 'NOT APPLICABLE') {
+    doc.setFont('times', 'normal');
     doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    const vkText = `Vk Required: ${device.vk_required}V | Vk Available: ${device.vk_available > 0 ? device.vk_available + 'V' : 'N/A'}`;
-    doc.text(vkText, margin + boxWidth/2, y + 18, { align: 'center' });
-    
+    doc.text(
+      `Vk Required: ${device.vk_required} V   |   Vk Available: ${device.vk_available > 0 ? device.vk_available + ' V' : 'N/A'}`,
+      margin + boxWidth / 2,
+      y + 18,
+      { align: 'center' }
+    );
     if (device.vk_available > 0) {
       const ratio = ((device.vk_available / device.vk_required) * 100).toFixed(0);
-      doc.setFontSize(12);
-      doc.setFont('helvetica', 'bold');
-      doc.text(`Adequacy Ratio: ${ratio}%`, margin + boxWidth/2, y + 22, { align: 'center' });
+      doc.setFont('times', 'bold');
+      doc.setFontSize(11);
+      doc.text(`Adequacy Ratio: ${ratio}%`, margin + boxWidth / 2, y + 24, { align: 'center' });
     }
   }
-  
-  y += verdictBoxHeight + 25;
+  y += verdictHeight + 15;
 
-  // 🏢 INPUT PARAMETERS TABLE (Black borders)
-  doc.setFontSize(12);
-  doc.setFont('helvetica', 'bold');
-  doc.text('INPUT PARAMETERS', margin, y);
-  y += 10;
+  // ---- input parameters table ----
+  y = sectionTitle(doc, 'Input Parameters', margin, y);
 
-  // Table structure
-  const tableY = y;
-  const rowHeight = 8;
-  const col1Width = 60;
-  const col2Width = 30;
-  const col3Width = 20;
-  
-  // Header row
-  doc.setDrawColor(0, 0, 0);
-  doc.setLineWidth(0.5);
-  doc.rect(margin, tableY, col1Width + col2Width + col3Width, rowHeight, 'S');
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'bold');
-  doc.text('Parameter', margin + 2, tableY + 6);
-  doc.text('Value', margin + col1Width + 2, tableY + 6);
-  doc.text('Unit', margin + col1Width + col2Width + 2, tableY + 6);
-  
-  // Vertical lines
-  doc.line(margin + col1Width, tableY, margin + col1Width, tableY + rowHeight);
-  doc.line(margin + col1Width + col2Width, tableY, margin + col1Width + col2Width, tableY + rowHeight);
-  
-  y += rowHeight;
-  
-  // Data rows
-  const params = [
+  const paramCols: Column[] = [
+    { header: 'Parameter', width: 70 },
+    { header: 'Value', width: 40, align: 'right', bold: true },
+    { header: 'Unit', width: 20, align: 'center' },
+  ];
+  const paramRows: string[][] = [
     ['CT Ratio', `${device.inputs.ct_ratio_primary}/${device.inputs.ct_ratio_secondary}`, 'A'],
     ['Accuracy Class', device.inputs.accuracy_class || 'N/A', ''],
-    ['CT Resistance', device.inputs.rct?.toString() || 'N/A', 'Ω'],
-    ['Lead Resistance', device.inputs.lead_resistance?.toString() || 'N/A', 'Ω'],
+    ['CT Resistance', device.inputs.rct?.toString() || 'N/A', 'ohm'],
+    ['Lead Resistance', device.inputs.lead_resistance?.toString() || 'N/A', 'ohm'],
     ['Relay Burden', device.inputs.relay_burden_va?.toString() || 'N/A', 'VA'],
     ['Bus Voltage', device.inputs.bus_voltage_kv?.toString() || 'N/A', 'kV'],
     ['Fault Level', device.inputs.max_bus_fault_kA?.toString() || 'N/A', 'kA'],
-    ['Route Length', device.inputs.route_length_km?.toString() || 'N/A', 'km']
+    ['Route Length', device.inputs.route_length_km?.toString() || 'N/A', 'km'],
   ];
-  
-  doc.setFont('helvetica', 'normal');
-  
-  params.forEach((param, index) => {
-    const rowY = y + (index * rowHeight);
-    
-    // Row border
-    doc.rect(margin, rowY, col1Width + col2Width + col3Width, rowHeight, 'S');
-    
-    // Vertical lines
-    doc.line(margin + col1Width, rowY, margin + col1Width, rowY + rowHeight);
-    doc.line(margin + col1Width + col2Width, rowY, margin + col1Width + col2Width, rowY + rowHeight);
-    
-    // Text
-    doc.text(param[0], margin + 2, rowY + 6);
-    doc.setFont('helvetica', 'bold');
-    doc.text(param[1], margin + col1Width + 2, rowY + 6);
-    doc.setFont('helvetica', 'normal');
-    doc.text(param[2], margin + col1Width + col2Width + 2, rowY + 6);
+
+  const rowH = 8;
+  y = ensureSpace(y, rowH * (paramRows.length + 1));
+  y = drawTableHeader(doc, margin, y, paramCols, rowH);
+  paramRows.forEach((row) => {
+    y = ensureSpace(y, rowH);
+    y = drawTableRow(doc, margin, y, paramCols, row, rowH);
   });
+  y += 14;
 
-  y += (params.length * rowHeight) + 20;
+  // ---- calculation breakdown table ----
+  y = ensureSpace(y, rowH * 2);
+  y = sectionTitle(doc, 'Calculation Breakdown', margin, y);
 
-  // Check for new page
-  if (y > 220) {
-    doc.addPage();
-    y = 30;
-  }
-
-  // 🏢 CALCULATION BREAKDOWN (Simple black text table)
-  doc.setFontSize(12);
-  doc.setFont('helvetica', 'bold');
-  doc.text('CALCULATION BREAKDOWN', margin, y);
-  y += 10;
-
-  // Table header
-  const calcTableY = y;
-  const conditionWidth = 80;
-  const ealreqWidth = 25;
-  const vkWidth = 25;
-  
-  doc.setDrawColor(0, 0, 0);
-  doc.setLineWidth(0.5);
-  doc.rect(margin, calcTableY, conditionWidth + ealreqWidth + vkWidth, rowHeight, 'S');
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'bold');
-  doc.text('Fault Condition', margin + 2, calcTableY + 6);
-  doc.text('Ealreq (V)', margin + conditionWidth + 2, calcTableY + 6);
-  doc.text('Vk Req (V)', margin + conditionWidth + ealreqWidth + 2, calcTableY + 6);
-  
-  // Vertical lines
-  doc.line(margin + conditionWidth, calcTableY, margin + conditionWidth, calcTableY + rowHeight);
-  doc.line(margin + conditionWidth + ealreqWidth, calcTableY, margin + conditionWidth + ealreqWidth, calcTableY + rowHeight);
-  
-  y += rowHeight;
-
-  device.vk_breakdown.forEach((row, index) => {
-    const rowY = y + (index * rowHeight);
-    
-    // Row border
-    doc.rect(margin, rowY, conditionWidth + ealreqWidth + vkWidth, rowHeight, 'S');
-    
-    // Vertical lines
-    doc.line(margin + conditionWidth, rowY, margin + conditionWidth, rowY + rowHeight);
-    doc.line(margin + conditionWidth + ealreqWidth, rowY, margin + conditionWidth + ealreqWidth, rowY + rowHeight);
-    
-    doc.setFontSize(9);
-    doc.setFont('helvetica', row.isMax ? 'bold' : 'normal');
-    
-    const label = row.isMax ? `${row.label} (MAX)` : row.label;
-    doc.text(label, margin + 2, rowY + 6);
-    doc.text(row.ealreq.toString(), margin + conditionWidth + 2, rowY + 6);
-    doc.text(row.vk.toString(), margin + conditionWidth + ealreqWidth + 2, rowY + 6);
+  const calcCols: Column[] = [
+    { header: 'Fault Condition', width: 90 },
+    { header: 'Ealreq (V)', width: 40, align: 'right' },
+    { header: 'Vk Req (V)', width: 40, align: 'right' },
+  ];
+  y = ensureSpace(y, rowH * (device.vk_breakdown.length + 1));
+  y = drawTableHeader(doc, margin, y, calcCols, rowH);
+  device.vk_breakdown.forEach((row) => {
+    y = ensureSpace(y, rowH);
+    const label = row.isMax ? `${row.label}  (MAX)` : row.label;
+    y = drawTableRow(doc, margin, y, calcCols, [label, row.ealreq.toString(), row.vk.toString()], rowH, row.isMax);
   });
+  y += 12;
 
-  y += (device.vk_breakdown.length * rowHeight) + 15;
-
-  // Final result box
-  doc.setDrawColor(0, 0, 0);
-  doc.setLineWidth(1);
+  // ---- final result ----
+  y = ensureSpace(y, 16);
+  doc.setDrawColor(...BLACK);
+  doc.setLineWidth(0.8);
   doc.rect(margin, y, boxWidth, 15, 'S');
-  doc.setFontSize(11);
-  doc.setFont('helvetica', 'bold');
-  doc.text(`FINAL RESULT: Ealreq Max = ${device.ealreq_max}V, Vk Required = ${device.vk_required}V`, margin + 2, y + 10);
+  doc.setFont('times', 'bold');
+  doc.setFontSize(10.5);
+  doc.text(
+    `FINAL RESULT:  Ealreq Max = ${device.ealreq_max} V     Vk Required = ${device.vk_required} V`,
+    margin + boxWidth / 2,
+    y + 9.5,
+    { align: 'center' }
+  );
 
-  // 🏢 CORPORATE FOOTER (Black line)
-  const footerY = 270;
-  doc.setLineWidth(0.5);
-  doc.line(margin, footerY, pageWidth - margin, footerY);
-  
-  doc.setFontSize(8);
-  doc.setFont('helvetica', 'normal');
-  doc.text('CT Analysis System - Professional Report', margin, footerY + 5);
-  doc.text(new Date().toLocaleString(), pageWidth - margin, footerY + 5, { align: 'right' });
+  drawFooter(doc, pageWidth, pageHeight, pageNum);
 
-  // Save with professional naming
   const deviceName = clean(device.device_name).replace(/[^a-zA-Z0-9]/g, '_');
-  const timestamp = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+  const timestamp = new Date().toISOString().split('T')[0];
   doc.save(`CT_Adequacy_Report_${deviceName}_${timestamp}.pdf`);
-  
-  console.log('✅ PROFESSIONAL CORPORATE PDF GENERATED (Black & White)');
 }
 
-/**
- * ✨ Generate Professional Corporate Consolidated Report (Black & White Only)
- */
+// ==================================================================
+// CONSOLIDATED MULTI-DEVICE REPORT
+// ==================================================================
+
 export async function generateConsolidatedPDFReport(
   devices: DeviceResult[],
   systemParams: StandardParameters
 ): Promise<void> {
-  console.log('🏢 PROFESSIONAL CORPORATE CONSOLIDATED PDF GENERATOR ACTIVATED');
-  
-  // Simple jsPDF import
   const jsPDFModule = await import('jspdf');
   const jsPDF = jsPDFModule.default;
   const doc = new jsPDF('landscape', 'mm', 'a4');
-  
-  const pageWidth = 297; // A4 landscape
-  const margin = 20;
-  let y = 25;
 
-  // 🏢 CORPORATE HEADER (Black text only)
-  doc.setFontSize(18);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(0, 0, 0);
-  doc.text('CT ADEQUACY ANALYSIS - CONSOLIDATED REPORT', margin, y);
-  
-  // Underline
-  doc.setLineWidth(0.5);
-  doc.line(margin, y + 2, pageWidth - margin, y + 2);
-  
-  y = 40;
+  const pageWidth = 297;
+  const pageHeight = 210;
+  const margin = MARGIN;
+  let pageNum = 1;
 
-  // Summary
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'normal');
-  doc.text(`${devices.length} devices analyzed on ${new Date().toLocaleDateString('en-US', { 
-    year: 'numeric', 
-    month: 'long', 
-    day: 'numeric' 
-  })}`, margin, y);
-  y += 20;
+  doc.setProperties({
+    title: 'CT Adequacy Analysis - Consolidated Report',
+    creator: 'CT Analysis System',
+  });
 
-  // Devices overview table (Black borders)
-  doc.setFontSize(12);
-  doc.setFont('helvetica', 'bold');
-  doc.text('DEVICES OVERVIEW', margin, y);
+  const newPage = () => {
+    drawFooter(doc, pageWidth, pageHeight, pageNum);
+    doc.addPage();
+    pageNum += 1;
+    return 25;
+  };
+
+  let y = drawLetterhead(
+    doc,
+    pageWidth,
+    'CT ADEQUACY ANALYSIS \u2014 CONSOLIDATED REPORT',
+    `${devices.length} device(s) analyzed`,
+    reportRef('CTA-CONS')
+  );
+
+  y = sectionTitle(doc, 'Devices Overview', margin, y);
+
+  const cols: Column[] = [
+    { header: '#', width: 12, align: 'center' },
+    { header: 'Device Name', width: 85 },
+    { header: 'CT Ratio', width: 35, align: 'center' },
+    { header: 'Verdict', width: 40, align: 'center', bold: true },
+    { header: 'Vk Req', width: 25, align: 'right' },
+    { header: 'Vk Avail', width: 25, align: 'right' },
+    { header: 'Ratio %', width: 22, align: 'right' },
+  ];
+  const rowH = 9;
+
+  y = drawTableHeader(doc, margin, y, cols, rowH);
+
+  devices.forEach((device, index) => {
+    if (y + rowH > pageHeight - 40) {
+      y = newPage();
+      y = drawTableHeader(doc, margin, y, cols, rowH);
+    }
+
+    const ratio =
+      device.vk_available > 0 ? `${((device.vk_available / device.vk_required) * 100).toFixed(0)}%` : 'N/A';
+    const name = device.device_name.length > 34 ? device.device_name.slice(0, 31) + '...' : device.device_name;
+
+    y = drawTableRow(
+      doc,
+      margin,
+      y,
+      cols,
+      [
+        (index + 1).toString(),
+        clean(name),
+        `${device.inputs.ct_ratio_primary}/${device.inputs.ct_ratio_secondary}`,
+        device.verdict === 'SUITABLY DIMENSIONED' ? 'SUITABLE' : 'UNDER DIM.',
+        `${device.vk_required} V`,
+        device.vk_available > 0 ? `${device.vk_available} V` : 'N/A',
+        ratio,
+      ],
+      rowH
+    );
+  });
+
   y += 15;
 
-  // Table structure
-  const tableStartY = y;
-  const rowHeight = 10;
-  const colWidths = [15, 80, 35, 30, 30, 25, 25, 25]; // Column widths
-  const totalWidth = colWidths.reduce((sum, width) => sum + width, 0);
-
-  // Header row
-  doc.setDrawColor(0, 0, 0);
-  doc.setLineWidth(0.5);
-  doc.rect(margin, tableStartY, totalWidth, rowHeight, 'S');
-  
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'bold');
-  
-  let x = margin;
-  const headers = ['#', 'Device Name', 'CT Ratio', 'Verdict', 'Vk Req', 'Vk Avail', 'Ratio %', 'Status'];
-  headers.forEach((header, i) => {
-    // Vertical lines
-    if (i > 0) {
-      doc.line(x, tableStartY, x, tableStartY + rowHeight);
-    }
-    doc.text(header, x + 2, tableStartY + 7);
-    x += colWidths[i];
-  });
-  
-  y += rowHeight;
-
-  // Device rows
-  devices.forEach((device, index) => {
-    const rowY = y + (index * rowHeight);
-    
-    // Row border
-    doc.rect(margin, rowY, totalWidth, rowHeight, 'S');
-    
-    const ratio = device.vk_available > 0 ? 
-      `${((device.vk_available / device.vk_required) * 100).toFixed(0)}%` : 'N/A';
-    
-    const name = device.device_name.length > 25 ? 
-      device.device_name.substring(0, 22) + '...' : device.device_name;
-
-    const rowData = [
-      (index + 1).toString(),
-      clean(name),
-      `${device.inputs.ct_ratio_primary}/${device.inputs.ct_ratio_secondary}`,
-      device.verdict === 'SUITABLY DIMENSIONED' ? 'SUITABLE' : 'UNDER DIM.',
-      `${device.vk_required}V`,
-      device.vk_available > 0 ? `${device.vk_available}V` : 'N/A',
-      ratio,
-      'ANALYZED'
-    ];
-
-    // Text content
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(0, 0, 0);
-    
-    x = margin;
-    rowData.forEach((data, i) => {
-      // Vertical lines
-      if (i > 0) {
-        doc.line(x, rowY, x, rowY + rowHeight);
-      }
-      
-      // Bold for verdict column
-      if (i === 3) {
-        doc.setFont('helvetica', 'bold');
-      }
-      
-      doc.text(data, x + 2, rowY + 7);
-      
-      if (i === 3) {
-        doc.setFont('helvetica', 'normal');
-      }
-      
-      x += colWidths[i];
-    });
-  });
-
-  // Final summary box
-  y += (devices.length * rowHeight) + 20;
-  const summaryBoxWidth = 200;
-  doc.setDrawColor(0, 0, 0);
-  doc.setLineWidth(1);
-  doc.rect(margin, y, summaryBoxWidth, 25, 'S');
-  
-  doc.setFontSize(11);
-  doc.setFont('helvetica', 'bold');
-  doc.text('ANALYSIS SUMMARY:', margin + 5, y + 10);
-  
-  const suitable = devices.filter(d => d.verdict === 'SUITABLY DIMENSIONED').length;
+  // ---- summary box ----
+  const suitable = devices.filter((d) => d.verdict === 'SUITABLY DIMENSIONED').length;
   const underDim = devices.length - suitable;
-  
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'normal');
-  doc.text(`Total Devices: ${devices.length} | Suitable: ${suitable} | Under Dimensioned: ${underDim}`, margin + 5, y + 18);
+  const summaryHeight = 22;
 
-  // 🏢 CORPORATE FOOTER (Black line)
-  const footerY = 210 - 15; // A4 landscape height
-  doc.setLineWidth(0.5);
-  doc.line(margin, footerY, pageWidth - margin, footerY);
-  
-  doc.setFontSize(8);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(0, 0, 0);
-  doc.text('CT Analysis System - Professional Report', margin, footerY + 5);
-  doc.text(new Date().toLocaleString(), pageWidth - margin, footerY + 5, { align: 'right' });
+  if (y + summaryHeight > pageHeight - 25) y = newPage();
 
-  // Save with professional naming
-  const timestamp = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+  const summaryWidth = 210;
+  doc.setDrawColor(...BLACK);
+  doc.setLineWidth(0.8);
+  doc.rect(margin, y, summaryWidth, summaryHeight, 'S');
+
+  doc.setFont('times', 'bold');
+  doc.setFontSize(11);
+  doc.text('ANALYSIS SUMMARY', margin + 5, y + 9);
+
+  doc.setFont('times', 'normal');
+  doc.setFontSize(9.5);
+  doc.text(
+    `Total Devices: ${devices.length}     Suitable: ${suitable}     Under Dimensioned: ${underDim}`,
+    margin + 5,
+    y + 17
+  );
+
+  drawFooter(doc, pageWidth, pageHeight, pageNum);
+
+  const timestamp = new Date().toISOString().split('T')[0];
   doc.save(`CT_Adequacy_Consolidated_Report_${timestamp}.pdf`);
-  
-  console.log('✅ PROFESSIONAL CORPORATE CONSOLIDATED PDF GENERATED (Black & White)');
 }
