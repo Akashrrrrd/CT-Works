@@ -117,8 +117,6 @@ export default function ImportExcelPage() {
       clearInterval(progressInterval);
       setUploadProgress(100);
 
-      const result = await response.json();
-
       if (!response.ok) {
         const errorResult = await response.json();
         throw new Error(errorResult.error || 'Failed to process Excel file');
@@ -339,8 +337,8 @@ Lead Resistance,0.47`;
         </Alert>
       )}
 
-      {/* Parsed Data Display */}
-      {parsedData && (
+      {/* Import Response Display */}
+      {importResponse && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -348,19 +346,19 @@ Lead Resistance,0.47`;
               File Processed Successfully
             </CardTitle>
             <CardDescription>
-              {parsedData.rowCount} data rows processed, {parsedData.iedCount} IEDs found
+              {importResponse.summary?.devices_found || 0} devices found, {importResponse.summary?.standard_parameters_found || 0} parameters extracted
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {/* Warnings */}
-            {parsedData.warnings.length > 0 && (
+            {importResponse.warnings && importResponse.warnings.length > 0 && (
               <Alert>
                 <AlertTriangle className="h-4 w-4" />
                 <AlertDescription>
                   <div className="space-y-1">
                     <p className="font-medium">Warnings:</p>
                     <ul className="list-disc list-inside text-sm">
-                      {parsedData.warnings.map((warning, i) => (
+                      {importResponse.warnings.map((warning, i) => (
                         <li key={i}>{warning}</li>
                       ))}
                     </ul>
@@ -369,84 +367,83 @@ Lead Resistance,0.47`;
               </Alert>
             )}
 
-            {/* Missing Fields */}
-            {parsedData.missing.length > 0 && (
+            {/* Errors */}
+            {importResponse.errors && importResponse.errors.length > 0 && (
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>
                   <div className="space-y-1">
-                    <p className="font-medium">Missing Required Fields:</p>
+                    <p className="font-medium">Errors Found:</p>
                     <ul className="list-disc list-inside text-sm">
-                      {parsedData.missing.map((field, i) => (
-                        <li key={i}>{field}</li>
+                      {importResponse.errors.map((error, i) => (
+                        <li key={i}>{error}</li>
                       ))}
                     </ul>
-                    <p className="text-xs mt-2">
-                      Default values will be used for missing fields
-                    </p>
                   </div>
                 </AlertDescription>
               </Alert>
             )}
 
             {/* Extracted Data Summary */}
-            <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <h4 className="font-medium mb-2">CT Parameters</h4>
-                <div className="space-y-1 text-sm">
-                  <div className="flex justify-between">
-                    <span>Primary Ratio:</span>
-                    <Badge variant="outline">{parsedData.parsed.ct.ratio_primary || 'Default'}</Badge>
+            {importResponse.data && (
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <h4 className="font-medium mb-2">Standard Parameters</h4>
+                  <div className="space-y-1 text-sm">
+                    <div className="flex justify-between">
+                      <span>Bus Voltage:</span>
+                      <Badge variant="outline">{importResponse.data.bus_voltage_kv || 'N/A'} kV</Badge>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Frequency:</span>
+                      <Badge variant="outline">{importResponse.data.frequency || 'N/A'} Hz</Badge>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Fault Level:</span>
+                      <Badge variant="outline">{importResponse.data.max_bus_fault_mva || 'N/A'} MVA</Badge>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Route Length:</span>
+                      <Badge variant="outline">{importResponse.data.route_length_km || 'N/A'} km</Badge>
+                    </div>
                   </div>
-                  <div className="flex justify-between">
-                    <span>Secondary Ratio:</span>
-                    <Badge variant="outline">{parsedData.parsed.ct.ratio_secondary || 'Default'}</Badge>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Accuracy Class:</span>
-                    <Badge variant="outline">{parsedData.parsed.ct.accuracy_class || 'Default'}</Badge>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Resistance (Rct):</span>
-                    <Badge variant="outline">{parsedData.parsed.ct.rct || 'Default'} Ω</Badge>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Knee Point Voltage:</span>
-                    <Badge variant="outline">{parsedData.parsed.ct.vk_available || 'Default'} V</Badge>
+                </div>
+
+                <div>
+                  <h4 className="font-medium mb-2">CT Parameters (First Device)</h4>
+                  <div className="space-y-1 text-sm">
+                    <div className="flex justify-between">
+                      <span>CT Ratio:</span>
+                      <Badge variant="outline">{importResponse.data.ct_ratio_primary || 'N/A'}/{importResponse.data.ct_ratio_secondary || 'N/A'}A</Badge>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Accuracy Class:</span>
+                      <Badge variant="outline">{importResponse.data.accuracy_class || 'N/A'}</Badge>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Resistance (Rct):</span>
+                      <Badge variant="outline">{importResponse.data.rct || 'N/A'} Ω</Badge>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Knee Point Voltage:</span>
+                      <Badge variant="outline">{importResponse.data.vk_available || 'N/A'} V</Badge>
+                    </div>
                   </div>
                 </div>
               </div>
+            )}
 
+            {/* Devices Found */}
+            {importResponse.data?.devices && importResponse.data.devices.length > 0 && (
               <div>
-                <h4 className="font-medium mb-2">System Parameters</h4>
-                <div className="space-y-1 text-sm">
-                  <div className="flex justify-between">
-                    <span>Frequency:</span>
-                    <Badge variant="outline">{parsedData.parsed.system.frequency || 'Default'} Hz</Badge>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Bus Voltage:</span>
-                    <Badge variant="outline">{parsedData.parsed.system.bus_voltage_kv || 'Default'} kV</Badge>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Fault Current:</span>
-                    <Badge variant="outline">{parsedData.parsed.system.fault_current_ka || 'Default'} kA</Badge>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* IEDs Found */}
-            {parsedData.iedCount > 0 && (
-              <div>
-                <h4 className="font-medium mb-2">IEDs Found ({parsedData.iedCount})</h4>
+                <h4 className="font-medium mb-2">Devices Found ({importResponse.data.devices.length})</h4>
                 <div className="space-y-2">
-                  {parsedData.parsed.ieds.map((ied, i) => (
+                  {importResponse.data.devices.map((device, i) => (
                     <div key={i} className="flex items-center justify-between p-2 bg-muted rounded">
-                      <span className="font-medium">{ied.name}</span>
+                      <span className="font-medium">{device.device_name}</span>
                       <div className="flex gap-2">
-                        <Badge variant="secondary">{ied.burden_va} VA</Badge>
-                        <Badge variant="outline">{ied.type}</Badge>
+                        <Badge variant="secondary">{device.ct_ratio || 'N/A'}</Badge>
+                        <Badge variant="outline">{device.accuracy_class || 'N/A'}</Badge>
                       </div>
                     </div>
                   ))}
@@ -459,14 +456,14 @@ Lead Resistance,0.47`;
               <Button 
                 onClick={proceedToComputation}
                 className="gap-2"
-                disabled={parsedData.missing.length > 0}
+                disabled={!importResponse.data}
               >
                 <Zap className="h-4 w-4" />
                 Proceed to Computation
               </Button>
               <Button 
                 variant="outline" 
-                onClick={() => setParsedData(null)}
+                onClick={() => setImportResponse(null)}
               >
                 Upload Different File
               </Button>
