@@ -451,15 +451,32 @@ export class ExcelProcessor {
       const row = data[i];
       if (!row || row.length < 2) continue;
       const firstCell = String(row[0] || '').toLowerCase().trim();
-      if (firstCell.includes('ct ratio') || firstCell.includes('ratio')) {
+      
+      // Look for CT ratio patterns in ALL cells of rows containing "ratio"
+      if (firstCell.includes('ct ratio') || firstCell.includes('ratio') || firstCell.includes('ct')) {
         console.log(`🎯 CT RATIO ROW ${i}:`, row.slice(0, 8).map((cell, j) => `col${j}="${cell}"`).join(' | '));
         
-        // Check for values like 700/1A, 2000/1A, etc.
-        for (let col = 1; col < Math.min(row.length, 8); col++) {
+        // Check ALL columns for CT ratio values like 700/1A, 2000/1A, 800/1, etc.
+        for (let col = 0; col < Math.min(row.length, 15); col++) {
           const cellValue = String(row[col] || '').trim();
-          if (cellValue.includes('/1A') || cellValue.includes('/1') || /^\d+\/\d/.test(cellValue)) {
+          // Enhanced pattern matching for CT ratios
+          if (cellValue && (
+            cellValue.includes('/1A') || 
+            cellValue.includes('/1') || 
+            /^\d+\/\d+A?$/i.test(cellValue) ||
+            /^\d+:\d+$/i.test(cellValue) ||
+            cellValue.match(/\b\d{3,4}\/\d+/i)
+          )) {
             console.log(`    🎯 FOUND CT RATIO VALUE: col${col} = "${cellValue}"`);
           }
+        }
+      }
+      
+      // Also scan for standalone ratio values in any row
+      for (let col = 0; col < Math.min(row.length, 15); col++) {
+        const cellValue = String(row[col] || '').trim();
+        if (cellValue && /\b(700|800|1000|2000|2500)\/1A?\b/i.test(cellValue)) {
+          console.log(`    🔥 STANDALONE CT RATIO FOUND: Row ${i}, Col ${col} = "${cellValue}"`);
         }
       }
     }
@@ -715,10 +732,28 @@ export class ExcelProcessor {
         const col = device._column!;
         let raw: any = col < row.length ? row[col] : undefined;
 
-        // Log raw cell value for CT Ratio specifically
+        // Enhanced CT Ratio extraction for values like "700/1A", "2000/1A", etc.
         if (paramKey === 'ct_ratio') {
           console.log(`   🎯 RAW CELL VALUE for "${device.device_name}" at row ${i}, col ${col}:`, raw);
           console.log(`   🎯 Full row data:`, row);
+          
+          // Try to find CT ratio in the current row if the device column is empty
+          if (raw === null || raw === undefined || String(raw).trim() === '' || String(raw).trim() === '-') {
+            console.log(`   🔍 Searching entire row for CT ratio patterns...`);
+            for (let searchCol = 0; searchCol < row.length; searchCol++) {
+              const searchValue = String(row[searchCol] || '').trim();
+              if (searchValue && (
+                /\b(700|800|1000|2000|2500)\/1A?\b/i.test(searchValue) ||
+                /^\d{3,4}\/\d+A?$/i.test(searchValue) ||
+                searchValue.includes('/1A') ||
+                searchValue.includes('/1')
+              )) {
+                console.log(`   🎯 FOUND CT RATIO IN ROW: col${searchCol} = "${searchValue}"`);
+                raw = searchValue;
+                break;
+              }
+            }
+          }
         }
 
         // Handle merged cells — check adjacent columns if exact is empty
@@ -829,21 +864,66 @@ export class ExcelProcessor {
 
     // CT parameters from first device
     if (firstDevice) {
-      if (firstDevice.ct_ratio) {
-        const ratio = firstDevice.ct_ratio.split('/');
+      if (firstDevice.ct_ratio && firstDevice.ct_ratio !== 'N/A') {
+        console.log('🔍 Processing CT ratio:', firstDevice.ct_ratio);
+        
+        // Enhanced CT ratio parsing to handle formats like "700/1A", "2000/1", "800/1A"
+        let ratioString = firstDevice.ct_ratio.trim();
+        
+        // Remove common suffixes and clean up
+        ratioString = ratioString.replace(/A$/i, ''); // Remove trailing A
+        
+        const ratio = ratioString.split('/');
         if (ratio.length === 2) {
-          result.ct_ratio_primary = this.parseNumber(ratio[0]);
-          result.ct_ratio_secondary = this.parseNumber(ratio[1]);
+          const primary = this.parseNumber(ratio[0]);
+          const secondary = this.parseNumber(ratio[1]);
+          
+          if (primary > 0 && secondary > 0) {
+            result.ct_ratio_primary = primary;
+            result.ct_ratio_secondary = secondary;
+            console.log(`✅ Extracted CT ratio: ${primary}/${secondary}`);
+          } else {
+            console.log(`⚠️ Invalid CT ratio values: ${primary}/${secondary}`);
+          }
+        } else {
+          console.log(`⚠️ Invalid CT ratio format: ${firstDevice.ct_ratio}`);
         }
+      } else {
+        console.log('⚠️ No CT ratio found in first device');
       }
-      if (firstDevice.accuracy_class) {
+      if (firstDevice.accuracy_class && firstDevice.accuracy_class !== 'N/A') {
         result.accuracy_class = firstDevice.accuracy_class;
+        console.log(`✅ Extracted accuracy class: ${result.accuracy_class}`);
+      } else {
+        console.log('⚠️ No accuracy class found in first device');
       }
-      if (firstDevice.ct_resistance) {
+      
+      if (firstDevice.ct_resistance && firstDevice.ct_resistance !== 'N/A') {
         result.rct = this.parseNumber(firstDevice.ct_resistance);
+        console.log(`✅ Extracted CT resistance: ${result.rct}Ω`);
+      } else {
+        console.log('⚠️ No CT resistance found in first device');
       }
-      if (firstDevice.vk_knee_point_voltage) {
+      
+      if (firstDevice.vk_knee_point_voltage && firstDevice.vk_knee_point_voltage !== 'N/A') {
         result.vk_available = this.parseNumber(firstDevice.vk_knee_point_voltage);
+        console.log(`✅ Extracted Vk: ${result.vk_available}V`);
+      } else {
+        console.log('⚠️ No Vk (knee point voltage) found in first device');
+      }
+      
+      if (firstDevice.magnetizing_current && firstDevice.magnetizing_current !== 'N/A') {
+        result.io_at_vk = this.parseNumber(firstDevice.magnetizing_current);
+        console.log(`✅ Extracted magnetizing current: ${result.io_at_vk}mA`);
+      } else {
+        console.log('⚠️ No magnetizing current found in first device');
+      }
+      
+      if (firstDevice.burden && firstDevice.burden !== 'N/A') {
+        result.relay_burden_va = this.parseNumber(firstDevice.burden);
+        console.log(`✅ Extracted burden: ${result.relay_burden_va}VA`);
+      } else {
+        console.log('⚠️ No burden found in first device');
       }
       if (firstDevice.magnetizing_current) {
         result.io_at_vk = this.parseNumber(firstDevice.magnetizing_current) / 1000; // Convert mA to A
@@ -853,24 +933,9 @@ export class ExcelProcessor {
       }
     }
 
-    // Ensure all required fields have values (use defaults if missing)
-    if (!result.frequency) result.frequency = 50;
-    if (!result.bus_voltage_kv) result.bus_voltage_kv = 33;
-    if (!result.max_bus_fault_mva) result.max_bus_fault_mva = 31.5;
-    if (!result.r1) result.r1 = 0.0221;
-    if (!result.x1) result.x1 = 0.16;
-    if (!result.r0) result.r0 = 0.13;
-    if (!result.x0) result.x0 = 0.06;
-    if (!result.route_length_km) result.route_length_km = 0.2;
-    if (!result.lead_resistance) result.lead_resistance = 0.1;
-    if (!result.ct_ratio_primary) result.ct_ratio_primary = 800;
-    if (!result.ct_ratio_secondary) result.ct_ratio_secondary = 1;
-    if (!result.accuracy_class) result.accuracy_class = 'PX';
-    if (!result.rct) result.rct = 3.5;
-    if (!result.vk_available) result.vk_available = 540;
-    if (!result.io_at_vk) result.io_at_vk = 0.02;
-    if (!result.relay_burden_va) result.relay_burden_va = 0;
-
+    // NO DEFAULT VALUES - System must use only extracted data
+    console.log('✅ Legacy fields generation complete - no defaults applied');
+    
     // Generate detected devices for compatibility
     result.detected_devices = result.devices.map(device => ({
       name: device.device_name,

@@ -55,6 +55,9 @@ interface ImportResponse {
     standard_parameters_found: number;
     devices_found: number;
     device_types: string[];
+    ai_confidence?: number;
+    processing_method?: string;
+    ai_notes?: string[];
     warnings: string[];
   };
   errors?: string[];
@@ -122,7 +125,7 @@ export default function ImportExcelPage() {
         throw new Error(errorResult.error || 'Failed to process Excel file');
       }
 
-      const result: ImportResponse = await response.json();
+      const result = await response.json();
       
       if (!result.success) {
         throw new Error(result.errors?.join(', ') || 'Failed to process Excel file');
@@ -167,22 +170,22 @@ export default function ImportExcelPage() {
     const ctRatioMatch = firstDevice?.ct_ratio?.match(/(\d+)\/(\d+)/);
     
     const computationData = {
-      ct_ratio_primary: data.ct_ratio_primary || (ctRatioMatch ? parseInt(ctRatioMatch[1]) : 800),
-      ct_ratio_secondary: data.ct_ratio_secondary || (ctRatioMatch ? parseInt(ctRatioMatch[2]) : 1),
-      accuracy_class: data.accuracy_class || firstDevice?.accuracy_class || 'PX',
-      rct: data.rct || (firstDevice?.ct_resistance ? parseFloat(firstDevice.ct_resistance) : 3.5),
-      vk_available: data.vk_available || (firstDevice?.vk_knee_point_voltage ? parseFloat(firstDevice.vk_knee_point_voltage) : 540),
-      io_at_vk: data.io_at_vk || (firstDevice?.magnetizing_current ? parseFloat(firstDevice.magnetizing_current) : 20),
-      frequency: data.frequency || 50,
-      bus_voltage_kv: data.bus_voltage_kv || 33,
-      max_bus_fault_mva: data.max_bus_fault_mva || 1800,
-      r1: data.r1 || 0.16,
-      x1: data.x1 || 0.13,
-      r0: data.r0 || 0.96,
-      x0: data.x0 || 0.32,
-      route_length_km: data.route_length_km || 0.2,
-      relay_burden_va: data.relay_burden_va || 0.02,
-      lead_resistance: data.lead_resistance || 0.47,
+      ct_ratio_primary: data.ct_ratio_primary || (ctRatioMatch ? parseInt(ctRatioMatch[1]) : undefined),
+      ct_ratio_secondary: data.ct_ratio_secondary || (ctRatioMatch ? parseInt(ctRatioMatch[2]) : undefined),
+      accuracy_class: data.accuracy_class || firstDevice?.accuracy_class,
+      rct: data.rct || (firstDevice?.ct_resistance ? parseFloat(firstDevice.ct_resistance) : undefined),
+      vk_available: data.vk_available || (firstDevice?.vk_knee_point_voltage ? parseFloat(firstDevice.vk_knee_point_voltage) : undefined),
+      io_at_vk: data.io_at_vk || (firstDevice?.magnetizing_current ? parseFloat(firstDevice.magnetizing_current) : undefined),
+      frequency: data.frequency,
+      bus_voltage_kv: data.bus_voltage_kv,
+      max_bus_fault_mva: data.max_bus_fault_mva,
+      r1: data.r1,
+      x1: data.x1,
+      r0: data.r0,
+      x0: data.x0,
+      route_length_km: data.route_length_km,
+      relay_burden_va: data.relay_burden_va,
+      lead_resistance: data.lead_resistance,
       relay_type: data.relay_type || firstDevice?.device_name || 'Imported Relay'
     };
 
@@ -347,9 +350,40 @@ Lead Resistance,0.47`;
             </CardTitle>
             <CardDescription>
               {importResponse.summary?.devices_found || 0} devices found, {importResponse.summary?.standard_parameters_found || 0} parameters extracted
+              {importResponse.summary?.ai_confidence !== undefined && (
+                <span className="ml-2 text-blue-600 font-medium">
+                  • AI Confidence: {(importResponse.summary.ai_confidence * 100).toFixed(0)}%
+                </span>
+              )}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* AI Processing Info */}
+            {importResponse.summary?.ai_confidence !== undefined && (
+              <Alert className={importResponse.summary.ai_confidence > 0.7 ? 'border-green-200 bg-green-50' : 'border-yellow-200 bg-yellow-50'}>
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">🤖</span>
+                  <div>
+                    <p className="font-medium">AI-Enhanced Processing</p>
+                    <p className="text-sm">
+                      Method: {importResponse.summary.processing_method?.replace(/_/g, ' ')} • 
+                      Confidence: {(importResponse.summary.ai_confidence * 100).toFixed(0)}%
+                    </p>
+                    {importResponse.summary.ai_notes && importResponse.summary.ai_notes.length > 0 && (
+                      <div className="mt-2">
+                        <p className="text-xs font-medium">AI Notes:</p>
+                        <ul className="list-disc list-inside text-xs">
+                          {importResponse.summary.ai_notes.map((note, i) => (
+                            <li key={i}>{note}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </Alert>
+            )}
+
             {/* Warnings */}
             {importResponse.warnings && importResponse.warnings.length > 0 && (
               <Alert>

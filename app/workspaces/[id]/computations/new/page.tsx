@@ -67,15 +67,15 @@ const SHEET2_FIELDS: { key: keyof Sheet2; label: string; unit: string }[] = [
   { key: 'lead_resistance',    label: 'Lead Resistance (Rl)',  unit: 'Ω'       },
 ];
 
-const DEFAULT_SHEET1: Sheet1 = {
-  ct_ratio_primary: '800', ct_ratio_secondary: '1',
-  accuracy_class: 'PX', rct: '3.5', vk_available: '540', io_at_vk: '20',
+const EMPTY_SHEET1: Sheet1 = {
+  ct_ratio_primary: '', ct_ratio_secondary: '',
+  accuracy_class: '', rct: '', vk_available: '', io_at_vk: '',
 };
 
-const DEFAULT_SHEET2: Sheet2 = {
-  frequency: '50', bus_voltage_kv: '33', max_bus_fault_mva: '1800',
-  r1: '0.1600', x1: '0.1300', r0: '0.9600', x0: '0.3200',
-  route_length_km: '0.20', relay_burden_va: '0.02', lead_resistance: '0.47',
+const EMPTY_SHEET2: Sheet2 = {
+  frequency: '', bus_voltage_kv: '', max_bus_fault_mva: '',
+  r1: '', x1: '', r0: '', x0: '',
+  route_length_km: '', relay_burden_va: '', lead_resistance: '',
 };
 
 export default function NewComputationPage() {
@@ -91,11 +91,11 @@ export default function NewComputationPage() {
   const [error, setError] = useState('');
   const [templates, setTemplates] = useState<Template[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
-  const [sheet1, setSheet1] = useState<Sheet1>(DEFAULT_SHEET1);
-  const [sheet2, setSheet2] = useState<Sheet2>(DEFAULT_SHEET2);
+  const [sheet1, setSheet1] = useState<Sheet1>(EMPTY_SHEET1);
+  const [sheet2, setSheet2] = useState<Sheet2>(EMPTY_SHEET2);
   const [result, setResult] = useState<Result | null>(null);
-  const [lastSheet1, setLastSheet1] = useState<Sheet1>(DEFAULT_SHEET1);
-  const [lastSheet2, setLastSheet2] = useState<Sheet2>(DEFAULT_SHEET2);
+  const [lastSheet1, setLastSheet1] = useState<Sheet1>(EMPTY_SHEET1);
+  const [lastSheet2, setLastSheet2] = useState<Sheet2>(EMPTY_SHEET2);
   const [iedName, setIedName] = useState('');
   const [importedFromExcel, setImportedFromExcel] = useState(false);
   const processedImportRef = useRef<string | null>(null);
@@ -143,28 +143,28 @@ export default function NewComputationPage() {
         // Mark this data as processed
         processedImportRef.current = dataParam;
         
-        // Fill Sheet 1 data
+        // Fill Sheet 1 data - NO DEFAULTS, only use imported data
         setSheet1({
-          ct_ratio_primary: String(importedData.ct_ratio_primary || DEFAULT_SHEET1.ct_ratio_primary),
-          ct_ratio_secondary: String(importedData.ct_ratio_secondary || DEFAULT_SHEET1.ct_ratio_secondary),
-          accuracy_class: importedData.accuracy_class || DEFAULT_SHEET1.accuracy_class,
-          rct: String(importedData.rct || DEFAULT_SHEET1.rct),
-          vk_available: String(importedData.vk_available || DEFAULT_SHEET1.vk_available),
-          io_at_vk: String(importedData.io_at_vk || DEFAULT_SHEET1.io_at_vk),
+          ct_ratio_primary: String(importedData.ct_ratio_primary || ''),
+          ct_ratio_secondary: String(importedData.ct_ratio_secondary || ''),
+          accuracy_class: importedData.accuracy_class || '',
+          rct: String(importedData.rct || ''),
+          vk_available: String(importedData.vk_available || ''),
+          io_at_vk: String(importedData.io_at_vk || ''),
         });
         
-        // Fill Sheet 2 data
+        // Fill Sheet 2 data - NO DEFAULTS, only use imported data
         setSheet2({
-          frequency: String(importedData.frequency || DEFAULT_SHEET2.frequency),
-          bus_voltage_kv: String(importedData.bus_voltage_kv || DEFAULT_SHEET2.bus_voltage_kv),
-          max_bus_fault_mva: String(importedData.max_bus_fault_mva || DEFAULT_SHEET2.max_bus_fault_mva),
-          r1: String(importedData.r1 || DEFAULT_SHEET2.r1),
-          x1: String(importedData.x1 || DEFAULT_SHEET2.x1),
-          r0: String(importedData.r0 || DEFAULT_SHEET2.r0),
-          x0: String(importedData.x0 || DEFAULT_SHEET2.x0),
-          route_length_km: String(importedData.route_length_km || DEFAULT_SHEET2.route_length_km),
-          relay_burden_va: String(importedData.relay_burden_va || DEFAULT_SHEET2.relay_burden_va),
-          lead_resistance: String(importedData.lead_resistance || DEFAULT_SHEET2.lead_resistance),
+          frequency: String(importedData.frequency || ''),
+          bus_voltage_kv: String(importedData.bus_voltage_kv || ''),
+          max_bus_fault_mva: String(importedData.max_bus_fault_mva || ''),
+          r1: String(importedData.r1 || ''),
+          x1: String(importedData.x1 || ''),
+          r0: String(importedData.r0 || ''),
+          x0: String(importedData.x0 || ''),
+          route_length_km: String(importedData.route_length_km || ''),
+          relay_burden_va: String(importedData.relay_burden_va || ''),
+          lead_resistance: String(importedData.lead_resistance || ''),
         });
         
         setImportedFromExcel(true);
