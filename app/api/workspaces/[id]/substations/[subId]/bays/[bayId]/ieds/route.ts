@@ -58,3 +58,81 @@ export async function POST(
 
   return NextResponse.json({ id: result.insertedId.toString(), name, model }, { status: 201 });
 }
+
+export async function PUT(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string; subId: string; bayId: string }> }
+) {
+  const { id } = await params;
+  const user = await auth(req);
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const body = await req.json();
+  const { iedId, name, model, serialNumber, functions, ctRatio, ctClass, rct, vk, io } = body;
+  
+  if (!iedId) return NextResponse.json({ error: 'iedId is required' }, { status: 400 });
+  if (!name || !model) return NextResponse.json({ error: 'name and model are required' }, { status: 400 });
+
+  const col = await getIEDs();
+  const now = new Date();
+  
+  const result = await col.updateOne(
+    { 
+      _id: new ObjectId(iedId), 
+      workspaceId: new ObjectId(id) 
+    },
+    {
+      $set: {
+        name,
+        model,
+        serialNumber: serialNumber ?? '',
+        functions: functions ?? [],
+        ct: {
+          ratio: ctRatio ?? '',
+          class: ctClass ?? 'PX',
+          rct: rct ?? 0,
+          vk: vk ?? 0,
+          io: io ?? 0,
+        },
+        updatedAt: now,
+      }
+    }
+  );
+
+  if (result.matchedCount === 0) {
+    return NextResponse.json({ error: 'IED not found' }, { status: 404 });
+  }
+
+  return NextResponse.json({ 
+    id: iedId,
+    name,
+    model
+  });
+}
+
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string; subId: string; bayId: string }> }
+) {
+  const { id } = await params;
+  const user = await auth(req);
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const body = await req.json();
+  const { iedId } = body;
+  
+  if (!iedId) return NextResponse.json({ error: 'iedId is required' }, { status: 400 });
+
+  const col = await getIEDs();
+  
+  const result = await col.deleteOne({
+    _id: new ObjectId(iedId),
+    workspaceId: new ObjectId(id)
+  });
+
+  if (result.deletedCount === 0) {
+    return NextResponse.json({ error: 'IED not found' }, { status: 404 });
+  }
+
+  return NextResponse.json({ success: true, message: 'IED deleted successfully' });
+}

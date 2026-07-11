@@ -215,10 +215,18 @@ export default function NewComputationPage() {
                 vk_available:       ied.ct.vk    ? String(ied.ct.vk)  : prev.vk_available,
                 io_at_vk:           ied.ct.io    ? String(ied.ct.io)  : prev.io_at_vk,
               }));
-              // Auto-select first matching function
+              // Auto-select first matching function based on IED's protection functions
               if (ied.functions?.length > 0 && templates.length > 0) {
                 const match = templates.find(t => ied.functions.includes(t.iedType));
-                if (match) setSelectedTemplate(match);
+                if (match) {
+                  setSelectedTemplate(match);
+                } else {
+                  // If no exact match, select first available template
+                  setSelectedTemplate(templates[0] ?? null);
+                }
+              } else {
+                // Default to first template if no functions defined
+                setSelectedTemplate(templates[0] ?? null);
               }
               return;
             }
@@ -355,6 +363,11 @@ export default function NewComputationPage() {
               ? `CT data imported from Excel: ${iedName}`
               : `CT data pre-filled from IED: ${iedName}`
             }
+            {selectedTemplate && (
+              <span className="ml-2 text-primary font-medium">
+                • Using {selectedTemplate.name}
+              </span>
+            )}
           </span>
         </div>
       )}
@@ -365,32 +378,6 @@ export default function NewComputationPage() {
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
-
-      {/* Protection Function */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Protection Function</CardTitle>
-          <CardDescription>Select the relay function to check CT adequacy for</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Select
-            value={selectedTemplate?.id ?? ''}
-            onValueChange={val => { setSelectedTemplate(templates.find(t => t.id === val) ?? null); setResult(null); }}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select function" />
-            </SelectTrigger>
-            <SelectContent>
-              {templates.map(t => (
-                <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {selectedTemplate && (
-            <p className="text-xs text-muted-foreground mt-2">{selectedTemplate.description}</p>
-          )}
-        </CardContent>
-      </Card>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Sheet 1 — CT Datasheet */}

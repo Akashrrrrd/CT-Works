@@ -55,7 +55,7 @@ async function initializeDatabase() {
     // CT/VT Analysis Features
     'templates', 'computations', 'relay_formulas', 'relay_templates', 'vt_checks', 'ct_checks',
     // Infrastructure & Equipment
-    'substations', 'bays', 'ieds', 'equipment', 'cables', 'transformers',
+    'substations', 'bays', 'bay_types', 'ieds', 'equipment', 'cables', 'transformers',
     // Data Import & Processing
     'import_jobs', 'excel_imports', 'file_uploads', 'data_sources',
     // Analysis & Reporting

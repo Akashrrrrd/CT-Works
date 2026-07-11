@@ -1,69 +1,63 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
-import Link from 'next/link';
+import { useParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
-  Plus, Building2, ChevronRight, CheckCircle,
-  AlertTriangle, HelpCircle, AlertCircle, Zap,
+  Plus, Building2, Edit, Trash2, MoreVertical, AlertCircle, GitCompare,
 } from 'lucide-react';
 
-interface IEDResult {
-  id: string; templateName: string; verdict: string;
-  vk_required: number; vk_available: number; createdAt: string;
-}
-interface IED {
-  id: string; name: string; model: string; functions: string[];
-  ct: { ratio: string; class: string; rct: number; vk: number };
-  latestResult: IEDResult | null;
-}
-interface Bay {
-  id: string; name: string; type: string; voltage: string; ieds: IED[];
-}
 interface Substation {
-  id: string; name: string; voltageLevel: string; location: string; bays: Bay[];
-}
-interface Summary { totalIEDs: number; adequate: number; underDim: number; notChecked: number }
-
-const BAY_TYPE_COLOR: Record<string, string> = {
-  FEEDER: 'bg-blue-500/15 text-blue-400 border-blue-500/30',
-  TRANSFORMER: 'bg-purple-500/15 text-purple-400 border-purple-500/30',
-  BUSBAR: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
-  COUPLER: 'bg-cyan-500/15 text-cyan-400 border-cyan-500/30',
-  OTHER: 'bg-muted text-muted-foreground',
-};
-
-function VerdictIcon({ verdict }: { verdict: string | null }) {
-  if (!verdict) return <HelpCircle className="h-4 w-4 text-muted-foreground" />;
-  return verdict === 'SUITABLY DIMENSIONED'
-    ? <CheckCircle className="h-4 w-4 text-green-500" />
-    : <AlertTriangle className="h-4 w-4 text-red-500" />;
+  id: string; name: string; voltageLevel: string; location: string; 
+  approvedBy: string; startDate: string; clientName: string; 
 }
 
-export default function SubstationsPage() {
+export default function ProjectsPage() {
   const params = useParams();
+  const router = useRouter();
   const workspaceId = params.id as string;
 
   const [loading, setLoading]       = useState(true);
   const [tree, setTree]             = useState<Substation[]>([]);
-  const [summary, setSummary]       = useState<Summary | null>(null);
   const [error, setError]           = useState('');
   const [addSubOpen, setAddSubOpen] = useState(false);
-  const [subForm, setSubForm]       = useState({ name: '', voltageLevel: '', location: '', description: '' });
+  const [editSubOpen, setEditSubOpen] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [editingProject, setEditingProject] = useState<Substation | null>(null);
+  const [deletingProject, setDeletingProject] = useState<Substation | null>(null);
+  const [compareMode, setCompareMode] = useState(false);
+  const [selectedProjects, setSelectedProjects] = useState<string[]>([]);
+  const [subForm, setSubForm]       = useState({ 
+    name: '', 
+    voltageLevel: '', 
+    location: '', 
+    description: '', 
+    approvedBy: '', 
+    startDate: '', 
+    clientName: '' 
+  });
+  const [editForm, setEditForm] = useState({ 
+    name: '', 
+    voltageLevel: '', 
+    location: '', 
+    description: '', 
+    approvedBy: '', 
+    startDate: '', 
+    clientName: '' 
+  });
   const [saving, setSaving]         = useState(false);
 
   const load = () => {
     setLoading(true);
     fetch(`/api/workspaces/${workspaceId}/hierarchy`)
       .then(r => r.json())
-      .then(d => { setTree(d.tree ?? []); setSummary(d.summary ?? null); })
+      .then(d => { setTree(d.tree ?? []); })
       .catch(() => setError('Failed to load hierarchy'))
       .finally(() => setLoading(false));
   };
@@ -81,12 +75,99 @@ export default function SubstationsPage() {
       });
       if (!res.ok) throw new Error((await res.json()).error);
       setAddSubOpen(false);
-      setSubForm({ name: '', voltageLevel: '', location: '', description: '' });
+      setSubForm({ 
+        name: '', 
+        voltageLevel: '', 
+        location: '', 
+        description: '', 
+        approvedBy: '', 
+        startDate: '', 
+        clientName: '' 
+      });
       load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to add substation');
+      setError(e instanceof Error ? e.message : 'Failed to add project');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleEditProject = (project: Substation) => {
+    setEditingProject(project);
+    setEditForm({
+      name: project.name,
+      voltageLevel: project.voltageLevel,
+      location: project.location,
+      description: '',
+      approvedBy: project.approvedBy || '',
+      startDate: project.startDate || '',
+      clientName: project.clientName || ''
+    });
+    setEditSubOpen(true);
+  };
+
+  const handleUpdateProject = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingProject) return;
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/workspaces/${workspaceId}/substations`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectId: editingProject.id, ...editForm }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error);
+      setEditSubOpen(false);
+      setEditingProject(null);
+      load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to update project');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteProject = (project: Substation) => {
+    setDeletingProject(project);
+    setDeleteConfirmOpen(true);
+  };
+
+  const confirmDeleteProject = async () => {
+    if (!deletingProject) return;
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/workspaces/${workspaceId}/substations`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectId: deletingProject.id }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error);
+      setDeleteConfirmOpen(false);
+      setDeletingProject(null);
+      load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to delete project');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const toggleCompareMode = () => {
+    setCompareMode(!compareMode);
+    setSelectedProjects([]);
+  };
+
+  const toggleProjectSelection = (projectId: string) => {
+    if (selectedProjects.includes(projectId)) {
+      setSelectedProjects(prev => prev.filter(id => id !== projectId));
+    } else if (selectedProjects.length < 3) {
+      setSelectedProjects(prev => [...prev, projectId]);
+    }
+  };
+
+  const handleCompareProjects = () => {
+    if (selectedProjects.length >= 2) {
+      router.push(`/workspaces/${workspaceId}/compare?projects=${selectedProjects.join(',')}`);
     }
   };
 
@@ -101,155 +182,252 @@ export default function SubstationsPage() {
       {/* Header */}
       <div className="flex justify-between items-start">
         <div>
-          <h2 className="text-2xl font-bold">Substations</h2>
-          <p className="text-sm text-muted-foreground">Substation → Bay → IED hierarchy</p>
+          <h2 className="text-2xl font-bold">Projects</h2>
+          <p className="text-sm text-muted-foreground">Project → Bay → IED hierarchy</p>
         </div>
-        <Dialog open={addSubOpen} onOpenChange={setAddSubOpen}>
-          <DialogTrigger asChild>
-            <Button className="gap-2"><Plus className="h-4 w-4" />Add Substation</Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader><DialogTitle>New Substation</DialogTitle></DialogHeader>
-            <form onSubmit={handleAddSubstation} className="space-y-3 mt-2">
-              {error && <Alert variant="destructive"><AlertCircle className="h-4 w-4" /><AlertDescription>{error}</AlertDescription></Alert>}
-              <div className="space-y-1">
-                <label className="text-sm font-medium">Substation Name *</label>
-                <Input value={subForm.name} onChange={e => setSubForm(p => ({ ...p, name: e.target.value }))} placeholder="e.g. 33kV DF5W SS" required />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="text-sm font-medium">Voltage Level</label>
-                  <Input value={subForm.voltageLevel} onChange={e => setSubForm(p => ({ ...p, voltageLevel: e.target.value }))} placeholder="e.g. 33kV" />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-sm font-medium">Location</label>
-                  <Input value={subForm.location} onChange={e => setSubForm(p => ({ ...p, location: e.target.value }))} placeholder="e.g. Site A" />
-                </div>
-              </div>
-              <div className="space-y-1">
-                <label className="text-sm font-medium">Description</label>
-                <Input value={subForm.description} onChange={e => setSubForm(p => ({ ...p, description: e.target.value }))} placeholder="Optional" />
-              </div>
-              <div className="flex gap-2 pt-2">
-                <Button type="submit" disabled={saving} className="flex-1">{saving ? 'Saving...' : 'Create Substation'}</Button>
-                <Button type="button" variant="outline" onClick={() => setAddSubOpen(false)}>Cancel</Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
+        <div className="flex gap-2">
+          {compareMode && selectedProjects.length >= 2 && (
+            <Button onClick={handleCompareProjects} className="gap-2">
+              <GitCompare className="h-4 w-4" />
+              Compare ({selectedProjects.length})
+            </Button>
+          )}
+          <Button 
+            variant={compareMode ? "default" : "outline"} 
+            onClick={toggleCompareMode} 
+            className="gap-2"
+          >
+            <GitCompare className="h-4 w-4" />
+            {compareMode ? 'Cancel Compare' : 'Compare Projects'}
+          </Button>
+        </div>
       </div>
 
-      {/* Summary bar */}
-      {summary && summary.totalIEDs > 0 && (
-        <div className="grid grid-cols-4 gap-3">
-          {[
-            { label: 'Total IEDs',    value: summary.totalIEDs,  color: 'text-foreground' },
-            { label: 'Adequate',      value: summary.adequate,   color: 'text-green-500'  },
-            { label: 'Under Dim.',    value: summary.underDim,   color: 'text-red-500'    },
-            { label: 'Not Checked',   value: summary.notChecked, color: 'text-muted-foreground' },
-          ].map(s => (
-            <Card key={s.label} className="text-center py-3">
-              <p className={`text-2xl font-bold ${s.color}`}>{s.value}</p>
-              <p className="text-xs text-muted-foreground">{s.label}</p>
-            </Card>
-          ))}
-        </div>
-      )}
-
-      {/* Empty state */}
-      {tree.length === 0 && (
-        <Card>
-          <CardContent className="py-16 text-center space-y-3">
-            <Building2 className="h-10 w-10 text-muted-foreground mx-auto" />
-            <p className="text-muted-foreground">No substations yet.</p>
-            <p className="text-xs text-muted-foreground">Add a substation to start organising your IEDs by bay.</p>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Substation tree */}
-      {tree.map(sub => (
-        <Card key={sub.id} className="overflow-hidden">
-          <CardHeader className="bg-muted/40 pb-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Building2 className="h-5 w-5 text-primary" />
-                <div>
-                  <CardTitle className="text-base">{sub.name}</CardTitle>
-                  <CardDescription className="text-xs">
-                    {[sub.voltageLevel, sub.location].filter(Boolean).join(' · ')}
-                  </CardDescription>
-                </div>
-              </div>
-              <Link href={`/workspaces/${workspaceId}/substations/${sub.id}`}>
-                <Button variant="outline" size="sm" className="gap-1 text-xs">
-                  Manage <ChevronRight className="h-3 w-3" />
-                </Button>
-              </Link>
+      {/* Projects Grid */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+        {/* New Project Card */}
+        <Card 
+          className="aspect-square flex flex-col items-center justify-center cursor-pointer border-2 border-dashed border-muted-foreground/30 hover:border-primary/50 hover:bg-muted/50 transition-colors"
+          onClick={() => setAddSubOpen(true)}
+        >
+          <CardContent className="flex flex-col items-center justify-center p-6 text-center">
+            <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-3">
+              <Plus className="h-6 w-6 text-primary" />
             </div>
-          </CardHeader>
-          <CardContent className="pt-4 space-y-3">
-            {sub.bays.length === 0 ? (
-              <p className="text-xs text-muted-foreground text-center py-4">
-                No bays yet —{' '}
-                <Link href={`/workspaces/${workspaceId}/substations/${sub.id}`} className="text-primary hover:underline">
-                  add bays
-                </Link>
-              </p>
-            ) : (
-              sub.bays.map(bay => (
-                <div key={bay.id} className="rounded-lg border border-border p-3 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded border ${BAY_TYPE_COLOR[bay.type] ?? BAY_TYPE_COLOR.OTHER}`}>
-                        {bay.type}
-                      </span>
-                      <span className="text-sm font-medium">{bay.name}</span>
-                      {bay.voltage && <span className="text-xs text-muted-foreground">{bay.voltage}</span>}
-                    </div>
-                    <Link href={`/workspaces/${workspaceId}/substations/${sub.id}/bays/${bay.id}`}>
-                      <Button variant="ghost" size="sm" className="h-6 text-xs gap-1">
-                        IEDs <ChevronRight className="h-3 w-3" />
-                      </Button>
-                    </Link>
-                  </div>
-
-                  {/* IED list */}
-                  {bay.ieds.length > 0 && (
-                    <div className="grid gap-1.5 pl-2">
-                      {bay.ieds.map(ied => (
-                        <div key={ied.id} className="flex items-center justify-between bg-muted/50 rounded px-3 py-2">
-                          <div className="flex items-center gap-2">
-                            <VerdictIcon verdict={ied.latestResult?.verdict ?? null} />
-                            <div>
-                              <span className="text-sm font-medium">{ied.name}</span>
-                              <span className="text-xs text-muted-foreground ml-2">{ied.model}</span>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            {ied.latestResult ? (
-                              <span className={`text-xs font-mono ${ied.latestResult.verdict === 'SUITABLY DIMENSIONED' ? 'text-green-500' : 'text-red-500'}`}>
-                                Vk {ied.latestResult.vk_available}V / {ied.latestResult.vk_required}V req
-                              </span>
-                            ) : (
-                              <span className="text-xs text-muted-foreground">Not checked</span>
-                            )}
-                            <Link href={`/workspaces/${workspaceId}/computations/new?iedId=${ied.id}`}>
-                              <Button variant="outline" size="sm" className="h-6 text-xs gap-1">
-                                <Zap className="h-3 w-3" />Check
-                              </Button>
-                            </Link>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))
-            )}
+            <p className="text-sm font-medium text-muted-foreground">New Project</p>
           </CardContent>
         </Card>
-      ))}
+
+        {/* Existing Projects */}
+        {tree.map(project => (
+          <Card 
+            key={project.id} 
+            className={`aspect-square relative cursor-pointer hover:shadow-md transition-shadow group ${
+              compareMode 
+                ? selectedProjects.includes(project.id)
+                  ? 'ring-2 ring-primary bg-primary/5'
+                  : selectedProjects.length >= 3
+                    ? 'opacity-50 cursor-not-allowed'
+                    : 'hover:ring-1 hover:ring-primary/50'
+                : ''
+            }`}
+            onClick={() => compareMode 
+              ? toggleProjectSelection(project.id)
+              : router.push(`/workspaces/${workspaceId}/substations/${project.id}`)
+            }
+          >
+            <CardContent className="p-4 h-full flex flex-col justify-between">
+              {/* Compare mode selection or Three-dot menu */}
+              <div className="flex justify-between items-start">
+                {compareMode && selectedProjects.includes(project.id) && (
+                  <div className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-bold">
+                    {selectedProjects.indexOf(project.id) + 1}
+                  </div>
+                )}
+                {!compareMode && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild onClick={e => e.stopPropagation()}>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEditProject(project); }}>
+                        <Edit className="h-4 w-4 mr-2" />
+                        Edit
+                      </DropdownMenuItem>
+                      <DropdownMenuItem 
+                        onClick={(e) => { e.stopPropagation(); handleDeleteProject(project); }}
+                        className="text-red-600"
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+              </div>
+
+              {/* Project Content */}
+              <div className="flex-1 flex flex-col justify-center text-center">
+                <Building2 className="h-8 w-8 mx-auto mb-2 text-primary" />
+                <h3 className="font-semibold text-sm leading-tight mb-1">{project.name}</h3>
+                {project.voltageLevel && (
+                  <p className="text-xs text-muted-foreground">{project.voltageLevel}</p>
+                )}
+              </div>
+
+              {/* Project Info */}
+              <div className="space-y-1">
+                {project.clientName && (
+                  <p className="text-xs text-muted-foreground truncate">
+                    <span className="font-medium">Client:</span> {project.clientName}
+                  </p>
+                )}
+                {project.approvedBy && (
+                  <p className="text-xs text-muted-foreground truncate">
+                    <span className="font-medium">By:</span> {project.approvedBy}
+                  </p>
+                )}
+                {project.startDate && (
+                  <p className="text-xs text-muted-foreground">
+                    <span className="font-medium">Start:</span> {new Date(project.startDate).toLocaleDateString()}
+                  </p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Dialogs */}
+      <Dialog open={addSubOpen} onOpenChange={setAddSubOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader><DialogTitle>New Project</DialogTitle></DialogHeader>
+          <form onSubmit={handleAddSubstation} className="space-y-4 mt-2">
+            {error && <Alert variant="destructive"><AlertCircle className="h-4 w-4" /><AlertDescription>{error}</AlertDescription></Alert>}
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Project Name *</label>
+              <Input value={subForm.name} onChange={e => setSubForm(p => ({ ...p, name: e.target.value }))} placeholder="e.g. 33kV DF5W SS" required />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Voltage Level</label>
+                <Input value={subForm.voltageLevel} onChange={e => setSubForm(p => ({ ...p, voltageLevel: e.target.value }))} placeholder="e.g. 33kV" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Location</label>
+                <Input value={subForm.location} onChange={e => setSubForm(p => ({ ...p, location: e.target.value }))} placeholder="e.g. Site A" />
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Approved By</label>
+                <Input value={subForm.approvedBy} onChange={e => setSubForm(p => ({ ...p, approvedBy: e.target.value }))} placeholder="e.g. John Smith" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Start Date</label>
+                <Input 
+                  type="date" 
+                  value={subForm.startDate} 
+                  onChange={e => setSubForm(p => ({ ...p, startDate: e.target.value }))} 
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Client Name</label>
+                <Input value={subForm.clientName} onChange={e => setSubForm(p => ({ ...p, clientName: e.target.value }))} placeholder="e.g. ABC Corp" />
+              </div>
+            </div>
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Description</label>
+              <Input value={subForm.description} onChange={e => setSubForm(p => ({ ...p, description: e.target.value }))} placeholder="Optional" />
+            </div>
+            <div className="flex gap-2 pt-2">
+              <Button type="submit" disabled={saving} className="flex-1">{saving ? 'Saving...' : 'Create Project'}</Button>
+              <Button type="button" variant="outline" onClick={() => setAddSubOpen(false)}>Cancel</Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={editSubOpen} onOpenChange={setEditSubOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader><DialogTitle>Edit Project</DialogTitle></DialogHeader>
+          <form onSubmit={handleUpdateProject} className="space-y-4 mt-2">
+            {error && <Alert variant="destructive"><AlertCircle className="h-4 w-4" /><AlertDescription>{error}</AlertDescription></Alert>}
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Project Name *</label>
+              <Input value={editForm.name} onChange={e => setEditForm(p => ({ ...p, name: e.target.value }))} placeholder="e.g. 33kV DF5W SS" required />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Voltage Level</label>
+                <Input value={editForm.voltageLevel} onChange={e => setEditForm(p => ({ ...p, voltageLevel: e.target.value }))} placeholder="e.g. 33kV" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Location</label>
+                <Input value={editForm.location} onChange={e => setEditForm(p => ({ ...p, location: e.target.value }))} placeholder="e.g. Site A" />
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Approved By</label>
+                <Input value={editForm.approvedBy} onChange={e => setEditForm(p => ({ ...p, approvedBy: e.target.value }))} placeholder="e.g. John Smith" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Start Date</label>
+                <Input 
+                  type="date" 
+                  value={editForm.startDate} 
+                  onChange={e => setEditForm(p => ({ ...p, startDate: e.target.value }))} 
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Client Name</label>
+                <Input value={editForm.clientName} onChange={e => setEditForm(p => ({ ...p, clientName: e.target.value }))} placeholder="e.g. ABC Corp" />
+              </div>
+            </div>
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Description</label>
+              <Input value={editForm.description} onChange={e => setEditForm(p => ({ ...p, description: e.target.value }))} placeholder="Optional" />
+            </div>
+            <div className="flex gap-2 pt-2">
+              <Button type="submit" disabled={saving} className="flex-1">{saving ? 'Updating...' : 'Update Project'}</Button>
+              <Button type="button" variant="outline" onClick={() => setEditSubOpen(false)}>Cancel</Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>Delete Project</DialogTitle></DialogHeader>
+          <div className="space-y-4 mt-2">
+            {error && <Alert variant="destructive"><AlertCircle className="h-4 w-4" /><AlertDescription>{error}</AlertDescription></Alert>}
+            <p className="text-sm text-muted-foreground">
+              Are you sure you want to delete "<span className="font-medium">{deletingProject?.name}</span>"? 
+            </p>
+            <p className="text-sm text-muted-foreground">
+              This will also delete all associated bays and IEDs. This action cannot be undone.
+            </p>
+            <div className="flex gap-2 pt-2">
+              <Button 
+                variant="destructive" 
+                disabled={saving} 
+                className="flex-1"
+                onClick={confirmDeleteProject}
+              >
+                {saving ? 'Deleting...' : 'Delete Project'}
+              </Button>
+              <Button type="button" variant="outline" onClick={() => setDeleteConfirmOpen(false)}>Cancel</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

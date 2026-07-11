@@ -1,6 +1,6 @@
 /**
  * GET /api/workspaces/[id]/hierarchy
- * Returns the full Substation → Bay → IED tree for a workspace in one call.
+ * Returns the full Project → Bay → IED tree for a workspace in one call.
  * Each IED includes its latest computation result if available.
  */
 import { NextRequest, NextResponse } from 'next/server';
@@ -40,6 +40,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     voltageLevel: sub.voltageLevel,
     location:     sub.location,
     description:  sub.description,
+    approvedBy:   sub.approvedBy || '',
+    startDate:    sub.startDate || '',
+    clientName:   sub.clientName || '',
     bays: bays
       .filter(b => b.substationId.toString() === sub._id.toString())
       .map(bay => ({

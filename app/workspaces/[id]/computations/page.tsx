@@ -147,96 +147,120 @@ export default function ComputationsPage() {
         </Select>
       </div>
 
-      {filtered.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center space-y-3">
-            <p className="text-muted-foreground">{computations.length === 0 ? 'No computations yet' : 'No results match your filters'}</p>
-            {computations.length === 0 && (
-              <Link href={`/workspaces/${workspaceId}/computations/new`}>
-                <Button className="gap-2"><Plus className="h-4 w-4" />Run first check</Button>
-              </Link>
-            )}
+      {/* CT Checks Grid */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+        {/* New Check Card */}
+        <Card 
+          className="aspect-square flex flex-col items-center justify-center cursor-pointer border-2 border-dashed border-muted-foreground/30 hover:border-primary/50 hover:bg-muted/50 transition-colors"
+          onClick={() => window.location.href = `/workspaces/${workspaceId}/computations/new`}
+        >
+          <CardContent className="flex flex-col items-center justify-center p-6 text-center">
+            <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-3">
+              <Plus className="h-6 w-6 text-primary" />
+            </div>
+            <p className="text-sm font-medium text-muted-foreground">New Check</p>
           </CardContent>
         </Card>
-      ) : (
-        <div className="grid gap-3">
-          {filtered.map(comp => {
-            const ok = comp.verdict === 'SUITABLY DIMENSIONED';
-            const margin = +(comp.vk_available - comp.vk_required).toFixed(1);
-            return (
-              <Card key={comp.id} className={`transition-colors ${ok ? 'border-green-800/40 hover:border-green-700/60' : 'border-red-800/40 hover:border-red-700/60'}`}>
-                <CardHeader className="pb-2 pt-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      {ok ? <CheckCircle className="h-4 w-4 text-green-500 shrink-0" /> : <AlertTriangle className="h-4 w-4 text-red-500 shrink-0" />}
-                      <CardTitle className="text-sm font-semibold">{comp.templateName}</CardTitle>
-                      <Badge className={`text-xs ${ok ? 'bg-green-700' : 'bg-red-700'}`}>
-                        {ok ? 'Suitable' : 'Under Dim.'}
-                      </Badge>
-                      {comp.approvalStatus === 'PENDING'  && <Badge variant="outline" className="text-xs border-amber-600 text-amber-500 gap-1"><Clock className="h-3 w-3" />Pending</Badge>}
-                      {comp.approvalStatus === 'APPROVED' && <Badge variant="outline" className="text-xs border-green-700 text-green-400 gap-1"><ShieldCheck className="h-3 w-3" />Approved</Badge>}
-                      {comp.approvalStatus === 'REJECTED' && <Badge variant="outline" className="text-xs border-red-700 text-red-400 gap-1"><XCircle className="h-3 w-3" />Rejected</Badge>}
-                    </div>
-                    <Button size="sm" variant="outline" className="gap-1 h-7 text-xs shrink-0" onClick={() => handleDownload(comp)}>
-                      <Download className="h-3 w-3" />PDF
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-3 pb-4">
-                  <div className="grid grid-cols-4 gap-2">
-                    <div className="bg-muted rounded p-2 text-center">
-                      <p className="text-[10px] text-muted-foreground">Ealreq max</p>
-                      <p className="text-sm font-bold">{comp.ealreq_max} V</p>
-                    </div>
-                    <div className="bg-muted rounded p-2 text-center">
-                      <p className="text-[10px] text-muted-foreground">Vk Required</p>
-                      <p className="text-sm font-bold">{comp.vk_required} V</p>
-                    </div>
-                    <div className={`rounded p-2 text-center border ${ok ? 'border-green-800 bg-green-950/30' : 'border-red-800 bg-red-950/30'}`}>
-                      <p className="text-[10px] text-muted-foreground">Vk Available</p>
-                      <p className="text-sm font-bold">{comp.vk_available} V</p>
-                    </div>
-                    <div className={`rounded p-2 text-center border ${margin >= 0 ? 'border-green-800 bg-green-950/20' : 'border-red-800 bg-red-950/20'}`}>
-                      <p className="text-[10px] text-muted-foreground">Margin</p>
-                      <p className={`text-sm font-bold ${margin >= 0 ? 'text-green-500' : 'text-red-500'}`}>{margin >= 0 ? '+' : ''}{margin} V</p>
-                    </div>
-                  </div>
 
-                  {comp.vk_breakdown?.length > 0 && (
-                    <div className="rounded border border-border overflow-hidden">
-                      <table className="w-full text-xs">
-                        <thead><tr className="bg-muted text-muted-foreground">
-                          <th className="text-left px-3 py-1.5">Fault Condition</th>
-                          <th className="text-right px-3 py-1.5">Ealreq (V)</th>
-                          <th className="text-right px-3 py-1.5">Vk Req (V)</th>
-                        </tr></thead>
-                        <tbody>
-                          {comp.vk_breakdown.map((row, i) => (
-                            <tr key={i} className={`border-t border-border ${row.isMax ? 'bg-primary/10 font-semibold' : ''}`}>
-                              <td className="px-3 py-1.5 flex items-center gap-1.5">
-                                {row.isMax && <span className="bg-primary text-primary-foreground px-1 py-0.5 rounded text-[10px]">MAX</span>}
-                                {row.label}
-                              </td>
-                              <td className="px-3 py-1.5 text-right font-mono">{row.ealreq}</td>
-                              <td className="px-3 py-1.5 text-right font-mono">{row.vk}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
+        {/* Existing Checks */}
+        {filtered.map(comp => {
+          const ok = comp.verdict === 'SUITABLY DIMENSIONED';
+          const margin = +(comp.vk_available - comp.vk_required).toFixed(1);
+          
+          return (
+            <Card 
+              key={comp.id} 
+              className="aspect-square relative cursor-pointer hover:shadow-md transition-shadow group"
+              onClick={() => {}} // Add click handler if needed
+            >
+              <CardContent className="p-4 h-full flex flex-col justify-between">
+                {/* Status and menu */}
+                <div className="flex justify-between items-start">
+                  {ok ? <CheckCircle className="h-4 w-4 text-green-500" /> : <AlertTriangle className="h-4 w-4 text-red-500" />}
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    className="gap-1 h-7 text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={(e) => { e.stopPropagation(); handleDownload(comp); }}
+                  >
+                    <Download className="h-3 w-3" />
+                  </Button>
+                </div>
+
+                {/* Check Content */}
+                <div className="flex-1 flex flex-col justify-center text-center">
+                  <Calculator className="h-8 w-8 mx-auto mb-2 text-primary" />
+                  <h3 className="font-semibold text-sm leading-tight mb-1">{comp.templateName}</h3>
+                  {comp.sheet1 && (
+                    <p className="text-xs text-muted-foreground mb-1">CT {comp.sheet1.ct_ratio_primary}/{comp.sheet1.ct_ratio_secondary}</p>
                   )}
+                  {comp.sheet2 && (
+                    <p className="text-xs text-muted-foreground">{comp.sheet2.bus_voltage_kv}kV</p>
+                  )}
+                </div>
 
-                  <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                    {comp.sheet1 && <span>CT {comp.sheet1.ct_ratio_primary}/{comp.sheet1.ct_ratio_secondary}A {comp.sheet1.accuracy_class}</span>}
-                    {comp.sheet2 && <><span>·</span><span>{comp.sheet2.bus_voltage_kv}kV · {comp.sheet2.max_bus_fault_mva}MVA</span></>}
-                    <span>·</span>
-                    <span>{comp.createdBy?.name} · {new Date(comp.createdAt).toLocaleString()}</span>
+                {/* Verdict and Values */}
+                <div className="text-center">
+                  <div className="space-y-1">
+                    <span className={`text-xs font-mono ${ok ? 'text-green-500' : 'text-red-500'}`}>
+                      {comp.vk_available}V / {comp.vk_required}V
+                    </span>
+                    <p className={`text-[10px] font-semibold ${ok ? 'text-green-500' : 'text-red-500'}`}>
+                      {ok ? 'ADEQUATE' : 'UNDER DIM'}
+                    </p>
+                    {margin !== 0 && (
+                      <p className={`text-[10px] ${margin >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                        Margin: {margin >= 0 ? '+' : ''}{margin}V
+                      </p>
+                    )}
                   </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
+                  
+                  {/* Approval Status */}
+                  <div className="mt-2">
+                    {comp.approvalStatus === 'PENDING' && (
+                      <Badge variant="outline" className="text-[10px] border-amber-600 text-amber-500">
+                        Pending
+                      </Badge>
+                    )}
+                    {comp.approvalStatus === 'APPROVED' && (
+                      <Badge variant="outline" className="text-[10px] border-green-700 text-green-400">
+                        Approved
+                      </Badge>
+                    )}
+                    {comp.approvalStatus === 'REJECTED' && (
+                      <Badge variant="outline" className="text-[10px] border-red-700 text-red-400">
+                        Rejected
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
+
+        {/* No results message */}
+        {filtered.length === 0 && computations.length > 0 && (
+          <div className="col-span-full">
+            <Card>
+              <CardContent className="py-12 text-center">
+                <p className="text-muted-foreground">No results match your filters</p>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+      </div>
+
+      {/* Empty state for no computations */}
+      {computations.length === 0 && (
+        <Card>
+          <CardContent className="py-12 text-center space-y-3">
+            <p className="text-muted-foreground">No computations yet</p>
+            <Link href={`/workspaces/${workspaceId}/computations/new`}>
+              <Button className="gap-2"><Plus className="h-4 w-4" />Run first check</Button>
+            </Link>
+          </CardContent>
+        </Card>
       )}
     </div>
   );

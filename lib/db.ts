@@ -50,6 +50,7 @@ export async function getCTChecks()     { return (await getDb()).collection('ct_
 // Infrastructure & Equipment
 export async function getSubstations()  { return (await getDb()).collection('substations'); }
 export async function getBays()         { return (await getDb()).collection('bays'); }
+export async function getBayTypes()     { return (await getDb()).collection('bay_types'); }
 export async function getIEDs()         { return (await getDb()).collection('ieds'); }
 export async function getEquipment()    { return (await getDb()).collection('equipment'); }
 export async function getCables()       { return (await getDb()).collection('cables'); }

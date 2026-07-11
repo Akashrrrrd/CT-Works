@@ -14,7 +14,9 @@
     "db:status": "node scripts/db-setup.js status",
     "db:seed-relay-templates": "node scripts/seed-relay-templates.js",
     "db:seed-sample-data": "node scripts/seed-sample-data.js",
-    "db:seed-all": "npm run db:seed-relay-templates && npm run db:seed-sample-data"
+    "db:seed-all": "npm run db:seed-relay-templates && npm run db:seed-sample-data",
+    "db:cleanup-all": "node scripts/cleanup-all-data.js",
+    "db:cleanup": "node scripts/selective-cleanup.js"
   },
   "prisma": {
     "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"

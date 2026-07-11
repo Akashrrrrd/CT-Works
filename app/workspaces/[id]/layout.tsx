@@ -83,7 +83,7 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
     },
     { 
       href: `/workspaces/${workspaceId}/substations`, 
-      label: 'Substations', 
+      label: 'Projects', 
       icon: <Building2 className="h-4 w-4" />, 
       roles: ['ENGINEER','ADMIN','MANAGER'],
       badge: null
@@ -92,6 +92,13 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
       href: `/workspaces/${workspaceId}/analysis`, 
       label: 'Full Analysis', 
       icon: <Cpu className="h-4 w-4" />, 
+      roles: ['ENGINEER','ADMIN','MANAGER'],
+      badge: null
+    },
+    { 
+      href: `/workspaces/${workspaceId}/relay-templates`, 
+      label: 'Excel Processing', 
+      icon: <Upload className="h-4 w-4" />, 
       roles: ['ENGINEER','ADMIN','MANAGER'],
       badge: null
     },
@@ -117,23 +124,9 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
       badge: null
     },
     { 
-      href: `/workspaces/${workspaceId}/relay-templates`, 
-      label: 'Excel Processing', 
-      icon: <Upload className="h-4 w-4" />, 
-      roles: ['ENGINEER','ADMIN','MANAGER'],
-      badge: null
-    },
-    { 
       href: `/workspaces/${workspaceId}/relay-formulas`, 
       label: 'Relay Formulas', 
       icon: <FlaskConical className="h-4 w-4" />, 
-      roles: ['ENGINEER','ADMIN','MANAGER'],
-      badge: null
-    },
-    { 
-      href: `/workspaces/${workspaceId}/compare`, 
-      label: 'Compare', 
-      icon: <GitCompare className="h-4 w-4" />, 
       roles: ['ENGINEER','ADMIN','MANAGER'],
       badge: null
     },
@@ -142,13 +135,6 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
       label: 'Activity Log', 
       icon: <TrendingUp className="h-4 w-4" />, 
       roles: ['ENGINEER','ADMIN','MANAGER'],
-      badge: null
-    },
-    { 
-      href: `/workspaces/${workspaceId}/analytics`, 
-      label: 'Analytics', 
-      icon: <BarChart3 className="h-4 w-4" />, 
-      roles: ['ADMIN','MANAGER'],
       badge: null
     },
     { 
@@ -228,7 +214,7 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
       <aside className="hidden lg:flex w-64 h-screen bg-sidebar border-r border-sidebar-border p-6 flex-col fixed left-0 top-0 z-50">
         <Link href="/dashboard" className="flex items-center gap-2 mb-8">
           <Zap className="h-6 w-6 text-sidebar-primary" />
-          <span className="font-bold text-lg">CT Adequacy</span>
+          <span className="font-bold text-lg">Project Manager</span>
         </Link>
 
         <div className="mb-6 pb-6 border-b border-sidebar-border">
@@ -266,7 +252,7 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
       <div className="lg:hidden fixed top-0 left-0 right-0 bg-card border-b border-border p-4 flex justify-between items-center z-40">
         <Link href="/dashboard" className="flex items-center gap-2">
           <Zap className="h-5 w-5 text-primary" />
-          <span className="font-bold">CT Adequacy</span>
+          <span className="font-bold">Project Manager</span>
         </Link>
         <div className="flex items-center gap-1">
           <ThemeToggle />
@@ -277,7 +263,7 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
             <SheetContent side="left">
               <div className="space-y-6">
                 <Link href="/dashboard" className="flex items-center gap-2">
-                  <Zap className="h-5 w-5" /><span className="font-bold">CT Adequacy</span>
+                  <Zap className="h-5 w-5" /><span className="font-bold">Project Manager</span>
                 </Link>
                 {roleMeta && (
                   <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded border ${roleMeta.color}`}>
