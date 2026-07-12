@@ -116,7 +116,12 @@ export default function NewComputationPage() {
         }
         console.log('Setting templates:', data.length, 'items');
         setTemplates(data);
-        setSelectedTemplate(data[0] ?? null);
+        
+        // Auto-select first template if no template is selected and not coming from IED/Excel
+        if (!selectedTemplate && data.length > 0 && !iedId && !searchParams?.get('imported')) {
+          console.log('Auto-selecting first template:', data[0]);
+          setSelectedTemplate(data[0]);
+        }
       })
       .catch(e => {
         console.error('Templates fetch error:', e);
@@ -170,21 +175,32 @@ export default function NewComputationPage() {
         setImportedFromExcel(true);
         setIedName(`${importedData.relay_type || 'Imported'} (from Excel)`);
         
-        // Auto-select matching template based on relay type
-        const relayTypeMapping: Record<string, string> = {
-          'RED670': 'tpl-red670',
-          'REB670': 'tpl-reb670',
-          'REF615': 'tpl-ref615',
-          'REL670': 'tpl-rel670',
-          'REQ650': 'tpl-req650'
+        // Auto-select matching template based on relay type  
+        const relayTypeToTemplate: Record<string, string> = {
+          'RED670': 'tpl-differential',    // Primary: Differential
+          'REB670': 'tpl-differential',    // Busbar Differential 
+          'REF615': 'tpl-differential',    // Feeder Differential
+          'REL670': 'tpl-distance',        // Distance Protection
+          'REQ650': 'tpl-breaker-failure', // Breaker Failure
+          'REB500': 'tpl-differential',    // Primary: Differential
+          'SEL-421': 'tpl-differential',   // Primary: Differential
+          'SEL-311C': 'tpl-distance',      // Distance
+          'P443': 'tpl-differential',      // Primary: Differential
+          'P142': 'tpl-distance',          // Distance
         };
         
-        const targetTemplate = relayTypeMapping[importedData.relay_type];
-        if (targetTemplate) {
-          const matchingTemplate = templates.find(t => t.iedType === targetTemplate);
+        const primaryFunction = relayTypeToTemplate[importedData.relay_type];
+        if (primaryFunction) {
+          const matchingTemplate = templates.find(t => t.iedType === primaryFunction);
           if (matchingTemplate) {
             setSelectedTemplate(matchingTemplate);
+          } else {
+            // Fallback to first template
+            setSelectedTemplate(templates[0] ?? null);
           }
+        } else {
+          // Unknown relay type: use first template
+          setSelectedTemplate(templates[0] ?? null);
         }
         
       } catch (error) {
@@ -193,6 +209,14 @@ export default function NewComputationPage() {
       }
     }
   }, [searchParams, templates.length]); // Use templates.length instead of templates object
+
+  // Ensure a template is selected when not coming from IED or Excel
+  useEffect(() => {
+    if (!iedId && !importedFromExcel && templates.length > 0 && !selectedTemplate) {
+      console.log('No IED/Excel import detected, selecting first template');
+      setSelectedTemplate(templates[0]);
+    }
+  }, [templates.length, iedId, importedFromExcel, selectedTemplate]);
 
   // Pre-fill CT data from IED if iedId is provided
   useEffect(() => {
@@ -215,18 +239,37 @@ export default function NewComputationPage() {
                 vk_available:       ied.ct.vk    ? String(ied.ct.vk)  : prev.vk_available,
                 io_at_vk:           ied.ct.io    ? String(ied.ct.io)  : prev.io_at_vk,
               }));
-              // Auto-select first matching function based on IED's protection functions
-              if (ied.functions?.length > 0 && templates.length > 0) {
-                const match = templates.find(t => ied.functions.includes(t.iedType));
-                if (match) {
-                  setSelectedTemplate(match);
+
+              // Auto-select template based on IED model and its protection functions
+              if (templates.length > 0) {
+                // IED model to primary protection function mapping
+                const modelToTemplate: Record<string, string> = {
+                  'RED670': 'tpl-differential',  // Primary: Differential (can also do distance & BF)
+                  'REB670': 'tpl-differential',  // Busbar Differential only
+                  'REF615': 'tpl-differential',  // Feeder Differential only  
+                  'REL670': 'tpl-distance',      // Distance Protection only
+                  'REQ650': 'tpl-breaker-failure', // Breaker Failure only
+                  'REB500': 'tpl-differential',  // Primary: Differential (+ BF)
+                  'SEL-421': 'tpl-differential', // Primary: Differential (+ distance)
+                  'SEL-311C': 'tpl-distance',    // Distance only
+                  'P443': 'tpl-differential',    // Primary: Differential (+ distance)  
+                  'P142': 'tpl-distance',        // Distance only
+                };
+                
+                const primaryFunction = modelToTemplate[ied.model];
+                if (primaryFunction) {
+                  // Find template that matches the primary protection function
+                  const matchingTemplate = templates.find(t => t.iedType === primaryFunction);
+                  if (matchingTemplate) {
+                    setSelectedTemplate(matchingTemplate);
+                  } else {
+                    // Fallback: use first template if no exact match
+                    setSelectedTemplate(templates[0] ?? null);
+                  }
                 } else {
-                  // If no exact match, select first available template
+                  // Unknown model: use first available template
                   setSelectedTemplate(templates[0] ?? null);
                 }
-              } else {
-                // Default to first template if no functions defined
-                setSelectedTemplate(templates[0] ?? null);
               }
               return;
             }
@@ -360,14 +403,9 @@ export default function NewComputationPage() {
           <Zap className="h-4 w-4 text-primary shrink-0" />
           <span>
             {importedFromExcel 
-              ? `CT data imported from Excel: ${iedName}`
-              : `CT data pre-filled from IED: ${iedName}`
+              ? `CT data imported from Excel: ${iedName} • Protection function auto-selected based on relay model`
+              : `CT data pre-filled from IED: ${iedName} • Protection function determined by IED model`
             }
-            {selectedTemplate && (
-              <span className="ml-2 text-primary font-medium">
-                • Using {selectedTemplate.name}
-              </span>
-            )}
           </span>
         </div>
       )}
@@ -380,6 +418,74 @@ export default function NewComputationPage() {
       )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Template Selection - Auto-selected based on IED */}
+        {selectedTemplate && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Protection Function Analysis</CardTitle>
+              <CardDescription>
+                {iedName 
+                  ? `Analyzing ${iedName} - protection functions determined by IED model`
+                  : 'Protection function template selected automatically'}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="bg-muted rounded-lg p-3">
+                <div className="flex items-center gap-2 mb-2">
+                  <Badge variant="outline">{selectedTemplate.iedType}</Badge>
+                  <span className="font-medium">{selectedTemplate.name}</span>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  {selectedTemplate.description}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  <strong>Relay:</strong> {selectedTemplate.relay}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Manual Template Selection - Only when not coming from IED */}
+        {!iedName && !importedFromExcel && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Protection Function Template</CardTitle>
+              <CardDescription>Select the protection function to analyze</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Template</label>
+                <Select 
+                  value={selectedTemplate?.id ?? ''} 
+                  onValueChange={id => {
+                    const template = templates.find(t => t.id === id);
+                    setSelectedTemplate(template ?? null);
+                    setResult(null);
+                  }}
+                  disabled={submitting}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choose protection function template..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {templates.map(t => (
+                      <SelectItem key={t.id} value={t.id}>
+                        {t.name} - {t.relay}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {selectedTemplate && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {selectedTemplate.description}
+                  </p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Sheet 1 — CT Datasheet */}
         <Card>
           <CardHeader>
@@ -530,15 +636,35 @@ export default function NewComputationPage() {
         )}
 
         {!result && (
-          <div className="flex gap-3">
-            <Button type="submit" disabled={submitting || !selectedTemplate} className="gap-2">
-              {submitting
-                ? <><Loader2 className="h-4 w-4 animate-spin" />Computing...</>
-                : <><Zap className="h-4 w-4" />Compute</>}
-            </Button>
-            <Button type="button" variant="outline" onClick={() => router.push(`/workspaces/${workspaceId}/computations`)}>
-              Cancel
-            </Button>
+          <div className="space-y-4">
+            {/* Debug Info - Temporary */}
+            <Card className="border-amber-200 bg-amber-50/50">
+              <CardContent className="pt-4">
+                <p className="text-sm text-amber-800 mb-2">Debug Information:</p>
+                <div className="text-xs text-amber-700 space-y-1">
+                  <div>Templates loaded: {templates.length}</div>
+                  <div>Selected template: {selectedTemplate ? `${selectedTemplate.name} (${selectedTemplate.id})` : 'None'}</div>
+                  <div>IED Name: {iedName || 'None'}</div>
+                  <div>Imported from Excel: {importedFromExcel ? 'Yes' : 'No'}</div>
+                  <div>Submitting: {submitting ? 'Yes' : 'No'}</div>
+                  <div>Button enabled: {!submitting && selectedTemplate ? 'Yes' : 'No'}</div>
+                  {templates.length > 0 && (
+                    <div>Available templates: {templates.map(t => `${t.name} (${t.iedType})`).join(', ')}</div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            <div className="flex gap-3">
+              <Button type="submit" disabled={submitting || !selectedTemplate} className="gap-2">
+                {submitting
+                  ? <><Loader2 className="h-4 w-4 animate-spin" />Computing...</>
+                  : <><Zap className="h-4 w-4" />Compute</>}
+              </Button>
+              <Button type="button" variant="outline" onClick={() => router.push(`/workspaces/${workspaceId}/computations`)}>
+                Cancel
+              </Button>
+            </div>
           </div>
         )}
       </form>

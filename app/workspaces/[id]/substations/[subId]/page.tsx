@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { ArrowLeft, Plus, AlertCircle, Edit, Trash2, MoreVertical, Zap } from 'lucide-react';
+import { ArrowLeft, Plus, AlertCircle, Edit, Trash2, MoreVertical, Zap, GitCompare } from 'lucide-react';
 
 interface Bay { 
   id: string; 
@@ -40,6 +40,8 @@ export default function ProjectDetailPage() {
   const [subName, setSubName]     = useState('');
   const [error, setError]         = useState('');
   const [availableTypes, setAvailableTypes] = useState<string[]>([]);
+  const [compareMode, setCompareMode] = useState(false);
+  const [selectedBays, setSelectedBays] = useState<string[]>([]);
 
   // Bay form states
   const [bayOpen, setBayOpen]     = useState(false);
@@ -187,18 +189,55 @@ export default function ProjectDetailPage() {
     }
   };
 
+  const toggleCompareMode = () => {
+    setCompareMode(!compareMode);
+    setSelectedBays([]);
+  };
+
+  const toggleBaySelection = (bayId: string) => {
+    if (selectedBays.includes(bayId)) {
+      setSelectedBays(prev => prev.filter(id => id !== bayId));
+    } else if (selectedBays.length < 3) {
+      setSelectedBays(prev => [...prev, bayId]);
+    }
+  };
+
+  const handleCompareBays = () => {
+    if (selectedBays.length >= 2) {
+      router.push(`/workspaces/${workspaceId}/substations/${subId}/compare?bays=${selectedBays.join(',')}`);
+    }
+  };
+
   if (loading) return <div className="space-y-4">{[...Array(3)].map((_, i) => <Skeleton key={i} className="h-40" />)}</div>;
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <Link href={`/workspaces/${workspaceId}/substations`}>
-          <Button variant="ghost" size="sm" className="gap-1">
-            <ArrowLeft className="h-4 w-4" />Projects
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Link href={`/workspaces/${workspaceId}/substations`}>
+            <Button variant="ghost" size="sm" className="gap-1">
+              <ArrowLeft className="h-4 w-4" />Projects
+            </Button>
+          </Link>
+          <h2 className="text-xl font-bold">{subName}</h2>
+        </div>
+        <div className="flex gap-2">
+          {compareMode && selectedBays.length >= 2 && (
+            <Button onClick={handleCompareBays} className="gap-2">
+              <GitCompare className="h-4 w-4" />
+              Compare ({selectedBays.length})
+            </Button>
+          )}
+          <Button 
+            variant={compareMode ? "default" : "outline"} 
+            onClick={toggleCompareMode} 
+            className="gap-2"
+          >
+            <GitCompare className="h-4 w-4" />
+            {compareMode ? 'Cancel Compare' : 'Compare Bays'}
           </Button>
-        </Link>
-        <h2 className="text-xl font-bold">{subName}</h2>
+        </div>
       </div>
 
       {/* Bays Grid */}
@@ -220,36 +259,56 @@ export default function ProjectDetailPage() {
         {bays.map(bay => (
           <Card 
             key={bay.id} 
-            className="aspect-square relative cursor-pointer hover:shadow-md transition-shadow group"
-            onClick={() => router.push(`/workspaces/${workspaceId}/substations/${subId}/bays/${bay.id}`)}
+            className={`aspect-square relative cursor-pointer hover:shadow-md transition-shadow group ${
+              compareMode 
+                ? selectedBays.includes(bay.id)
+                  ? 'ring-2 ring-primary bg-primary/5'
+                  : selectedBays.length >= 3
+                    ? 'opacity-50 cursor-not-allowed'
+                    : 'hover:ring-1 hover:ring-primary/50'
+                : ''
+            }`}
+            onClick={() => compareMode 
+              ? toggleBaySelection(bay.id)
+              : router.push(`/workspaces/${workspaceId}/substations/${subId}/bays/${bay.id}`)
+            }
           >
             <CardContent className="p-4 h-full flex flex-col justify-between">
-              {/* Three-dot menu */}
-              <div className="flex justify-end">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild onClick={e => e.stopPropagation()}>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      <MoreVertical className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEditBay(bay); }}>
-                      <Edit className="h-4 w-4 mr-2" />
-                      Edit
-                    </DropdownMenuItem>
-                    <DropdownMenuItem 
-                      onClick={(e) => { e.stopPropagation(); handleDeleteBay(bay); }}
-                      className="text-red-600"
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Delete
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+              {/* Compare mode selection or Three-dot menu */}
+              <div className="flex justify-between items-start">
+                {compareMode && selectedBays.includes(bay.id) && (
+                  <div className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-bold">
+                    {selectedBays.indexOf(bay.id) + 1}
+                  </div>
+                )}
+                {!compareMode && (
+                  <div className="flex justify-end w-full">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild onClick={e => e.stopPropagation()}>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEditBay(bay); }}>
+                          <Edit className="h-4 w-4 mr-2" />
+                          Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          onClick={(e) => { e.stopPropagation(); handleDeleteBay(bay); }}
+                          className="text-red-600"
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                )}
               </div>
 
               {/* Bay Content */}

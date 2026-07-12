@@ -31,8 +31,6 @@ export default function ProjectsPage() {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<Substation | null>(null);
   const [deletingProject, setDeletingProject] = useState<Substation | null>(null);
-  const [compareMode, setCompareMode] = useState(false);
-  const [selectedProjects, setSelectedProjects] = useState<string[]>([]);
   const [subForm, setSubForm]       = useState({ 
     name: '', 
     voltageLevel: '', 
@@ -152,25 +150,6 @@ export default function ProjectsPage() {
     }
   };
 
-  const toggleCompareMode = () => {
-    setCompareMode(!compareMode);
-    setSelectedProjects([]);
-  };
-
-  const toggleProjectSelection = (projectId: string) => {
-    if (selectedProjects.includes(projectId)) {
-      setSelectedProjects(prev => prev.filter(id => id !== projectId));
-    } else if (selectedProjects.length < 3) {
-      setSelectedProjects(prev => [...prev, projectId]);
-    }
-  };
-
-  const handleCompareProjects = () => {
-    if (selectedProjects.length >= 2) {
-      router.push(`/workspaces/${workspaceId}/compare?projects=${selectedProjects.join(',')}`);
-    }
-  };
-
   if (loading) return (
     <div className="space-y-4">
       {[...Array(2)].map((_, i) => <Skeleton key={i} className="h-48 w-full" />)}
@@ -184,22 +163,6 @@ export default function ProjectsPage() {
         <div>
           <h2 className="text-2xl font-bold">Projects</h2>
           <p className="text-sm text-muted-foreground">Project → Bay → IED hierarchy</p>
-        </div>
-        <div className="flex gap-2">
-          {compareMode && selectedProjects.length >= 2 && (
-            <Button onClick={handleCompareProjects} className="gap-2">
-              <GitCompare className="h-4 w-4" />
-              Compare ({selectedProjects.length})
-            </Button>
-          )}
-          <Button 
-            variant={compareMode ? "default" : "outline"} 
-            onClick={toggleCompareMode} 
-            className="gap-2"
-          >
-            <GitCompare className="h-4 w-4" />
-            {compareMode ? 'Cancel Compare' : 'Compare Projects'}
-          </Button>
         </div>
       </div>
 
@@ -222,54 +185,37 @@ export default function ProjectsPage() {
         {tree.map(project => (
           <Card 
             key={project.id} 
-            className={`aspect-square relative cursor-pointer hover:shadow-md transition-shadow group ${
-              compareMode 
-                ? selectedProjects.includes(project.id)
-                  ? 'ring-2 ring-primary bg-primary/5'
-                  : selectedProjects.length >= 3
-                    ? 'opacity-50 cursor-not-allowed'
-                    : 'hover:ring-1 hover:ring-primary/50'
-                : ''
-            }`}
-            onClick={() => compareMode 
-              ? toggleProjectSelection(project.id)
-              : router.push(`/workspaces/${workspaceId}/substations/${project.id}`)
-            }
+            className="aspect-square relative cursor-pointer hover:shadow-md transition-shadow group"
+            onClick={() => router.push(`/workspaces/${workspaceId}/substations/${project.id}`)}
           >
             <CardContent className="p-4 h-full flex flex-col justify-between">
-              {/* Compare mode selection or Three-dot menu */}
+              {/* Three-dot menu */}
               <div className="flex justify-between items-start">
-                {compareMode && selectedProjects.includes(project.id) && (
-                  <div className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-bold">
-                    {selectedProjects.indexOf(project.id) + 1}
-                  </div>
-                )}
-                {!compareMode && (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild onClick={e => e.stopPropagation()}>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEditProject(project); }}>
-                        <Edit className="h-4 w-4 mr-2" />
-                        Edit
-                      </DropdownMenuItem>
-                      <DropdownMenuItem 
-                        onClick={(e) => { e.stopPropagation(); handleDeleteProject(project); }}
-                        className="text-red-600"
-                      >
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                )}
+                <div /> {/* Spacer */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild onClick={e => e.stopPropagation()}>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEditProject(project); }}>
+                      <Edit className="h-4 w-4 mr-2" />
+                      Edit
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={(e) => { e.stopPropagation(); handleDeleteProject(project); }}
+                      className="text-red-600"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
 
               {/* Project Content */}

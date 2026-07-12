@@ -10,9 +10,13 @@ import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useWebSocket, useWebSocketSubscription } from '@/lib/services/websocket';
 import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  PieChart, Pie, Cell, Legend, LineChart, Line,
+} from 'recharts';
+import {
   Calculator, CheckCircle, AlertTriangle, Clock, Users, Building2,
   Activity, FileText, CheckSquare, Zap, ArrowRight, RefreshCw, Shield, Database,
-  BarChart3, ShieldCheck, FlaskConical, Upload, Cpu, GitCompare, Wifi, WifiOff
+  BarChart3, ShieldCheck, FlaskConical, Upload, Cpu, GitCompare, Wifi, WifiOff, TrendingUp
 } from 'lucide-react';
 
 interface OverviewStats {
@@ -51,6 +55,13 @@ interface OverviewStats {
   };
 }
 
+interface Computation {
+  id: string; templateName: string; verdict: string;
+  vk_required: number; vk_available: number; ealreq_max: number;
+  approvalStatus: string; createdAt: string;
+  sheet2: { bus_voltage_kv: number };
+}
+
 interface RecentActivity {
   id: string;
   type: 'computation' | 'approval' | 'template' | 'user';
@@ -60,6 +71,8 @@ interface RecentActivity {
   status?: 'success' | 'warning' | 'error';
 }
 
+const COLORS = { suitable: '#22c55e', under: '#ef4444', pending: '#f59e0b', approved: '#3b82f6' };
+
 export default function WorkspaceOverview() {
   const params = useParams();
   const workspaceId = params.id as string;
@@ -67,6 +80,7 @@ export default function WorkspaceOverview() {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<OverviewStats | null>(null);
   const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
+  const [computations, setComputations] = useState<Computation[]>([]);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
 
   // WebSocket connection for real-time updates
@@ -74,10 +88,11 @@ export default function WorkspaceOverview() {
 
   const fetchData = useCallback(async () => {
     try {
-      // Fetch overview statistics
-      const [statsRes, activityRes] = await Promise.all([
+      // Fetch overview statistics and computations for analytics
+      const [statsRes, activityRes, computationsRes] = await Promise.all([
         fetch(`/api/workspaces/${workspaceId}/overview`),
-        fetch(`/api/workspaces/${workspaceId}/activity`)
+        fetch(`/api/workspaces/${workspaceId}/activity`),
+        fetch(`/api/workspaces/${workspaceId}/computations`)
       ]);
 
       if (statsRes.ok) {
@@ -90,11 +105,17 @@ export default function WorkspaceOverview() {
         setRecentActivity(activityData);
       }
 
+      if (computationsRes.ok) {
+        const computationsData = await computationsRes.json();
+        setComputations(Array.isArray(computationsData) ? computationsData : []);
+      }
+
       setLastUpdated(new Date());
     } catch (error) {
       console.error('Failed to fetch overview data:', error);
-      setStats(null); // Set to null instead of mock data
+      setStats(null);
       setRecentActivity([]);
+      setComputations([]);
     } finally {
       setLoading(false);
     }
@@ -174,14 +195,44 @@ export default function WorkspaceOverview() {
   const adequacyRate = stats ? (stats.computations.adequate / stats.computations.total) * 100 : 0;
   const analysisProgress = stats ? (stats.substations.analyzed / stats.substations.total) * 100 : 0;
 
+  // Analytics data processing
+  const suitable  = computations.filter(c => c.verdict === 'SUITABLY DIMENSIONED').length;
+  const underDim  = computations.filter(c => c.verdict === 'UNDER DIMENSIONED').length;
+  const pending   = computations.filter(c => c.approvalStatus === 'PENDING').length;
+  const approved  = computations.filter(c => c.approvalStatus === 'APPROVED').length;
+  const total     = computations.length;
+
+  // Verdict pie chart data
+  const verdictPie = [
+    { name: 'Suitable',      value: suitable, color: COLORS.suitable },
+    { name: 'Under Dim.',    value: underDim, color: COLORS.under    },
+  ].filter(d => d.value > 0);
+
+  // Approval pie chart data  
+  const approvalPie = [
+    { name: 'Approved', value: approved,                                    color: COLORS.approved },
+    { name: 'Pending',  value: pending,                                     color: COLORS.pending  },
+    { name: 'Rejected', value: total - approved - pending,                  color: COLORS.under    },
+  ].filter(d => d.value > 0);
+
+  // Vk margin bar chart data
+  const marginData = computations
+    .map(c => ({
+      name:   c.templateName.replace(/\s*–.*/, '').substring(0, 14),
+      margin: +(c.vk_available - c.vk_required).toFixed(1),
+      fill:   c.vk_available >= c.vk_required ? COLORS.suitable : COLORS.under,
+    }))
+    .sort((a, b) => a.margin - b.margin)
+    .slice(0, 12);
+
   return (
     <div className="w-full max-w-none space-y-4">
       {/* Header with real-time indicator */}
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Workspace Overview</h2>
+          <h2 className="text-3xl font-bold tracking-tight">Overview & Analytics</h2>
           <p className="text-muted-foreground">
-            Real-time dashboard for CT/VT adequacy analysis
+            Real-time dashboard and analytics for project management
           </p>
         </div>
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -344,10 +395,10 @@ export default function WorkspaceOverview() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Building2 className="h-5 w-5 text-orange-500" />
-                Substations
+                Projects
               </CardTitle>
               <CardDescription>
-                Manage substation configurations and data
+                Manage project configurations and data
               </CardDescription>
             </CardHeader>
           </Link>
@@ -450,9 +501,9 @@ export default function WorkspaceOverview() {
             </div>
 
             <div className="mt-4 pt-4 border-t border-border">
-              <Link href={`/workspaces/${workspaceId}/analytics`}>
+              <Link href={`/workspaces/${workspaceId}/computations`}>
                 <Button variant="outline" size="sm" className="w-full">
-                  View detailed analytics <ArrowRight className="h-3 w-3 ml-1" />
+                  View all computations <ArrowRight className="h-3 w-3 ml-1" />
                 </Button>
               </Link>
             </div>
@@ -533,6 +584,124 @@ export default function WorkspaceOverview() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Analytics Dashboard */}
+      {computations.length > 0 && (
+        <div className="space-y-6">
+          <div>
+            <h3 className="text-xl font-semibold mb-2">CT Adequacy Analytics</h3>
+            <p className="text-sm text-muted-foreground">Detailed performance metrics and trends</p>
+          </div>
+
+          {/* Adequacy Rate Progress */}
+          <Card>
+            <CardContent className="pt-4 pb-4 space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="font-medium">Overall Adequacy Rate</span>
+                <span className={`font-bold ${adequacyRate >= 80 ? 'text-green-500' : adequacyRate >= 50 ? 'text-amber-500' : 'text-red-500'}`}>
+                  {adequacyRate.toFixed(1)}%
+                </span>
+              </div>
+              <div className="h-3 rounded-full bg-muted overflow-hidden">
+                <div 
+                  className={`h-full rounded-full ${adequacyRate >= 80 ? 'bg-green-500' : adequacyRate >= 50 ? 'bg-amber-500' : 'bg-red-500'}`} 
+                  style={{ width: `${adequacyRate}%` }} 
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">{suitable} of {total} CTs are suitably dimensioned</p>
+            </CardContent>
+          </Card>
+
+          {/* Analytics Charts Grid */}
+          <div className="grid gap-4 md:grid-cols-2">
+            {/* Verdict Distribution */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm">Verdict Distribution</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={200}>
+                  <PieChart>
+                    <Pie 
+                      data={verdictPie} 
+                      cx="50%" 
+                      cy="50%" 
+                      innerRadius={55} 
+                      outerRadius={80} 
+                      dataKey="value" 
+                      label={({ name, value }) => `${name}: ${value}`} 
+                      labelLine={false}
+                    >
+                      {verdictPie.map((entry, i) => <Cell key={i} fill={entry.color} />)}
+                    </Pie>
+                    <Tooltip />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+
+            {/* Approval Status */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm">Approval Status</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={200}>
+                  <PieChart>
+                    <Pie 
+                      data={approvalPie} 
+                      cx="50%" 
+                      cy="50%" 
+                      innerRadius={55} 
+                      outerRadius={80} 
+                      dataKey="value" 
+                      label={({ name, value }) => `${name}: ${value}`} 
+                      labelLine={false}
+                    >
+                      {approvalPie.map((entry, i) => <Cell key={i} fill={entry.color} />)}
+                    </Pie>
+                    <Tooltip />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+
+            {/* Vk Margin Bar Chart */}
+            {marginData.length > 0 && (
+              <Card className="md:col-span-2">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm">Vk Margin per Computation</CardTitle>
+                  <CardDescription className="text-xs">Positive = adequate, negative = under-dimensioned</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={220}>
+                    <BarChart data={marginData} margin={{ top: 4, right: 8, left: 0, bottom: 40 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                      <XAxis 
+                        dataKey="name" 
+                        tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} 
+                        angle={-35} 
+                        textAnchor="end" 
+                        interval={0} 
+                      />
+                      <YAxis 
+                        tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} 
+                        unit="V" 
+                      />
+                      <Tooltip formatter={(v: number) => [`${v} V`, 'Margin']} />
+                      <Bar dataKey="margin" radius={[3, 3, 0, 0]}>
+                        {marginData.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

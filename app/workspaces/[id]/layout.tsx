@@ -82,6 +82,13 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
       badge: null
     },
     { 
+      href: `/dashboard`, 
+      label: 'Workspaces', 
+      icon: <GitCompare className="h-4 w-4" />, 
+      roles: ['ENGINEER','ADMIN','MANAGER'],
+      badge: null
+    },
+    { 
       href: `/workspaces/${workspaceId}/substations`, 
       label: 'Projects', 
       icon: <Building2 className="h-4 w-4" />, 
@@ -111,7 +118,7 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
     },
     { 
       href: `/workspaces/${workspaceId}/vt-check`, 
-      label: 'VT Check', 
+      label: 'VT Checks', 
       icon: <Activity className="h-4 w-4" />, 
       roles: ['ENGINEER','ADMIN','MANAGER'],
       badge: null
@@ -218,8 +225,8 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
         </Link>
 
         <div className="mb-6 pb-6 border-b border-sidebar-border">
-          <p className="text-sm font-medium text-sidebar-foreground">{workspace?.name}</p>
-          <p className="text-xs text-sidebar-accent-foreground opacity-75">{workspace?.organization?.name}</p>
+          <p className="text-sm font-medium text-sidebar-foreground">Project Workspace</p>
+          <p className="text-xs text-sidebar-accent-foreground opacity-75">Engineering & Analysis</p>
         </div>
 
         <nav className="flex-1 space-y-1">
@@ -285,8 +292,8 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
         <main className="min-h-screen lg:pt-0 pt-20">
           <div className="bg-card border-b border-border px-6 py-4 flex justify-between items-center sticky top-20 lg:top-0 z-30">
             <div>
-              <h1 className="text-xl font-bold">{workspace?.name}</h1>
-              <p className="text-xs text-muted-foreground">{workspace?.organization?.name}</p>
+              <h1 className="text-xl font-bold">Project Management System</h1>
+              <p className="text-xs text-muted-foreground">Professional Engineering Solutions</p>
             </div>
             <div className="hidden md:flex items-center gap-2">
               <ThemeToggle />

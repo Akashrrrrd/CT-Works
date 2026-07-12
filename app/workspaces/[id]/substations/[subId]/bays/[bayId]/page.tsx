@@ -40,7 +40,6 @@ interface IED {
   id: string; 
   name: string; 
   model: string; 
-  serialNumber?: string;
   functions: string[]; 
   ct: { ratio: string; class: string; rct: number; vk: number; io: number };
   latestResult?: { verdict: string; vk_required: number; vk_available: number } | null;
@@ -76,7 +75,6 @@ export default function IEDsPage() {
   const [iedForm, setIedForm] = useState({
     name: '', 
     model: 'RED670', 
-    serialNumber: '',
     functions: MODEL_FUNCTIONS['RED670'] || [], // Set default functions for RED670
     ctRatio: '', 
     ctClass: 'PX', 
@@ -88,7 +86,6 @@ export default function IEDsPage() {
   const [editForm, setEditForm] = useState({
     name: '', 
     model: 'RED670', 
-    serialNumber: '',
     functions: MODEL_FUNCTIONS['RED670'] || [],
     ctRatio: '', 
     ctClass: 'PX', 
@@ -152,7 +149,6 @@ export default function IEDsPage() {
       setIedForm({
         name: '', 
         model: 'RED670', 
-        serialNumber: '',
         functions: MODEL_FUNCTIONS['RED670'] || [],
         ctRatio: '', 
         ctClass: 'PX', 
@@ -173,7 +169,6 @@ export default function IEDsPage() {
     setEditForm({
       name: ied.name,
       model: ied.model,
-      serialNumber: ied.serialNumber || '',
       functions: [...ied.functions],
       ctRatio: ied.ct.ratio,
       ctClass: ied.ct.class,
@@ -280,7 +275,11 @@ export default function IEDsPage() {
             <Card 
               key={ied.id} 
               className="aspect-square relative cursor-pointer hover:shadow-md transition-shadow group"
-              onClick={() => router.push(`/workspaces/${workspaceId}/computations/new?iedId=${ied.id}`)}
+              onClick={() => {
+                // Instead of redirecting to CT checks, we'll add inline computation here
+                // For now, keep existing behavior but we'll enhance this
+                router.push(`/workspaces/${workspaceId}/computations/new?iedId=${ied.id}&context=project`);
+              }}
             >
               <CardContent className="p-4 h-full flex flex-col justify-between">
                 {/* Three-dot menu */}
@@ -374,15 +373,6 @@ export default function IEDsPage() {
               </div>
             </div>
 
-            <div className="space-y-1">
-              <label className="text-sm font-medium">Serial Number</label>
-              <Input 
-                value={iedForm.serialNumber} 
-                onChange={e => setIedForm(p => ({ ...p, serialNumber: e.target.value }))} 
-                placeholder="Optional" 
-              />
-            </div>
-
             <div className="space-y-3">
               <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">CT Nameplate Data</p>
               <div className="grid grid-cols-3 gap-3">
@@ -473,15 +463,6 @@ export default function IEDsPage() {
                   </SelectContent>
                 </Select>
               </div>
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-sm font-medium">Serial Number</label>
-              <Input 
-                value={editForm.serialNumber} 
-                onChange={e => setEditForm(p => ({ ...p, serialNumber: e.target.value }))} 
-                placeholder="Optional" 
-              />
             </div>
 
             <div className="space-y-3">
