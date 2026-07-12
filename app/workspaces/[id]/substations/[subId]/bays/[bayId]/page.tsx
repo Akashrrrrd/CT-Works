@@ -11,7 +11,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { ArrowLeft, Plus, AlertCircle, Edit, Trash2, MoreVertical, Cpu, CheckCircle, AlertTriangle, HelpCircle, Zap } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { ArrowLeft, Plus, AlertCircle, Edit, Trash2, MoreVertical, Cpu, CheckCircle, AlertTriangle, HelpCircle, Zap, Calculator, Loader2, Download, GitCompare } from 'lucide-react';
 
 const IED_MODELS = ['RED670', 'REB670', 'REF615', 'REL670', 'REQ650', 'REB500', 'SEL-421', 'SEL-311C', 'P443', 'P142', 'OTHER'];
 
@@ -45,6 +46,23 @@ interface IED {
   latestResult?: { verdict: string; vk_required: number; vk_available: number } | null;
 }
 
+interface ComputationResult {
+  verdict: 'SUITABLY DIMENSIONED' | 'UNDER DIMENSIONED';
+  vk_required: number;
+  vk_available: number;
+  ealreq_max: number;
+  vk_breakdown: { label: string; ealreq: number; vk: number; isMax: boolean }[];
+  intermediates: Record<string, number | string>;
+}
+
+interface Template { 
+  id: string; 
+  name: string; 
+  description: string; 
+  relay: string; 
+  iedType: string; 
+}
+
 function VerdictIcon({ verdict }: { verdict: string | null | undefined }) {
   if (!verdict) return <HelpCircle className="h-4 w-4 text-muted-foreground" />;
   return verdict === 'SUITABLY DIMENSIONED'
@@ -71,6 +89,30 @@ export default function IEDsPage() {
   const [deleteIedOpen, setDeleteIedOpen] = useState(false);
   const [editingIed, setEditingIed] = useState<IED | null>(null);
   const [deletingIed, setDeletingIed] = useState<IED | null>(null);
+  
+  // Computation dialog states
+  const [computationOpen, setComputationOpen] = useState(false);
+  const [computingIed, setComputingIed] = useState<IED | null>(null);
+  const [templates, setTemplates] = useState<Template[]>([]);
+  const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
+  const [computing, setComputing] = useState(false);
+  const [computationResult, setComputationResult] = useState<ComputationResult | null>(null);
+  const [systemParams, setSystemParams] = useState({
+    frequency: '50',
+    bus_voltage_kv: '33',
+    max_bus_fault_mva: '1000',
+    r1: '0.1',
+    x1: '0.4',
+    r0: '0.3',
+    x0: '1.2',
+    route_length_km: '1.0',
+    relay_burden_va: '5.0',
+    lead_resistance: '0.05'
+  });
+  
+  // Compare states
+  const [compareMode, setCompareMode] = useState(false);
+  const [selectedIeds, setSelectedIeds] = useState<string[]>([]);
   
   const [iedForm, setIedForm] = useState({
     name: '', 
@@ -126,6 +168,95 @@ export default function IEDsPage() {
   };
 
   useEffect(() => { load(); }, [bayId]);
+
+  // Load templates for computations
+  useEffect(() => {
+    fetch(`/api/workspaces/${workspaceId}/templates`)
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          setTemplates(data);
+        }
+      })
+      .catch(console.error);
+  }, [workspaceId]);
+
+  const openComputationDialog = (ied: IED) => {
+    setComputingIed(ied);
+    setComputationResult(null);
+    
+    // Auto-select template based on IED model
+    const modelToTemplate: Record<string, string> = {
+      'RED670': 'tpl-differential',
+      'REB670': 'tpl-differential', 
+      'REF615': 'tpl-differential',
+      'REL670': 'tpl-distance',
+      'REQ650': 'tpl-breaker-failure',
+      'REB500': 'tpl-differential',
+      'SEL-421': 'tpl-differential',
+      'SEL-311C': 'tpl-distance',
+      'P443': 'tpl-differential',
+      'P142': 'tpl-distance',
+    };
+    
+    const primaryFunction = modelToTemplate[ied.model];
+    if (primaryFunction && templates.length > 0) {
+      const matchingTemplate = templates.find(t => t.iedType === primaryFunction);
+      setSelectedTemplate(matchingTemplate || templates[0] || null);
+    }
+    
+    setComputationOpen(true);
+  };
+
+  const runComputation = async () => {
+    if (!computingIed || !selectedTemplate) return;
+    
+    setComputing(true);
+    try {
+      const parse = (v: string) => { const n = parseFloat(v); if (isNaN(n)) throw new Error(`Invalid value: "${v}"`); return n; };
+      
+      const [primary, secondary] = computingIed.ct.ratio.split('/');
+      const sheet1 = {
+        ct_ratio_primary: parse(primary || '1'),
+        ct_ratio_secondary: parse(secondary || '1'),
+        accuracy_class: computingIed.ct.class,
+        rct: computingIed.ct.rct,
+        vk_available: computingIed.ct.vk,
+        io_at_vk: computingIed.ct.io,
+      };
+      
+      const sheet2 = {
+        frequency: parse(systemParams.frequency),
+        bus_voltage_kv: parse(systemParams.bus_voltage_kv),
+        max_bus_fault_mva: parse(systemParams.max_bus_fault_mva),
+        r1: parse(systemParams.r1),
+        x1: parse(systemParams.x1),
+        r0: parse(systemParams.r0),
+        x0: parse(systemParams.x0),
+        route_length_km: parse(systemParams.route_length_km),
+        relay_burden_va: parse(systemParams.relay_burden_va),
+        lead_resistance: parse(systemParams.lead_resistance),
+      };
+
+      const res = await fetch(`/api/workspaces/${workspaceId}/computations`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ templateId: selectedTemplate.id, sheet1, sheet2 }),
+      });
+      
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Computation failed');
+      
+      setComputationResult(data);
+      // Refresh IED data to show updated result
+      load();
+    } catch (error) {
+      console.error('Computation error:', error);
+      alert(error instanceof Error ? error.message : 'Computation failed');
+    } finally {
+      setComputing(false);
+    }
+  };
 
   const addIED = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -237,18 +368,55 @@ export default function IEDsPage() {
     }
   };
 
+  const toggleCompareMode = () => {
+    setCompareMode(!compareMode);
+    setSelectedIeds([]);
+  };
+
+  const toggleIedSelection = (iedId: string) => {
+    if (selectedIeds.includes(iedId)) {
+      setSelectedIeds(prev => prev.filter(id => id !== iedId));
+    } else if (selectedIeds.length < 3) {
+      setSelectedIeds(prev => [...prev, iedId]);
+    }
+  };
+
+  const handleCompareIeds = () => {
+    if (selectedIeds.length >= 2) {
+      router.push(`/workspaces/${workspaceId}/substations/${subId}/bays/${bayId}/compare?ieds=${selectedIeds.join(',')}`);
+    }
+  };
+
   if (loading) return <div className="space-y-4">{[...Array(3)].map((_, i) => <Skeleton key={i} className="h-40" />)}</div>;
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <Link href={`/workspaces/${workspaceId}/substations/${subId}`}>
-          <Button variant="ghost" size="sm" className="gap-1">
-            <ArrowLeft className="h-4 w-4" />{subName}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Link href={`/workspaces/${workspaceId}/substations/${subId}`}>
+            <Button variant="ghost" size="sm" className="gap-1">
+              <ArrowLeft className="h-4 w-4" />{subName}
+            </Button>
+          </Link>
+          <h2 className="text-xl font-bold">{bayName}</h2>
+        </div>
+        <div className="flex gap-2">
+          {compareMode && selectedIeds.length >= 2 && (
+            <Button onClick={handleCompareIeds} className="gap-2">
+              <GitCompare className="h-4 w-4" />
+              Compare ({selectedIeds.length})
+            </Button>
+          )}
+          <Button 
+            variant={compareMode ? "default" : "outline"} 
+            onClick={toggleCompareMode} 
+            className="gap-2"
+          >
+            <GitCompare className="h-4 w-4" />
+            {compareMode ? 'Cancel Compare' : 'Compare IEDs'}
           </Button>
-        </Link>
-        <h2 className="text-xl font-bold">{bayName}</h2>
+        </div>
       </div>
 
       {/* IEDs Grid */}
@@ -274,41 +442,54 @@ export default function IEDsPage() {
           return (
             <Card 
               key={ied.id} 
-              className="aspect-square relative cursor-pointer hover:shadow-md transition-shadow group"
-              onClick={() => {
-                // Instead of redirecting to CT checks, we'll add inline computation here
-                // For now, keep existing behavior but we'll enhance this
-                router.push(`/workspaces/${workspaceId}/computations/new?iedId=${ied.id}&context=project`);
-              }}
+              className={`aspect-square relative cursor-pointer hover:shadow-md transition-shadow group ${
+                compareMode 
+                  ? selectedIeds.includes(ied.id)
+                    ? 'ring-2 ring-primary bg-primary/5'
+                    : selectedIeds.length >= 3
+                      ? 'opacity-50 cursor-not-allowed'
+                      : 'hover:ring-1 hover:ring-primary/50'
+                  : ''
+              }`}
+              onClick={() => compareMode 
+                ? toggleIedSelection(ied.id)
+                : openComputationDialog(ied)
+              }
             >
               <CardContent className="p-4 h-full flex flex-col justify-between">
-                {/* Three-dot menu */}
+                {/* Compare mode selection or Three-dot menu */}
                 <div className="flex justify-between items-start">
                   <VerdictIcon verdict={ied.latestResult?.verdict} />
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild onClick={e => e.stopPropagation()}>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEditIed(ied); }}>
-                        <Edit className="h-4 w-4 mr-2" />
-                        Edit
-                      </DropdownMenuItem>
-                      <DropdownMenuItem 
-                        onClick={(e) => { e.stopPropagation(); handleDeleteIed(ied); }}
-                        className="text-red-600"
-                      >
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  {compareMode && selectedIeds.includes(ied.id) ? (
+                    <div className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-bold">
+                      {selectedIeds.indexOf(ied.id) + 1}
+                    </div>
+                  ) : !compareMode ? (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild onClick={e => e.stopPropagation()}>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEditIed(ied); }}>
+                          <Edit className="h-4 w-4 mr-2" />
+                          Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          onClick={(e) => { e.stopPropagation(); handleDeleteIed(ied); }}
+                          className="text-red-600"
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  ) : null}
                 </div>
 
                 {/* IED Content */}
@@ -555,6 +736,174 @@ export default function IEDsPage() {
               </Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Computation Dialog */}
+      <Dialog open={computationOpen} onOpenChange={setComputationOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Calculator className="h-5 w-5" />
+              CT Adequacy Check - {computingIed?.name} ({computingIed?.model})
+            </DialogTitle>
+          </DialogHeader>
+          
+          {computingIed && (
+            <div className="space-y-6 mt-4">
+              {/* IED Info */}
+              <Card>
+                <CardContent className="pt-4">
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div><span className="font-medium">IED:</span> {computingIed.name}</div>
+                    <div><span className="font-medium">Model:</span> {computingIed.model}</div>
+                    <div><span className="font-medium">CT Ratio:</span> {computingIed.ct.ratio}</div>
+                    <div><span className="font-medium">CT Class:</span> {computingIed.ct.class}</div>
+                    <div><span className="font-medium">Rct:</span> {computingIed.ct.rct}Ω</div>
+                    <div><span className="font-medium">Vk Available:</span> {computingIed.ct.vk}V</div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Template Selection */}
+              <Card>
+                <CardContent className="pt-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Protection Function Template</label>
+                    <div className="bg-muted rounded p-3">
+                      {selectedTemplate ? (
+                        <div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <Badge variant="outline">{selectedTemplate.iedType}</Badge>
+                            <span className="font-medium">{selectedTemplate.name}</span>
+                          </div>
+                          <p className="text-xs text-muted-foreground">{selectedTemplate.description}</p>
+                        </div>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">No template selected</p>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* System Parameters */}
+              <Card>
+                <CardContent className="pt-4">
+                  <h3 className="font-medium mb-3">System Parameters</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-sm">System Frequency (Hz)</label>
+                      <Input 
+                        type="number" 
+                        value={systemParams.frequency}
+                        onChange={e => setSystemParams(p => ({ ...p, frequency: e.target.value }))}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-sm">Bus Voltage (kV)</label>
+                      <Input 
+                        type="number" 
+                        value={systemParams.bus_voltage_kv}
+                        onChange={e => setSystemParams(p => ({ ...p, bus_voltage_kv: e.target.value }))}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-sm">Max Bus Fault (MVA)</label>
+                      <Input 
+                        type="number" 
+                        value={systemParams.max_bus_fault_mva}
+                        onChange={e => setSystemParams(p => ({ ...p, max_bus_fault_mva: e.target.value }))}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-sm">Route Length (km)</label>
+                      <Input 
+                        type="number" 
+                        value={systemParams.route_length_km}
+                        onChange={e => setSystemParams(p => ({ ...p, route_length_km: e.target.value }))}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-sm">Relay Burden (VA)</label>
+                      <Input 
+                        type="number" 
+                        value={systemParams.relay_burden_va}
+                        onChange={e => setSystemParams(p => ({ ...p, relay_burden_va: e.target.value }))}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-sm">Lead Resistance (Ω)</label>
+                      <Input 
+                        type="number" 
+                        value={systemParams.lead_resistance}
+                        onChange={e => setSystemParams(p => ({ ...p, lead_resistance: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Results */}
+              {computationResult && (
+                <Card className={computationResult.verdict === 'SUITABLY DIMENSIONED' ? 'border-green-700 bg-green-950/20' : 'border-red-700 bg-red-950/20'}>
+                  <CardContent className="pt-4">
+                    <div className="flex items-center gap-3 mb-4">
+                      {computationResult.verdict === 'SUITABLY DIMENSIONED'
+                        ? <CheckCircle className="h-6 w-6 text-green-500" />
+                        : <AlertTriangle className="h-6 w-6 text-red-500" />}
+                      <h3 className={`text-lg font-semibold ${computationResult.verdict === 'SUITABLY DIMENSIONED' ? 'text-green-400' : 'text-red-400'}`}>
+                        {computationResult.verdict}
+                      </h3>
+                    </div>
+                    
+                    <div className="grid grid-cols-3 gap-3 mb-4">
+                      <div className="bg-muted rounded p-3 text-center">
+                        <p className="text-xs text-muted-foreground mb-1">Ealreq (max)</p>
+                        <p className="text-xl font-bold">{computationResult.ealreq_max}</p>
+                        <p className="text-xs text-muted-foreground">V</p>
+                      </div>
+                      <div className="bg-muted rounded p-3 text-center">
+                        <p className="text-xs text-muted-foreground mb-1">Vk Required</p>
+                        <p className="text-xl font-bold">{computationResult.vk_required}</p>
+                        <p className="text-xs text-muted-foreground">V</p>
+                      </div>
+                      <div className={`rounded p-3 text-center border ${computationResult.verdict === 'SUITABLY DIMENSIONED' ? 'border-green-700 bg-green-950/40' : 'border-red-700 bg-red-950/40'}`}>
+                        <p className="text-xs text-muted-foreground mb-1">Vk Available</p>
+                        <p className="text-xl font-bold">{computationResult.vk_available}</p>
+                        <p className="text-xs text-muted-foreground">V</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex gap-3">
+                {!computationResult && (
+                  <Button 
+                    onClick={runComputation} 
+                    disabled={computing || !selectedTemplate} 
+                    className="gap-2"
+                  >
+                    {computing ? (
+                      <><Loader2 className="h-4 w-4 animate-spin" />Computing...</>
+                    ) : (
+                      <><Zap className="h-4 w-4" />Compute</>
+                    )}
+                  </Button>
+                )}
+                {computationResult && (
+                  <Button onClick={() => setComputationResult(null)} variant="outline">
+                    Run Again
+                  </Button>
+                )}
+                <Button variant="outline" onClick={() => setComputationOpen(false)}>
+                  {computationResult ? 'Close' : 'Cancel'}
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

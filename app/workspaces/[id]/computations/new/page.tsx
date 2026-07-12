@@ -636,35 +636,15 @@ export default function NewComputationPage() {
         )}
 
         {!result && (
-          <div className="space-y-4">
-            {/* Debug Info - Temporary */}
-            <Card className="border-amber-200 bg-amber-50/50">
-              <CardContent className="pt-4">
-                <p className="text-sm text-amber-800 mb-2">Debug Information:</p>
-                <div className="text-xs text-amber-700 space-y-1">
-                  <div>Templates loaded: {templates.length}</div>
-                  <div>Selected template: {selectedTemplate ? `${selectedTemplate.name} (${selectedTemplate.id})` : 'None'}</div>
-                  <div>IED Name: {iedName || 'None'}</div>
-                  <div>Imported from Excel: {importedFromExcel ? 'Yes' : 'No'}</div>
-                  <div>Submitting: {submitting ? 'Yes' : 'No'}</div>
-                  <div>Button enabled: {!submitting && selectedTemplate ? 'Yes' : 'No'}</div>
-                  {templates.length > 0 && (
-                    <div>Available templates: {templates.map(t => `${t.name} (${t.iedType})`).join(', ')}</div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            <div className="flex gap-3">
-              <Button type="submit" disabled={submitting || !selectedTemplate} className="gap-2">
-                {submitting
-                  ? <><Loader2 className="h-4 w-4 animate-spin" />Computing...</>
-                  : <><Zap className="h-4 w-4" />Compute</>}
-              </Button>
-              <Button type="button" variant="outline" onClick={() => router.push(`/workspaces/${workspaceId}/computations`)}>
-                Cancel
-              </Button>
-            </div>
+          <div className="flex gap-3">
+            <Button type="submit" disabled={submitting || !selectedTemplate} className="gap-2">
+              {submitting
+                ? <><Loader2 className="h-4 w-4 animate-spin" />Computing...</>
+                : <><Zap className="h-4 w-4" />Compute</>}
+            </Button>
+            <Button type="button" variant="outline" onClick={() => router.push(`/workspaces/${workspaceId}/computations`)}>
+              Cancel
+            </Button>
           </div>
         )}
       </form>
