@@ -117,7 +117,63 @@ export interface KsscCalcs {
 
 // ── Main engine ───────────────────────────────────────────────────────────────
 
-export function runFullAnalysis(input: FullAnalysisInput): AnalysisResult {
+import { Siemens7SJ85Calculator } from './siemens-7sj85-calculations';
+
+export function runFullAnalysis(input: FullAnalysisInput, templateType?: string): AnalysisResult {
+  // Check if this is a Siemens 7SJ85 calculation request
+  if (templateType === 'tpl-siemens-7sj85' || templateType === 'SIEMENS 7SJ85') {
+    // Delegate to specialized 7SJ85 calculator
+    const result = Siemens7SJ85Calculator.performCompleteCalculation(input as any);
+    
+    // Convert to standard AnalysisResult format
+    return {
+      verdict: result.final_verdict === 'SUITABLY DIMENSIONED' ? 'ADEQUATE' : 'UNDER DIMENSIONED',
+      kssc_required: result.adequacy_check?.required_kssc || 0,
+      kssc_available: result.adequacy_check?.available_kssc || 0,
+      vk_required: 0, // Not applicable for 7SJ85 method
+      vk_available: 0, // Not applicable for 7SJ85 method
+      wiring: {
+        r_at_temp: result.ct_calculations?.resistance_at_75c || 0,
+        rl_one_way: result.ct_calculations?.lead_resistance || 0,
+        rl_loop: result.ct_calculations?.loop_resistance || 0,
+        pl_burden_va: result.ct_calculations?.va_consumption || 0
+      },
+      source: {
+        zs: 0, // Calculated differently in 7SJ85
+        rs: 0,
+        xs: 0,
+        theta_deg: 0,
+        tp: result.fault_calculations?.system_tp_ms ? result.fault_calculations.system_tp_ms / 1000 : 0
+      },
+      faults: {
+        z1l: 0,
+        z_total_3ph: 0,
+        if_3ph: result.fault_calculations?.through_fault_current_a || 0,
+        z0l: 0,
+        z_total_1ph: 0,
+        if_1ph: result.fault_calculations?.endzone1_fault_current_a || 0
+      },
+      burden: {
+        pe: result.burden_calculations?.internal_burden_va || 0,
+        pl: result.burden_calculations?.total_load_burden_va || 0,
+        ied_total_va: result.burden_calculations?.total_load_burden_va || 0,
+        total_va: (result.burden_calculations?.internal_burden_va || 0) + 
+                  (result.burden_calculations?.total_load_burden_va || 0)
+      },
+      kssc: {
+        required: result.adequacy_check?.required_kssc || 0,
+        available: result.adequacy_check?.available_kssc || 0
+      },
+      intermediates: result.intermediates || {},
+      conclusion: result.final_verdict || 'Unknown'
+    };
+  }
+
+  // Continue with standard calculation for other templates
+  return runStandardAnalysis(input);
+}
+
+export function runStandardAnalysis(input: FullAnalysisInput): AnalysisResult {
   const { ct, wiring, ieds, system, line } = input;
   const In  = ct.ratio_secondary;
   const Ipn = ct.ratio_primary;
