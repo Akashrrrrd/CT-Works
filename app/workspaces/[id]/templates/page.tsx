@@ -81,7 +81,7 @@ export default function TemplatesPage() {
             </div>
             <Link href={`/workspaces/${workspaceId}/templates/siemens-7sj85`}>
               <Button className="bg-blue-600 hover:bg-blue-700">
-                Open Calculator
+                Open
               </Button>
             </Link>
           </div>
@@ -119,7 +119,7 @@ export default function TemplatesPage() {
             </div>
             <Link href={`/workspaces/${workspaceId}/templates/abb-ret670`}>
               <Button className="bg-red-600 hover:bg-red-700">
-                Open Calculator
+                Open
               </Button>
             </Link>
           </div>
@@ -157,7 +157,7 @@ export default function TemplatesPage() {
             </div>
             <Link href={`/workspaces/${workspaceId}/templates/red670`}>
               <Button className="bg-green-600 hover:bg-green-700">
-                Open Calculator
+                Open
               </Button>
             </Link>
           </div>
