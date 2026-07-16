@@ -159,7 +159,7 @@ console.log('\n🎯 OVERALL RESULT:', allPassed ? '✅ ALL TESTS PASSED!' : '❌
 
 if (allPassed) {
   console.log('\n🎉 SUCCESS! The RED670 implementation is working correctly.');
-  console.log('📋 All calculations match the Hitachi document exactly.');
+  console.log('📋 All calculations validated against the Hitachi document.');
   console.log('🌐 You can now use the web interface at:');
   console.log('   http://localhost:3001/workspaces/[workspace-id]/templates/red670');
   

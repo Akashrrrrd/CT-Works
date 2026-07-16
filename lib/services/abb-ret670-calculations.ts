@@ -336,8 +336,8 @@ export class ABB_RET670_Calculator {
 
     const validation = differences.length === 0;
     const summary = validation 
-      ? "✅ All calculations match Hitachi document exactly"
-      : `❌ ${differences.length} calculation(s) differ from document`;
+      ? "Calculations validated successfully"
+      : `${differences.length} calculation(s) differ from document`;
 
     return { validation, differences, summary };
   }

@@ -440,6 +440,10 @@ export class Siemens7SJ85Calculator {
       verdict: suitability.verdict
     };
 
+    // Also set at top level for component compatibility
+    results.required_kssc = required_kssc;
+    results.available_kssc = available_kssc;
+
     results.final_verdict = suitability.verdict;
 
     return results;
