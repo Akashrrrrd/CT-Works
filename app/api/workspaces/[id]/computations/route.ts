@@ -2,6 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getComputations, getTemplates, getUsers, getWorkspaces, getApprovals, getAuditLogs, ObjectId } from '@/lib/db';
 import { verifyJWT } from '@/lib/auth';
 import { calculateCTAdequacy } from '@/lib/services/ct-adequacy';
+import { 
+  performProjectCalculation, 
+  convertLegacyInput, 
+  calculateProjectCTAdequacy,
+  type IEDTemplateType 
+} from '@/lib/services/project-calculations';
+import { runFullAnalysis, type FullAnalysisInput } from '@/lib/services/calculation-engine';
 import type { Sheet1Inputs, Sheet2Inputs } from '@/lib/services/ct-adequacy';
 
 async function auth(request: NextRequest) {
@@ -79,8 +86,109 @@ export async function POST(
     const template  = await templates.findOne({ _id: new ObjectId(templateId) });
     if (!template) return NextResponse.json({ error: 'Template not found' }, { status: 404 });
 
-    // Run the CT adequacy calculation using iedType (not the MongoDB _id)
-    const result = calculateCTAdequacy(template.iedType, sheet1, sheet2);
+    let result: any;
+
+    // Check if this is one of our IED templates that should use the new calculation system
+    const iedTemplateMap: Record<string, IEDTemplateType> = {
+      'tpl-siemens-7sj85': 'SIEMENS_7SJ85',
+      'tpl-abb-ret670': 'ABB_RET670', 
+      'tpl-red670': 'RED670',
+      'SIEMENS 7SJ85': 'SIEMENS_7SJ85',
+      'ABB RET670': 'ABB_RET670',
+      'RED670': 'RED670'
+    };
+
+    const iedTemplateType = iedTemplateMap[template.iedType] || iedTemplateMap[template.name];
+
+    if (iedTemplateType) {
+      // Use the new IED template calculation system
+      try {
+        // Convert sheet inputs to FullAnalysisInput format
+        const fullAnalysisInput: FullAnalysisInput = {
+          ct: {
+            ratio_primary: sheet1.ct_ratio_primary || 2000,
+            ratio_secondary: sheet1.ct_ratio_secondary || 1,
+            accuracy_class: sheet1.accuracy_class || '5P20',
+            rct: sheet1.ct_resistance || 0.5,
+            rated_burden_va: sheet1.rated_burden || 7.5,
+            alf: sheet1.accuracy_limit_factor || 10,
+            vk_available: sheet1.knee_point_voltage || 1000,
+            io_at_vk: sheet1.magnetizing_current || 10
+          },
+          wiring: {
+            conductor_mm2: sheet1.conductor_cross_section || 6.0,
+            r20: sheet1.resistance_20c || 3.69,
+            alpha: sheet1.temp_coefficient || 0.00393,
+            temperature: sheet1.operating_temperature || 75,
+            cable_length_m: sheet1.cable_length || 120,
+            cores: 2
+          },
+          ieds: [{
+            name: template.name,
+            burden_va: sheet1.ied_burden || 0.02,
+            type: 'protection'
+          }],
+          system: {
+            frequency: sheet2.system_frequency || 50,
+            bus_voltage_kv: sheet2.bus_voltage || 132,
+            fault_current_ka: sheet2.max_fault_current || 50,
+            xr_ratio: sheet2.xr_ratio || 15
+          },
+          line: {
+            r1: sheet2.positive_seq_resistance || 0.0221,
+            x1: sheet2.positive_seq_reactance || 0.1600,
+            r0: sheet2.zero_seq_resistance || 0.1300,
+            x0: sheet2.zero_seq_reactance || 0.0600,
+            length_km: sheet2.line_length || 1.74
+          }
+        };
+
+        // Use the project calculation service
+        const projectResult = await calculateProjectCTAdequacy(
+          fullAnalysisInput,
+          iedTemplateType,
+          {
+            project_id: `proj_${templateId}`,
+            workspace_id: id,
+            calculated_by: currentUser.email
+          }
+        );
+
+        // Convert project result to legacy format for compatibility
+        result = {
+          verdict: projectResult.final_verdict === 'SUITABLY DIMENSIONED' ? 'ADEQUATE' : 'UNDER DIMENSIONED',
+          ealreq_max: projectResult.detailed_results?.ct_adequacy_check?.highest_ealreq || 
+                     projectResult.detailed_results?.ealreq_calculations?.highest_ealreq || 0,
+          vk_required: projectResult.detailed_results?.ct_adequacy_check?.required_vk || 0,
+          vk_available: projectResult.detailed_results?.ct_adequacy_check?.available_vk || 0,
+          vk_breakdown: [],
+          intermediates: {
+            template_type: iedTemplateType,
+            calculation_method: 'IED Template',
+            hitachi_reference: projectResult.hitachi_reference.document_no,
+            validation_passed: projectResult.validation?.passed || false,
+            ...projectResult.detailed_results?.intermediates
+          }
+        };
+
+      } catch (error) {
+        console.error('IED template calculation failed:', error);
+        // Fallback to legacy calculation
+        result = calculateCTAdequacy(template.iedType, sheet1, sheet2);
+        result.intermediates = {
+          ...result.intermediates,
+          calculation_method: 'Legacy (IED template failed)',
+          error: error instanceof Error ? error.message : 'Unknown error'
+        };
+      }
+    } else {
+      // Use legacy calculation for non-IED templates
+      result = calculateCTAdequacy(template.iedType, sheet1, sheet2);
+      result.intermediates = {
+        ...result.intermediates,
+        calculation_method: 'Legacy'
+      };
+    }
 
     // Fetch user info for audit
     const users = await getUsers();

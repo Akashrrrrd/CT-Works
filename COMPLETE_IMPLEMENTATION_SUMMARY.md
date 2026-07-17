@@ -197,7 +197,6 @@ Key Calculations Verified:
 3. **Calculation Engines**
    - SIEMENS 7SJ85: CT adequacy using Kssc method
    - ABB RET670: Transformer differential using EMF method
-   - All formulas match Hitachi documents exactly
 
 4. **Verification Systems**
    - Built-in validation against document values

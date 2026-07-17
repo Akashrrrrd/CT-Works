@@ -118,18 +118,20 @@ export interface KsscCalcs {
 // ── Main engine ───────────────────────────────────────────────────────────────
 
 import { Siemens7SJ85Calculator } from './siemens-7sj85-calculations';
+import { ABB_RET670_Calculator } from './abb-ret670-calculations';
+import { RED670_Calculator } from './red670-calculations';
 
 export function runFullAnalysis(input: FullAnalysisInput, templateType?: string): AnalysisResult {
-  // Check if this is a Siemens 7SJ85 calculation request
-  if (templateType === 'tpl-siemens-7sj85' || templateType === 'SIEMENS 7SJ85') {
+  // Check if this is a SIEMENS 7SJ85 calculation request
+  if (templateType === 'tpl-siemens-7sj85' || templateType === 'SIEMENS 7SJ85' || templateType === 'siemens-7sj85') {
     // Delegate to specialized 7SJ85 calculator
     const result = Siemens7SJ85Calculator.performCompleteCalculation(input as any);
     
     // Convert to standard AnalysisResult format
     return {
       verdict: result.final_verdict === 'SUITABLY DIMENSIONED' ? 'ADEQUATE' : 'UNDER DIMENSIONED',
-      kssc_required: result.adequacy_check?.required_kssc || 0,
-      kssc_available: result.adequacy_check?.available_kssc || 0,
+      kssc_required: result.adequacy_check?.required_kssc || result.required_kssc || 0,
+      kssc_available: result.adequacy_check?.available_kssc || result.available_kssc || 0,
       vk_required: 0, // Not applicable for 7SJ85 method
       vk_available: 0, // Not applicable for 7SJ85 method
       wiring: {
@@ -161,8 +163,107 @@ export function runFullAnalysis(input: FullAnalysisInput, templateType?: string)
                   (result.burden_calculations?.total_load_burden_va || 0)
       },
       kssc: {
-        required: result.adequacy_check?.required_kssc || 0,
-        available: result.adequacy_check?.available_kssc || 0
+        required: result.adequacy_check?.required_kssc || result.required_kssc || 0,
+        available: result.adequacy_check?.available_kssc || result.available_kssc || 0
+      },
+      intermediates: result.intermediates || {},
+      conclusion: result.final_verdict || 'Unknown'
+    };
+  }
+
+  // Check if this is an ABB RET670 calculation request  
+  if (templateType === 'tpl-abb-ret670' || templateType === 'ABB RET670' || templateType === 'abb-ret670') {
+    // Delegate to specialized RET670 calculator
+    const result = ABB_RET670_Calculator.performCompleteCalculation(input as any);
+    
+    // Convert to standard AnalysisResult format
+    return {
+      verdict: result.final_verdict === 'SUITABLY DIMENSIONED' ? 'ADEQUATE' : 'UNDER DIMENSIONED',
+      kssc_required: 0, // Not applicable for RET670 method (uses Vk method)
+      kssc_available: 0, // Not applicable for RET670 method (uses Vk method)
+      vk_required: result.ct_adequacy_check?.required_vk || 0,
+      vk_available: result.ct_adequacy_check?.available_vk || 0,
+      wiring: {
+        r_at_temp: 0,
+        rl_one_way: result.wiring_parameters?.total_lead_resistance || 0,
+        rl_loop: result.wiring_parameters?.total_lead_resistance * 2 || 0,
+        pl_burden_va: result.connected_devices?.ret670_burden || 0
+      },
+      source: {
+        zs: 0,
+        rs: 0,
+        xs: 0,
+        theta_deg: 0,
+        tp: 0
+      },
+      faults: {
+        z1l: 0,
+        z_total_3ph: 0,
+        if_3ph: result.ealreq_calculations?.max_fault_current || 0,
+        z0l: 0,
+        z_total_1ph: 0,
+        if_1ph: result.ealreq_calculations?.max_fault_current || 0
+      },
+      burden: {
+        pe: 0,
+        pl: 0,
+        ied_total_va: result.connected_devices?.ret670_burden || 0,
+        total_va: result.connected_devices?.ret670_burden || 0
+      },
+      kssc: {
+        required: 0, // Not applicable for RET670
+        available: 0  // Not applicable for RET670
+      },
+      intermediates: result.intermediates || {},
+      conclusion: result.final_verdict || 'Unknown'
+    };
+  }
+
+  // Check if this is a RED670 calculation request
+  if (templateType === 'tpl-red670' || templateType === 'RED670' || templateType === 'red670') {
+    // Delegate to specialized RED670 calculator
+    const result = RED670_Calculator.performCompleteCalculation(input as any);
+    
+    // Get recommended tap results (tap2 - 1800A)
+    const tapResults = result.tap_comparison?.tap2 || result.tap_comparison?.tap1;
+    
+    // Convert to standard AnalysisResult format
+    return {
+      verdict: result.final_verdict === 'SUITABLY DIMENSIONED' ? 'ADEQUATE' : 'UNDER DIMENSIONED',
+      kssc_required: 0, // Not applicable for RED670 method (uses Vk method)
+      kssc_available: 0, // Not applicable for RED670 method (uses Vk method)
+      vk_required: tapResults?.overall_assessment?.required_vk || 0,
+      vk_available: tapResults?.overall_assessment?.available_vk || 0,
+      wiring: {
+        r_at_temp: 0,
+        rl_one_way: result.wiring_parameters?.total_lead_resistance || 0,
+        rl_loop: result.wiring_parameters?.total_lead_resistance * 2 || 0,
+        pl_burden_va: result.connected_devices?.red670_burden || 0
+      },
+      source: {
+        zs: 0,
+        rs: 0,
+        xs: 0,
+        theta_deg: 0,
+        tp: 0
+      },
+      faults: {
+        z1l: 0,
+        z_total_3ph: 0,
+        if_3ph: result.system_parameters?.max_endzone1_3ph || 0,
+        z0l: 0,
+        z_total_1ph: 0,
+        if_1ph: result.system_parameters?.max_endzone1_1ph || 0
+      },
+      burden: {
+        pe: 0,
+        pl: 0,
+        ied_total_va: result.connected_devices?.red670_burden || 0,
+        total_va: result.connected_devices?.red670_burden || 0
+      },
+      kssc: {
+        required: 0, // Not applicable for RED670
+        available: 0  // Not applicable for RED670
       },
       intermediates: result.intermediates || {},
       conclusion: result.final_verdict || 'Unknown'

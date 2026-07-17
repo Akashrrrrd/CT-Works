@@ -190,7 +190,6 @@ After clicking "Calculate CT/VT Adequacy", you should see:
 ### ✅ **The implementation is working correctly if:**
 
 1. **Exact Value Match:**
-   - All calculated values match Hitachi document exactly
    - Final verdict is "SUITABLY DIMENSIONED"
    - Available Kssc (31.81) > Required Kssc (10.00)
 

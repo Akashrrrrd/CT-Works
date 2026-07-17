@@ -154,7 +154,7 @@ export function runVerificationTest(): {
   
   const success = errors.length === 0;
   const summary = success 
-    ? `🎉 ALL TESTS PASSED! Implementation matches Hitachi document exactly.`
+    ? `🎉 ALL TESTS PASSED! Implementation validated successfully.`
     : `❌ ${errors.length} test(s) failed. See details above.`;
     
   console.log(summary);
