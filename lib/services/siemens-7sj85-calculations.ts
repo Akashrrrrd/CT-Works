@@ -5,40 +5,42 @@
  */
 
 export interface CT_WiringParameters {
-  conductor_cross_section: number;    // A (mm²)
-  resistance_w_km_20c: number;       // R20 (Ω/km) 
-  specific_resistance_20c: number;   // a (/K⁻¹)
-  conductor_length_m: number;        // l (m)
+  ct_conductor_cross_section: number;    // A (mm²)
+  ct_resistance_w_km_20c: number;       // R20 (Ω/km) 
+  ct_specific_resistance_20c: number;   // a (/K⁻¹)
+  ct_conductor_length_m: number;        // l (m)
+  relay_rated_current: number;          // Ir (A)
 }
 
 export interface VT_WiringParameters {
-  conductor_cross_section: number;    // A (mm²)
-  resistance_w_km_20c: number;       // R20 (Ω/km)
-  specific_resistance_20c: number;   // a (/K⁻¹)
-  conductor_length_m: number;        // l (m)
-  primary_voltage: number;           // Vp (kV)
-  secondary_voltage: number;         // Vs (kV)
+  vt_conductor_cross_section: number;    // A (mm²)
+  vt_resistance_w_km_20c: number;       // R20 (Ω/km)
+  vt_specific_resistance_20c: number;   // a (/K⁻¹)
+  vt_conductor_length_m: number;        // l (m)
+  primary_voltage: number;              // Vp (kV) - will be divided by √3
+  secondary_voltage: number;            // Vs (kV) - will be divided by √3
 }
 
 export interface SystemParams_7SJ85 {
-  system_frequency: number;          // f (Hz)
-  bus_voltage_level: number;         // kV
-  max_bus_fault_level: number;       // kA
-  xr_ratio: number;                  // X/R ratio
-  mv_bus_voltage_level: number;      // kV
-  mv_max_bus_fault_rating: number;   // kA
+  system_frequency: number;             // f (Hz)
+  bus_voltage_level: number;            // kV
+  max_bus_fault_level: number;          // kA
+  xr_ratio: number;                     // X/R ratio
+  max_hv_busbar_fault_current: number;  // A
+  hv_rating_of_busbar: number;          // V
 }
 
 export interface PowerLineParams_7SJ85 {
-  assumed_cable: number;             // Number of cables
-  cable_type: string;                // e.g., "CU HDPE"
-  cable_mm2: number;                 // mm²
-  cables_per_phase: number;          // Number of cables per phase
-  positive_seq_resistance_r1: number; // Ω/km
-  positive_seq_reactance_x1: number;  // Ω/km
-  zero_seq_resistance_r0: number;     // Ω/km
-  zero_seq_reactance_x0: number;      // Ω/km
-  route_length: number;               // km
+  positive_seq_resistance_r1: number;   // Ω/km
+  positive_seq_reactance_x1: number;    // Ω/km
+  zero_seq_resistance_r0: number;       // Ω/km
+  zero_seq_reactance_x0: number;        // Ω/km
+  route_length: number;                 // km
+  cable_positive_seq_impedance: number; // Ω/km
+  cable_zero_seq_impedance: number;     // Ω/km
+  total_cable_positive_seq_impedance: number; // Ω/km
+  total_cable_zero_seq_impedance: number; // Ω/km
+  source_impedance_zs: number;           // pu
 }
 
 export interface CT_CoreParameters {
@@ -51,18 +53,12 @@ export interface CT_CoreParameters {
 
 export interface ConnectedDevices_7SJ85 {
   device_7sj85: number;      // VA
-  device_sel751: number;     // VA  
-  device_fms: number;        // VA
-  device_avr: number;        // VA
 }
 
 export interface BurdenValues {
-  burden_7sj85: number;    // VA
-  burden_sel751: number;   // VA
-  burden_fms: number;      // VA
-  burden_avr: number;      // VA
-  total_load_burden: number;  // VA
-  total_load_other_burden: number; // PL (VA)
+  burden_7sj85: number;           // VA
+  total_load_burden: number;      // VA - Calculated as 2 * R * l
+  total_load_other_burden: number; // PL (VA) - Calculated as burden_7sj85 * total_load_burden
 }
 /**
  * CT WIRING CALCULATIONS - Exact formulas from Hitachi document
@@ -70,15 +66,11 @@ export interface BurdenValues {
 export class CT_WiringCalculations {
   
   /**
-   * Calculate resistance at operating temperature
-   * Formula: R = R20[1 + a(t - 20°C)]
+   * Calculate resistance R
+   * Formula: R = r20 * 0.00121615
    */
-  static calculateResistanceAtTemp(
-    r20: number,           // Resistance at 20°C (Ω/km)
-    alpha: number,         // Temperature coefficient (/K)
-    temperature: number    // Operating temperature (°C)
-  ): number {
-    return r20 * (1 + alpha * (temperature - 20));
+  static calculateResistance(r20: number): number {
+    return r20 * 0.00121615;
   }
 
   /**
@@ -86,54 +78,95 @@ export class CT_WiringCalculations {
    * Formula: RL = R × l
    */
   static calculateLeadResistance(
-    resistance_ohm_km: number,  // Ω/km
+    r20: number,
     length_m: number           // meters
   ): number {
-    return resistance_ohm_km * (length_m / 1000); // Convert m to km
+    const R = r20 * 0.00121615;
+    return R * length_m; 
   }
 
   /**
-   * Calculate total loop resistance
+   * Calculate total loop resistance (same as total_load_burden)
    * Formula: 2RL = 2 × R × l
    */
-  static calculateLoopResistance(leadResistance: number): number {
-    return 2 * leadResistance;
+  static calculateLoopResistance(r20: number, length_m: number): number {
+    return 2 * r20 * 0.00121615 * length_m;
   }
 
   /**
    * Calculate VA consumption of connecting leads
-   * Formula: Pl = In² × RL (where RL is loop resistance, not lead resistance)
+   * Formula: Pl = In² × R × l (where R × l is the resistance calculation)
    */
   static calculateVAConsumption(
     secondary_current: number,  // In (A)
-    loop_resistance: number     // 2RL (Ω) - total loop resistance
+    r20: number,
+    length_m: number
   ): number {
-    return Math.pow(secondary_current, 2) * loop_resistance;
+    return Math.pow(secondary_current, 2) * r20 * 0.00121615 * length_m;
+  }
+
+  /**
+   * Calculate total_load_burden
+   * Formula: total_load_burden = 2 * R * l where R = r20 * 0.00121615
+   */
+  static calculateTotalLoadBurden(r20: number, length_m: number): number {
+    return 2 * r20 * 0.00121615 * length_m;
+  }
+
+  /**
+   * Calculate total_load_other_burden
+   * Formula: total_load_other_burden = burden_7sj85 * total_load_burden
+   */
+  static calculateTotalLoadOtherBurden(burden_7sj85: number, total_load_burden: number): number {
+    return burden_7sj85 * total_load_burden;
   }
 }
 
 /**
- * VT WIRING CALCULATIONS - Exact formulas from Hitachi document
+ * VT WIRING CALCULATIONS - Similar to CT but for VT parameters
  */
 export class VT_WiringCalculations {
   
+  /**
+   * Calculate VT resistance R
+   * Formula: R = r20 * 0.00121615
+   */
+  static calculateVTResistance(r20: number): number {
+    return r20 * 0.00121615;
+  }
+
   /**
    * Calculate VT lead resistance
    * Formula: RL = R × l
    */
   static calculateVTLeadResistance(
-    resistance_ohm_km: number,  // Ω/km
+    r20: number,  
     length_m: number           // meters  
   ): number {
-    return resistance_ohm_km * (length_m / 1000);
+    const R = r20 * 0.00121615;
+    return R * length_m;
   }
 
   /**
    * Calculate VT loop resistance
    * Formula: 2RL = 2 × R × l
    */
-  static calculateVTLoopResistance(leadResistance: number): number {
-    return 2 * leadResistance;
+  static calculateVTLoopResistance(r20: number, length_m: number): number {
+    return 2 * r20 * 0.00121615 * length_m;
+  }
+
+  /**
+   * Get primary voltage divided by √3
+   */
+  static getPrimaryVoltageNormalized(primary_voltage: number): number {
+    return primary_voltage / Math.sqrt(3);
+  }
+
+  /**
+   * Get secondary voltage divided by √3
+   */
+  static getSecondaryVoltageNormalized(secondary_voltage: number): number {
+    return secondary_voltage / Math.sqrt(3);
   }
 }
 /**
@@ -154,20 +187,43 @@ export class FaultCurrentCalculations {
   }
 
   /**
-   * Calculate 1-phase to Earth Through fault impedance
-   * Formula: Zot = Zs + Z1L
+   * Calculate Cable Details - Power Line Calculations
+   * Calculates cable impedances and total cable impedances
    */
-  static calculate1PhaseEarthThroughFaultImpedance(
-    zs: number,    // Source impedance
-    z1l: number    // Cable positive sequence impedance
-  ): { real: number; imag: number; magnitude: number; angle: number } {
-    // From document: Zot = (0.1014 + j 1.5208) + (0.2262 + j 0.1044)
-    const real = 0.1014 + 0.2262;      // 0.3276
-    const imag = 1.5208 + 0.1044;      // 1.6252
-    const magnitude = Math.sqrt(real * real + imag * imag);  // 1.658
-    const angle = Math.atan2(imag, real) * (180 / Math.PI); // 78.604°
+  static calculateCableDetails(
+    positive_seq_resistance_r1: number,  // Ω/km
+    positive_seq_reactance_x1: number,   // Ω/km
+    zero_seq_resistance_r0: number,      // Ω/km
+    zero_seq_reactance_x0: number,       // Ω/km
+    route_length: number                 // km
+  ): {
+    cable_positive_seq_impedance: number;
+    cable_zero_seq_impedance: number;
+    total_cable_positive_seq_impedance: number;
+    total_cable_zero_seq_impedance: number;
+    real: number;
+    imag: number;
+  } {
+    // Calculate cable impedances
+    const cable_positive_seq_impedance = positive_seq_resistance_r1 + positive_seq_reactance_x1;
+    const cable_zero_seq_impedance = zero_seq_resistance_r0 + zero_seq_reactance_x0;
     
-    return { real, imag, magnitude, angle };
+    // Calculate total cable impedances
+    const total_cable_positive_seq_impedance = positive_seq_resistance_r1 * route_length + positive_seq_reactance_x1 * route_length;
+    const total_cable_zero_seq_impedance = zero_seq_resistance_r0 * route_length + zero_seq_reactance_x0 * route_length;
+    
+    // Real and imaginary parts (as requested)
+    const real = positive_seq_resistance_r1 + zero_seq_resistance_r0; 
+    const imag = positive_seq_reactance_x1 + zero_seq_reactance_x0;
+    
+    return {
+      cable_positive_seq_impedance,
+      cable_zero_seq_impedance,
+      total_cable_positive_seq_impedance,
+      total_cable_zero_seq_impedance,
+      real,
+      imag
+    };
   }
 
   /**
@@ -224,11 +280,10 @@ export class BurdenCalculations {
 
   /**
    * Calculate total burden including connected devices
-   * From document page 5: Various device burdens
+   * For 7SJ85 only - removed other devices
    */
   static calculateTotalBurden(burdens: BurdenValues): number {
-    return burdens.burden_7sj85 + burdens.burden_sel751 + 
-           burdens.burden_fms + burdens.burden_avr;
+    return burdens.burden_7sj85;
   }
 
   /**
@@ -297,52 +352,77 @@ export class Siemens7SJ85Calculator {
     };
 
     // 1. CT WIRING CALCULATIONS (Page 1)
-    const ct_temp = 75; // Operating temperature from document
-    const ct_resistance_75c = CT_WiringCalculations.calculateResistanceAtTemp(
-      input.ct_wiring.resistance_w_km_20c,
-      input.ct_wiring.specific_resistance_20c,
-      ct_temp
+    const ct_resistance = CT_WiringCalculations.calculateResistance(
+      input.ct_wiring.ct_resistance_w_km_20c
     );
 
     const ct_lead_resistance = CT_WiringCalculations.calculateLeadResistance(
-      ct_resistance_75c,
-      input.ct_wiring.conductor_length_m
+      input.ct_wiring.ct_resistance_w_km_20c,
+      input.ct_wiring.ct_conductor_length_m
     );
 
-    const ct_loop_resistance = CT_WiringCalculations.calculateLoopResistance(ct_lead_resistance);
+    const ct_loop_resistance = CT_WiringCalculations.calculateLoopResistance(
+      input.ct_wiring.ct_resistance_w_km_20c,
+      input.ct_wiring.ct_conductor_length_m
+    );
 
     const ct_va_consumption = CT_WiringCalculations.calculateVAConsumption(
       input.ct_core.ct_ratio_secondary,
-      ct_loop_resistance  // Use loop resistance, not lead resistance
+      input.ct_wiring.ct_resistance_w_km_20c,
+      input.ct_wiring.ct_conductor_length_m
+    );
+
+    // Calculate total_load_burden (2 * R * l)
+    const total_load_burden = CT_WiringCalculations.calculateTotalLoadBurden(
+      input.ct_wiring.ct_resistance_w_km_20c,
+      input.ct_wiring.ct_conductor_length_m
+    );
+
+    // Calculate total_load_other_burden (burden_7sj85 * total_load_burden)
+    const total_load_other_burden = CT_WiringCalculations.calculateTotalLoadOtherBurden(
+      input.connected_devices.device_7sj85,
+      total_load_burden
     );
 
     results.ct_calculations = {
-      resistance_at_75c: ct_resistance_75c,
+      resistance_at_75c: ct_resistance,
       lead_resistance: ct_lead_resistance,
       loop_resistance: ct_loop_resistance,
-      va_consumption: ct_va_consumption
+      va_consumption: ct_va_consumption,
+      total_load_burden: total_load_burden,
+      total_load_other_burden: total_load_other_burden
     };
 
     // 2. VT WIRING CALCULATIONS (Page 1)
     if (input.vt_wiring) {
-      const vt_temp = 75; // Operating temperature
-      const vt_resistance_75c = CT_WiringCalculations.calculateResistanceAtTemp(
-        input.vt_wiring.resistance_w_km_20c,
-        input.vt_wiring.specific_resistance_20c,
-        vt_temp
+      const vt_resistance = VT_WiringCalculations.calculateVTResistance(
+        input.vt_wiring.vt_resistance_w_km_20c
       );
 
       const vt_lead_resistance = VT_WiringCalculations.calculateVTLeadResistance(
-        vt_resistance_75c,
-        input.vt_wiring.conductor_length_m
+        input.vt_wiring.vt_resistance_w_km_20c,
+        input.vt_wiring.vt_conductor_length_m
       );
 
-      const vt_loop_resistance = VT_WiringCalculations.calculateVTLoopResistance(vt_lead_resistance);
+      const vt_loop_resistance = VT_WiringCalculations.calculateVTLoopResistance(
+        input.vt_wiring.vt_resistance_w_km_20c,
+        input.vt_wiring.vt_conductor_length_m
+      );
+
+      // Normalize voltages by dividing by √3
+      const primary_voltage_normalized = VT_WiringCalculations.getPrimaryVoltageNormalized(
+        input.vt_wiring.primary_voltage
+      );
+      const secondary_voltage_normalized = VT_WiringCalculations.getSecondaryVoltageNormalized(
+        input.vt_wiring.secondary_voltage
+      );
 
       results.vt_calculations = {
-        resistance_at_75c: vt_resistance_75c,
+        resistance_at_75c: vt_resistance,
         lead_resistance: vt_lead_resistance,
-        loop_resistance: vt_loop_resistance
+        loop_resistance: vt_loop_resistance,
+        primary_voltage_normalized: primary_voltage_normalized,
+        secondary_voltage_normalized: secondary_voltage_normalized
       };
     }
     // 3. FAULT CURRENT CALCULATIONS (Pages 3-4)
@@ -354,7 +434,13 @@ export class Siemens7SJ85Calculator {
     );
 
     // 1-phase to Earth Through fault calculations
-    const through_fault = FaultCurrentCalculations.calculate1PhaseEarthThroughFaultImpedance(0, 0);
+    const cable_details = FaultCurrentCalculations.calculateCableDetails(
+      input.power_line.positive_seq_resistance_r1,
+      input.power_line.positive_seq_reactance_x1,
+      input.power_line.zero_seq_resistance_r0,
+      input.power_line.zero_seq_reactance_x0,
+      input.power_line.route_length
+    );
     const through_fault_current = FaultCurrentCalculations.calculate1PhaseFaultCurrent(
       132000, // From document
       1.0,
@@ -376,7 +462,8 @@ export class Siemens7SJ85Calculator {
       endzone1_fault_current_a: endzone1_fault.current,
       endzone1_tp_ms: endzone1_tp * 1000,
       xr_ratio_through: 8.60, // From document
-      xr_ratio_endzone1: 13.19 // From document
+      xr_ratio_endzone1: 13.19, // From document
+      cable_details: cable_details
     };
 
     // 4. BURDEN CALCULATIONS (Pages 5-6)
@@ -384,15 +471,11 @@ export class Siemens7SJ85Calculator {
     // Calculate individual device burdens from document
     const burden_values: BurdenValues = {
       burden_7sj85: input.connected_devices.device_7sj85,
-      burden_sel751: input.connected_devices.device_sel751,
-      burden_fms: input.connected_devices.device_fms,
-      burden_avr: input.connected_devices.device_avr,
-      total_load_burden: 0,
-      total_load_other_burden: 0
+      total_load_burden: total_load_burden,
+      total_load_other_burden: total_load_other_burden
     };
 
-    burden_values.total_load_burden = BurdenCalculations.calculateTotalBurden(burden_values);
-    burden_values.total_load_other_burden = burden_values.total_load_burden; // PL from document
+    const total_device_burden = BurdenCalculations.calculateTotalBurden(burden_values);
 
     // Internal burden calculation
     const internal_burden = BurdenCalculations.calculateInternalBurden(
@@ -403,6 +486,7 @@ export class Siemens7SJ85Calculator {
     results.burden_calculations = {
       internal_burden_va: internal_burden,
       total_load_burden_va: burden_values.total_load_burden,
+      total_load_other_burden_va: burden_values.total_load_other_burden,
       individual_burdens: burden_values
     };
 

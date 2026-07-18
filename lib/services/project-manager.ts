@@ -276,7 +276,8 @@ export class ProjectManager {
         positive_sequence_reactance: project.data.line_parameters.positive_sequence_reactance,
         zero_sequence_resistance: project.data.line_parameters.zero_sequence_resistance,
         zero_sequence_reactance: project.data.line_parameters.zero_sequence_reactance,
-        route_length: project.data.line_parameters.route_length
+        route_length: project.data.line_parameters.route_length,
+        source_impedance_zs: project.data.line_parameters.source_impedance_zs || 1.0
       },
       ieds: project.data.ied_list.map(ied => ({
         ied_name: ied.ied_name,

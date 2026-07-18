@@ -42,6 +42,7 @@ export interface TransmissionLineParameters {
   zero_sequence_resistance: number;      // R0 (Ω/km)
   zero_sequence_reactance: number;       // X0 (Ω/km)
   route_length: number;                  // km (total route length)
+  source_impedance_zs: number;           // pu (per unit) - Source Impedance
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

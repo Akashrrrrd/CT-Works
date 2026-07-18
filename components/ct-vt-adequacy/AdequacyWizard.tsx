@@ -113,7 +113,8 @@ export function AdequacyWizard() {
     positive_sequence_reactance: 0.1600,
     zero_sequence_resistance: 0.1300,
     zero_sequence_reactance: 0.0600,
-    route_length: 1.74
+    route_length: 1.74,
+    source_impedance_zs: 1.0
   });
   const [ieds, setIEDs] = useState<IEDParameters[]>([
     {
@@ -272,6 +273,7 @@ export function AdequacyWizard() {
                 onClick={() => {
                   setSystemParams({bus_fault_level: 31.5, system_frequency: 50, bus_voltage_level: 132, xr_ratio: 40});
                   setCTWiring({conductor_cross_section: 10, resistance_w_km_20c: 1.83, lead_length_ct_to_relay: 150});
+                  setLineParams({...lineParams, source_impedance_zs: 1.0});
                 }}
               >
                 132kV Transmission
@@ -281,6 +283,7 @@ export function AdequacyWizard() {
                 onClick={() => {
                   setSystemParams({bus_fault_level: 25, system_frequency: 50, bus_voltage_level: 33, xr_ratio: 15});
                   setCTWiring({conductor_cross_section: 6, resistance_w_km_20c: 3.08, lead_length_ct_to_relay: 120});
+                  setLineParams({...lineParams, source_impedance_zs: 1.0});
                 }}
               >
                 33kV Sub-transmission  
@@ -290,6 +293,7 @@ export function AdequacyWizard() {
                 onClick={() => {
                   setSystemParams({bus_fault_level: 20, system_frequency: 50, bus_voltage_level: 11, xr_ratio: 10});
                   setCTWiring({conductor_cross_section: 4, resistance_w_km_20c: 4.61, lead_length_ct_to_relay: 100});
+                  setLineParams({...lineParams, source_impedance_zs: 1.0});
                 }}
               >
                 11kV Distribution
@@ -562,12 +566,27 @@ export function AdequacyWizard() {
                   onChange={(e) => setLineParams({...lineParams, route_length: parseFloat(e.target.value) || 0})}
                 />
               </div>
+              
+              <div className="md:col-span-2">
+                <Label htmlFor="source-impedance">Source Impedance (Zs) - pu</Label>
+                <Input 
+                  id="source-impedance"
+                  type="number"
+                  step="0.01"
+                  placeholder="1.0"
+                  value={lineParams.source_impedance_zs}
+                  onChange={(e) => setLineParams({...lineParams, source_impedance_zs: parseFloat(e.target.value) || 0})}
+                />
+                <p className="text-sm text-muted-foreground mt-1">
+                  Per unit source impedance considering voltage level
+                </p>
+              </div>
             </div>
             
             <Alert>
               <CheckCircle className="h-4 w-4" />
               <AlertDescription>
-                💡 <strong>Typical Cable Types:</strong> XLPE 132kV | CU HDPE | Overhead | Gas Insulated - Values from cable manufacturer data
+                💡 <strong>Typical Cable Types:</strong> XLPE 132kV | CU HDPE | Overhead | Gas Insulated - Values from cable manufacturer data. Source impedance typically 1.0 pu for fault studies.
               </AlertDescription>
             </Alert>
           </div>
