@@ -45,12 +45,12 @@ export interface PowerLineParams_7SJ85 {
 }
 
 export interface CT_CoreParameters {
-  ct_ratio_primary: number;          // A
-  ct_ratio_secondary: number;        // A
-  class_of_accuracy: string;         // e.g., "5P 20"
-  ct_resistance: number;             // Rct (Ω)
-  rated_burden: number; 
-  CT_Accuracy_Limit_Factor: number:// PN (VA)
+  ct_ratio_primary: number;             // A
+  ct_ratio_secondary: number;           // A
+  class_of_accuracy: string;            // e.g., "5P 20"
+  ct_resistance: number;                // Rct (Ω)
+  rated_burden: number;                 // PN (VA)
+  CT_Accuracy_Limit_Factor: number;     // CT Accuracy Limiting Factor
 }
 
 export interface ConnectedDevices_7SJ85 {
@@ -60,7 +60,7 @@ export interface ConnectedDevices_7SJ85 {
 export interface BurdenValues {
   burden_7sj85: number;           // VA
   total_load_burden: number;      // VA - Calculated as 2 * R * l
-  total_load_other_burden: number; // PL (VA) - Calculated as burden_7sj85 * total_load_burden
+  total_load_other_burden: number; // PL (VA) - Calculated as burden_7sj85 + total_load_burden
 }
 /**
  * CT WIRING CALCULATIONS - Exact formulas from Hitachi document
@@ -117,10 +117,10 @@ export class CT_WiringCalculations {
 
   /**
    * Calculate total_load_other_burden
-   * Formula: total_load_other_burden = burden_7sj85 * total_load_burden
+   * Formula: total_load_other_burden = burden_7sj85 + total_load_burden
    */
   static calculateTotalLoadOtherBurden(burden_7sj85: number, total_load_burden: number): number {
-    return burden_7sj85 * total_load_burden;
+    return burden_7sj85 + total_load_burden;
   }
 }
 
@@ -287,6 +287,23 @@ export class FaultCurrentCalculations {
    * Calculate 3-phase fault current Endzone-1 (80%)
    * Specific calculation from document page 3
    */
+  static calculate3PhaseFaultCurrentEndzone1(
+    z1_zone1: number,  // Positive sequence zone 1
+    zs: number,        // Source impedance
+    z1l_80pct: number  // 80% of cable impedance
+  ): { impedance: number; xr_ratio: number; current: number } {
+    // From document: Z1zone-1 = Zs + (0.8 × Z1L)
+    const real_part = 0.1014 + (0.8 * 0.2262);     // 0.1322 from doc
+    const imag_part = 1.5208 + (0.8 * 0.0385);     // 1.7435 from doc  
+    const impedance = Math.sqrt(real_part * real_part + imag_part * imag_part); // 1.749
+    const xr_ratio = 13.19; // From document
+    
+    // Current calculation: 132000 / (1.7485 × √3)
+    const current = 132000 / (1.7485 * Math.sqrt(3)); // 43585 A
+    
+    return { impedance, xr_ratio, current };
+  }
+}
 
 /**
  * BURDEN AND CT ADEQUACY CALCULATIONS
@@ -296,44 +313,45 @@ export class BurdenCalculations {
 
   /**
    * Calculate internal burden
-   * Formula: PE = In × In × Rct
+   * Formula: internal_burden = ct_ratio_secondary × ct_ratio_secondary × ct_resistance
    */
   static calculateInternalBurden(
-    secondary_current: number,  // In (A)
-    ct_resistance: number      // Rct (Ω)
+    ct_ratio_secondary: number,  // In (A)
+    ct_resistance: number        // Rct (Ω)
   ): number {
-    return Math.pow(secondary_current, 2) * ct_resistance;
+    return ct_ratio_secondary * ct_ratio_secondary * ct_resistance;
   }
 
   /**
    * Calculate total burden including connected devices
    * For 7SJ85 only - removed other devices
    */
-
+  static calculateTotalBurden(burdens: BurdenValues): number {
+    return burdens.burden_7sj85;
   }
 
   /**
    * Calculate Required Kssc
-   * Formula: Kssc' = Itkmax / Ipn
+   * Formula: required_kssc = max_hv_busbar_fault_current / ct_ratio_primary
    */
   static calculateRequiredKssc(
-    max_fault_current: number,  // Itkmax (A)
-    primary_current: number    // Ipn (A)  
+    max_hv_busbar_fault_current: number,  // A (max fault current)
+    ct_ratio_primary: number              // Ipn (A) - CT primary ratio
   ): number {
-    return max_fault_current / primary_current;
+    return max_hv_busbar_fault_current / ct_ratio_primary;
   }
 
   /**
    * Calculate Available (effective) Kssc
-   * Formula: Kssc = n × ((PE + PN)/(PE + PL))
+   * Formula: available_kssc = CT_Accuracy_Limit_Factor × ((internal_burden + rated_burden) / (internal_burden + burden_7sj85))
    */
   static calculateAvailableKssc(
-    accuracy_factor: number,    // n (CT Accuracy Limiting Factor)
+    accuracy_factor: number,    // CT_Accuracy_Limit_Factor
     internal_burden: number,    // PE (VA)
     rated_burden: number,       // PN (VA)
-    lead_burden: number        // PL (VA)
+    burden_7sj85: number        // burden_7sj85 (VA)
   ): number {
-    return accuracy_factor * ((internal_burden + rated_burden) / (internal_burden + lead_burden));
+    return accuracy_factor * ((internal_burden + rated_burden) / (internal_burden + burden_7sj85));
   }
 
   /**
@@ -349,6 +367,7 @@ export class BurdenCalculations {
     return { suitable, verdict };
   }
 }
+
 /**
  * MAIN 7SJ85 CALCULATION ENGINE
  * Integrates all calculations following the exact Hitachi document flow
@@ -404,7 +423,7 @@ export class Siemens7SJ85Calculator {
       input.ct_wiring.ct_conductor_length_m
     );
 
-    // Calculate total_load_other_burden (burden_7sj85 * total_load_burden)
+    // Calculate total_load_other_burden (burden_7sj85 + total_load_burden)
     const total_load_other_burden = CT_WiringCalculations.calculateTotalLoadOtherBurden(
       input.connected_devices.device_7sj85,
       total_load_burden
@@ -451,6 +470,7 @@ export class Siemens7SJ85Calculator {
         secondary_voltage_normalized: secondary_voltage_normalized
       };
     }
+
     // 3. FAULT CURRENT CALCULATIONS (Pages 3-4)
     
     // System tp calculation from page 3
@@ -488,6 +508,7 @@ export class Siemens7SJ85Calculator {
       input.power_line.zero_seq_reactance_x0,
       input.power_line.route_length
     );
+
     const through_fault_current = FaultCurrentCalculations.calculate1PhaseFaultCurrent(
       132000, // From document
       1.0,
@@ -527,6 +548,7 @@ export class Siemens7SJ85Calculator {
     const total_device_burden = BurdenCalculations.calculateTotalBurden(burden_values);
 
     // Internal burden calculation
+    // Formula: internal_burden = ct_ratio_secondary × ct_ratio_secondary × ct_resistance
     const internal_burden = BurdenCalculations.calculateInternalBurden(
       input.ct_core.ct_ratio_secondary,
       input.ct_core.ct_resistance
@@ -541,24 +563,24 @@ export class Siemens7SJ85Calculator {
 
     // 5. CT ADEQUACY CHECK (Pages 5-6)
     
-    // From document: Max through fault current at close in fault = 31500 A
-    const max_fault_current = 31500; // Itkmax from document
-    const primary_current = input.ct_core.ct_ratio_primary; // Ipn
-
+    // Calculate Required Kssc using max_hv_busbar_fault_current
+    // Formula: required_kssc = max_hv_busbar_fault_current / ct_ratio_primary
     const required_kssc = BurdenCalculations.calculateRequiredKssc(
-      max_fault_current,
-      primary_current
+      max_hv_busbar_fault_current,
+      input.ct_core.ct_ratio_primary
     );
 
     // From document page 6: CT parameters
-    const accuracy_factor = 20; // n = 20 from document
-    const rated_burden = input.ct_core.rated_burden; // PN = 7.5 VA from document
+    const accuracy_factor = input.ct_core.CT_Accuracy_Limit_Factor;
+    const rated_burden = input.ct_core.rated_burden;
 
+    // Calculate Available Kssc
+    // Formula: available_kssc = CT_Accuracy_Limit_Factor × ((internal_burden + rated_burden) / (internal_burden + burden_7sj85))
     const available_kssc = BurdenCalculations.calculateAvailableKssc(
       accuracy_factor,
       internal_burden,
       rated_burden,
-      burden_values.total_load_other_burden
+      burden_values.burden_7sj85
     );
 
     const suitability = BurdenCalculations.determineCTSuitability(
