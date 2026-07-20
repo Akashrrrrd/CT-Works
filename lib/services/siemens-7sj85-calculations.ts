@@ -287,23 +287,7 @@ export class FaultCurrentCalculations {
    * Calculate 3-phase fault current Endzone-1 (80%)
    * Specific calculation from document page 3
    */
-  static calculate3PhaseFaultCurrentEndzone1(
-    z1_zone1: number,  // Positive sequence zone 1
-    zs: number,        // Source impedance
-    z1l_80pct: number  // 80% of cable impedance
-  ): { impedance: number; xr_ratio: number; current: number } {
-    // From document: Z1zone-1 = Zs + (0.8 × Z1L)
-    const real_part = 0.1014 + (0.8 * 0.2262);     // 0.1322 from doc
-    const imag_part = 1.5208 + (0.8 * 0.0385);     // 1.7435 from doc  
-    const impedance = Math.sqrt(real_part * real_part + imag_part * imag_part); // 1.749
-    const xr_ratio = 13.19; // From document
-    
-    // Current calculation: 132000 / (1.7485 × √3)
-    const current = 132000 / (1.7485 * Math.sqrt(3)); // 43585 A
-    
-    return { impedance, xr_ratio, current };
-  }
-}
+
 /**
  * BURDEN AND CT ADEQUACY CALCULATIONS
  * Based on exact formulas from Hitachi document pages 5-6
@@ -325,8 +309,7 @@ export class BurdenCalculations {
    * Calculate total burden including connected devices
    * For 7SJ85 only - removed other devices
    */
-  static calculateTotalBurden(burdens: BurdenValues): number {
-    return burdens.burden_7sj85;
+
   }
 
   /**
