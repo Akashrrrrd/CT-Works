@@ -187,6 +187,16 @@ export class FaultCurrentCalculations {
   }
 
   /**
+   * Calculate Max HV Busbar Fault Current
+   * Formula: max_hv_busbar_fault_current = 1000 × max_bus_fault_level
+   */
+  static calculateMaxHVBusbarFaultCurrent(
+    max_bus_fault_level: number  // kA
+  ): number {
+    return 1000 * max_bus_fault_level;
+  }
+
+  /**
    * Calculate Cable Details - Power Line Calculations
    * Calculates cable impedances and total cable impedances
    */
@@ -433,6 +443,11 @@ export class Siemens7SJ85Calculator {
       input.system.system_frequency
     );
 
+    // Calculate Max HV Busbar Fault Current
+    const max_hv_busbar_fault_current = FaultCurrentCalculations.calculateMaxHVBusbarFaultCurrent(
+      input.system.max_bus_fault_level
+    );
+
     // 1-phase to Earth Through fault calculations
     const cable_details = FaultCurrentCalculations.calculateCableDetails(
       input.power_line.positive_seq_resistance_r1,
@@ -457,6 +472,7 @@ export class Siemens7SJ85Calculator {
 
     results.fault_calculations = {
       system_tp_ms: system_tp * 1000, // Convert to ms
+      max_hv_busbar_fault_current_a: max_hv_busbar_fault_current,
       through_fault_current_a: through_fault_current,
       through_fault_tp_ms: system_tp * 1000,
       endzone1_fault_current_a: endzone1_fault.current,
