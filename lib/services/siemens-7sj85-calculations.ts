@@ -40,7 +40,8 @@ export interface PowerLineParams_7SJ85 {
   cable_zero_seq_impedance: number;     // Ω/km
   total_cable_positive_seq_impedance: number; // Ω/km
   total_cable_zero_seq_impedance: number; // Ω/km
-  source_impedance_zs: number;           // pu
+  source_impedance_zs: number;          // pu
+  impedance_angle_in_radians: number;   // radians - Calculated as ATAN(xr_ratio)
 }
 
 export interface CT_CoreParameters {
@@ -215,6 +216,16 @@ export class FaultCurrentCalculations {
     max_hv_busbar_fault_current: number  // A
   ): number {
     return (hv_rating_of_busbar * 1) / (Math.sqrt(3) * max_hv_busbar_fault_current);
+  }
+
+  /**
+   * Calculate Impedance Angle in Radians
+   * Formula: impedance_angle_in_radians = ATAN(xr_ratio)
+   */
+  static calculateImpedanceAngleInRadians(
+    xr_ratio: number  // X/R ratio
+  ): number {
+    return Math.atan(xr_ratio);
   }
 
   /**
@@ -480,6 +491,11 @@ export class Siemens7SJ85Calculator {
       max_hv_busbar_fault_current
     );
 
+    // Calculate Impedance Angle in Radians
+    const impedance_angle_in_radians = FaultCurrentCalculations.calculateImpedanceAngleInRadians(
+      input.system.xr_ratio
+    );
+
     // 1-phase to Earth Through fault calculations
     const cable_details = FaultCurrentCalculations.calculateCableDetails(
       input.power_line.positive_seq_resistance_r1,
@@ -580,6 +596,7 @@ export class Siemens7SJ85Calculator {
     // 6. POWER LINE PARAMETERS UPDATE
     results.power_line_calculations = {
       source_impedance_zs: source_impedance_zs,
+      impedance_angle_in_radians: impedance_angle_in_radians,
       cable_details: cable_details
     };
 
