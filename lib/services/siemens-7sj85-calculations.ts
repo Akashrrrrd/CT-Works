@@ -207,6 +207,17 @@ export class FaultCurrentCalculations {
   }
 
   /**
+   * Calculate Source Impedance Zs
+   * Formula: source_impedance_zs = (hv_rating_of_busbar × 1) / (√3 × max_hv_busbar_fault_current)
+   */
+  static calculateSourceImpedanceZs(
+    hv_rating_of_busbar: number,         // V
+    max_hv_busbar_fault_current: number  // A
+  ): number {
+    return (hv_rating_of_busbar * 1) / (Math.sqrt(3) * max_hv_busbar_fault_current);
+  }
+
+  /**
    * Calculate Cable Details - Power Line Calculations
    * Calculates cable impedances and total cable impedances
    */
@@ -463,6 +474,12 @@ export class Siemens7SJ85Calculator {
       input.system.bus_voltage_level
     );
 
+    // Calculate Source Impedance Zs
+    const source_impedance_zs = FaultCurrentCalculations.calculateSourceImpedanceZs(
+      hv_rating_of_busbar,
+      max_hv_busbar_fault_current
+    );
+
     // 1-phase to Earth Through fault calculations
     const cable_details = FaultCurrentCalculations.calculateCableDetails(
       input.power_line.positive_seq_resistance_r1,
@@ -559,6 +576,12 @@ export class Siemens7SJ85Calculator {
     // Also set at top level for component compatibility
     results.required_kssc = required_kssc;
     results.available_kssc = available_kssc;
+
+    // 6. POWER LINE PARAMETERS UPDATE
+    results.power_line_calculations = {
+      source_impedance_zs: source_impedance_zs,
+      cable_details: cable_details
+    };
 
     results.final_verdict = suitability.verdict;
 
