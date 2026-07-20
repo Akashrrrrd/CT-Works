@@ -49,7 +49,8 @@ export interface CT_CoreParameters {
   ct_ratio_secondary: number;        // A
   class_of_accuracy: string;         // e.g., "5P 20"
   ct_resistance: number;             // Rct (Ω)
-  rated_burden: number;              // PN (VA)
+  rated_burden: number; 
+  CT_Accuracy_Limit_Factor: number:// PN (VA)
 }
 
 export interface ConnectedDevices_7SJ85 {
