@@ -349,9 +349,10 @@ export class BurdenCalculations {
     accuracy_factor: number,    // CT_Accuracy_Limit_Factor
     internal_burden: number,    // PE (VA)
     rated_burden: number,       // PN (VA)
-    burden_7sj85: number        // burden_7sj85 (VA)
+    burden_7sj85: number 
+    total_load_other_burden: number// burden_7sj85 (VA)
   ): number {
-    return accuracy_factor * ((internal_burden + rated_burden) / (internal_burden + burden_7sj85));
+    return accuracy_factor * ((internal_burden + rated_burden) / (internal_burden + total_load_other_burden));
   }
 
   /**
