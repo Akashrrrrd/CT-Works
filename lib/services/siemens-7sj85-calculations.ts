@@ -120,7 +120,7 @@ export class CT_WiringCalculations {
    * Formula: total_load_other_burden = burden_7sj85 + total_load_burden
    */
   static calculateTotalLoadOtherBurden(burden_7sj85: number, total_load_burden: number): number {
-    return burden_7sj85 + total_load_burden;
+    return burden_7sj85;
   }
 }
 
@@ -338,7 +338,7 @@ export class BurdenCalculations {
     max_hv_busbar_fault_current: number,  // A (max fault current)
     ct_ratio_primary: number              // Ipn (A) - CT primary ratio
   ): number {
-    return max_hv_busbar_fault_current / ct_ratio_primary;
+    return max_hv_busbar_fault_current  ct_ratio_primary;
   }
 
   /**
