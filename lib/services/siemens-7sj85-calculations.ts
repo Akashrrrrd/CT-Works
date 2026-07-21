@@ -1,4 +1,4 @@
-**
+/**
  * SIEMENS 7SJ85 IED TEMPLATE - CT/VT ADEQUACY CALCULATIONS
  * Based on Hitachi Technical Documentation N-19957 2-DF4W
  * Implements exact formulas and calculations from the provided images
@@ -518,50 +518,3 @@ export class Siemens7SJ85Calculator {
     return results;
   }
 }
- 
-/**
- * ============================================================
- * CLI / PROMPT HELPER - collects "how many devices" + each device's
- * burden from the user via readline, then hands the array straight to
- * performCompleteCalculation() as connected_devices.
- * Node.js only (uses the built-in readline module). Skip this section
- * if you're wiring connected_devices up from a web form instead - in
- * that case just build a ConnectedDevice[] array directly.
- * ============================================================
- */
-export async function promptForConnectedDevices(): Promise<ConnectedDevices_7SJ85> {
-  const readline = await import("readline/promises");
-  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
- 
-  try {
-    const countAnswer = await rl.question("How many devices are connected to this CT circuit? ");
-    const count = parseInt(countAnswer, 10);
- 
-    if (isNaN(count) || count <= 0) {
-      throw new Error("Please enter a whole number greater than 0.");
-    }
- 
-    const devices: ConnectedDevice[] = [];
-    for (let i = 1; i <= count; i++) {
-      const name = await rl.question(`Device ${i} - name (e.g. "7SJ85 Relay"): `);
-      const burdenAnswer = await rl.question(`Device ${i} (${name || "unnamed"}) - burden in VA: `);
-      const burden_va = parseFloat(burdenAnswer);
- 
-      if (isNaN(burden_va) || burden_va < 0) {
-        throw new Error(`Invalid burden entered for device ${i}.`);
-      }
- 
-      devices.push({ device_name: name || `Device ${i}`, burden_va });
-    }
- 
-    const total = CT_WiringCalculations.calculateTotalLoadOtherBurden(devices);
-    console.log("\nDevices entered:");
-    devices.forEach((d, idx) => console.log(`  ${idx + 1}. ${d.device_name}: ${d.burden_va} VA`));
-    console.log(`Total Load Other Burden (sum of all devices): ${total} VA\n`);
- 
-    return devices;
-  } finally {
-    rl.close();
-  }
-}
- 
