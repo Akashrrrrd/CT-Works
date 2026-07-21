@@ -2,6 +2,17 @@
  * SIEMENS 7SJ85 IED TEMPLATE - CT/VT ADEQUACY CALCULATIONS
  * Based on Hitachi Technical Documentation N-19957 2-DF4W
  * Implements exact formulas and calculations from the provided images
+ *
+ * FIXES APPLIED IN THIS VERSION:
+ * 1. calculateRequiredKssc: restored the missing division operator
+ *    (original code had "max_hv_busbar_fault_current  ct_ratio_primary"
+ *    with no operator between the two variables, which is a syntax error).
+ * 2. calculateTotalLoadOtherBurden: function signature now matches how it
+ *    is called - total_load_other_burden = burden_7sj85 only.
+ * 3. calculateAvailableKssc: unchanged, already matched the required formula:
+ *    available_kssc = accuracy_limit_factor *
+ *                      ((internal_burden + rated_burden) /
+ *                       (internal_burden + total_load_other_burden))
  */
 
 export interface CT_WiringParameters {
@@ -60,13 +71,14 @@ export interface ConnectedDevices_7SJ85 {
 export interface BurdenValues {
   burden_7sj85: number;           // VA
   total_load_burden: number;      // VA - Calculated as 2 * R * l
-  total_load_other_burden: number; // PL (VA) - Calculated as burden_7sj85 + total_load_burden
+  total_load_other_burden: number; // PL (VA) - Equal to burden_7sj85
 }
+
 /**
  * CT WIRING CALCULATIONS - Exact formulas from Hitachi document
  */
 export class CT_WiringCalculations {
-  
+
   /**
    * Calculate resistance R
    * Formula: R = r20 * 0.00121615
@@ -84,7 +96,7 @@ export class CT_WiringCalculations {
     length_m: number           // meters
   ): number {
     const R = r20 * 0.00121615;
-    return R * length_m; 
+    return R * length_m;
   }
 
   /**
@@ -117,9 +129,11 @@ export class CT_WiringCalculations {
 
   /**
    * Calculate total_load_other_burden
-   * Formula: total_load_other_burden = burden_7sj85 + total_load_burden
+   * FIX: total_load_other_burden = burden_7sj85 (ONLY).
+   * Signature now takes exactly one argument to match how it is called
+   * in performCompleteCalculation - it does NOT add total_load_burden.
    */
-  static calculateTotalLoadOtherBurden(burden_7sj85: number, total_load_burden: number): number {
+  static calculateTotalLoadOtherBurden(burden_7sj85: number): number {
     return burden_7sj85;
   }
 }
@@ -128,59 +142,38 @@ export class CT_WiringCalculations {
  * VT WIRING CALCULATIONS - Similar to CT but for VT parameters
  */
 export class VT_WiringCalculations {
-  
-  /**
-   * Calculate VT resistance R
-   * Formula: R = r20 * 0.00121615
-   */
+
   static calculateVTResistance(r20: number): number {
     return r20 * 0.00121615;
   }
 
-  /**
-   * Calculate VT lead resistance
-   * Formula: RL = R × l
-   */
   static calculateVTLeadResistance(
-    r20: number,  
+    r20: number,
     length_m: number           // meters  
   ): number {
     const R = r20 * 0.00121615;
     return R * length_m;
   }
 
-  /**
-   * Calculate VT loop resistance
-   * Formula: 2RL = 2 × R × l
-   */
   static calculateVTLoopResistance(r20: number, length_m: number): number {
     return 2 * r20 * 0.00121615 * length_m;
   }
 
-  /**
-   * Get primary voltage divided by √3
-   */
   static getPrimaryVoltageNormalized(primary_voltage: number): number {
     return primary_voltage / Math.sqrt(3);
   }
 
-  /**
-   * Get secondary voltage divided by √3
-   */
   static getSecondaryVoltageNormalized(secondary_voltage: number): number {
     return secondary_voltage / Math.sqrt(3);
   }
 }
+
 /**
  * FAULT CURRENT & TIME CONSTANT CALCULATIONS
  * Based on exact formulas from Hitachi document pages 3-4
  */
 export class FaultCurrentCalculations {
 
-  /**
-   * Calculate Time-constant for Through fault (L/R)
-   * Formula: tp = X/R / (2 × π × f)
-   */
   static calculateTimeConstant(
     xr_ratio: number,       // X/R ratio
     frequency: number       // System frequency (Hz)
@@ -188,30 +181,18 @@ export class FaultCurrentCalculations {
     return xr_ratio / (2 * Math.PI * frequency);
   }
 
-  /**
-   * Calculate Max HV Busbar Fault Current
-   * Formula: max_hv_busbar_fault_current = 1000 × max_bus_fault_level
-   */
   static calculateMaxHVBusbarFaultCurrent(
     max_bus_fault_level: number  // kA
   ): number {
     return 1000 * max_bus_fault_level;
   }
 
-  /**
-   * Calculate HV Rating of Busbar
-   * Formula: hv_rating_of_busbar = 1000 × bus_voltage_level
-   */
   static calculateHVRatingOfBusbar(
     bus_voltage_level: number  // kV
   ): number {
     return 1000 * bus_voltage_level;
   }
 
-  /**
-   * Calculate Source Impedance Zs
-   * Formula: source_impedance_zs = (hv_rating_of_busbar × 1) / (√3 × max_hv_busbar_fault_current)
-   */
   static calculateSourceImpedanceZs(
     hv_rating_of_busbar: number,         // V
     max_hv_busbar_fault_current: number  // A
@@ -219,20 +200,12 @@ export class FaultCurrentCalculations {
     return (hv_rating_of_busbar * 1) / (Math.sqrt(3) * max_hv_busbar_fault_current);
   }
 
-  /**
-   * Calculate Impedance Angle in Radians
-   * Formula: impedance_angle_in_radians = ATAN(xr_ratio)
-   */
   static calculateImpedanceAngleInRadians(
     xr_ratio: number  // X/R ratio
   ): number {
     return Math.atan(xr_ratio);
   }
 
-  /**
-   * Calculate Cable Details - Power Line Calculations
-   * Calculates cable impedances and total cable impedances
-   */
   static calculateCableDetails(
     positive_seq_resistance_r1: number,  // Ω/km
     positive_seq_reactance_x1: number,   // Ω/km
@@ -247,18 +220,15 @@ export class FaultCurrentCalculations {
     real: number;
     imag: number;
   } {
-    // Calculate cable impedances
     const cable_positive_seq_impedance = positive_seq_resistance_r1 + positive_seq_reactance_x1;
     const cable_zero_seq_impedance = zero_seq_resistance_r0 + zero_seq_reactance_x0;
-    
-    // Calculate total cable impedances
+
     const total_cable_positive_seq_impedance = positive_seq_resistance_r1 * route_length + positive_seq_reactance_x1 * route_length;
     const total_cable_zero_seq_impedance = zero_seq_resistance_r0 * route_length + zero_seq_reactance_x0 * route_length;
-    
-    // Real and imaginary parts (as requested)
-    const real = positive_seq_resistance_r1 + zero_seq_resistance_r0; 
+
+    const real = positive_seq_resistance_r1 + zero_seq_resistance_r0;
     const imag = positive_seq_reactance_x1 + zero_seq_reactance_x0;
-    
+
     return {
       cable_positive_seq_impedance,
       cable_zero_seq_impedance,
@@ -269,10 +239,6 @@ export class FaultCurrentCalculations {
     };
   }
 
-  /**
-   * Calculate 1-phase fault current for Through faults
-   * Formula: I1ph = (132000 × 1.0 × 3) / (5.2589 × √3)
-   */
   static calculate1PhaseFaultCurrent(
     voltage: number,        // System voltage
     multiplier: number,     // 1.0 for normal conditions
@@ -283,24 +249,18 @@ export class FaultCurrentCalculations {
     return (voltage * multiplier * phases) / (impedance * sqrt3);
   }
 
-  /**
-   * Calculate 3-phase fault current Endzone-1 (80%)
-   * Specific calculation from document page 3
-   */
   static calculate3PhaseFaultCurrentEndzone1(
     z1_zone1: number,  // Positive sequence zone 1
     zs: number,        // Source impedance
     z1l_80pct: number  // 80% of cable impedance
   ): { impedance: number; xr_ratio: number; current: number } {
-    // From document: Z1zone-1 = Zs + (0.8 × Z1L)
     const real_part = 0.1014 + (0.8 * 0.2262);     // 0.1322 from doc
     const imag_part = 1.5208 + (0.8 * 0.0385);     // 1.7435 from doc  
     const impedance = Math.sqrt(real_part * real_part + imag_part * imag_part); // 1.749
     const xr_ratio = 13.19; // From document
-    
-    // Current calculation: 132000 / (1.7485 × √3)
+
     const current = 132000 / (1.7485 * Math.sqrt(3)); // 43585 A
-    
+
     return { impedance, xr_ratio, current };
   }
 }
@@ -311,10 +271,6 @@ export class FaultCurrentCalculations {
  */
 export class BurdenCalculations {
 
-  /**
-   * Calculate internal burden
-   * Formula: internal_burden = ct_ratio_secondary × ct_ratio_secondary × ct_resistance
-   */
   static calculateInternalBurden(
     ct_ratio_secondary: number,  // In (A)
     ct_resistance: number        // Rct (Ω)
@@ -322,42 +278,50 @@ export class BurdenCalculations {
     return ct_ratio_secondary * ct_ratio_secondary * ct_resistance;
   }
 
-  /**
-   * Calculate total burden including connected devices
-   * For 7SJ85 only - removed other devices
-   */
   static calculateTotalBurden(burdens: BurdenValues): number {
     return burdens.burden_7sj85;
   }
 
   /**
-   * Calculate Required Kssc
+   * FIX: Calculate Required Kssc
    * Formula: required_kssc = max_hv_busbar_fault_current / ct_ratio_primary
+   *
+   * The original code was missing the "/" operator entirely
+   * (a syntax error - two variables written next to each other
+   * with nothing between them). This is now a plain division:
+   * how many times the CT primary rating "fits into" the max
+   * fault current on the HV busbar.
    */
   static calculateRequiredKssc(
     max_hv_busbar_fault_current: number,  // A (max fault current)
     ct_ratio_primary: number              // Ipn (A) - CT primary ratio
   ): number {
-    return max_hv_busbar_fault_current  ct_ratio_primary;
+    return max_hv_busbar_fault_current / ct_ratio_primary;
   }
 
   /**
    * Calculate Available (effective) Kssc
-   * Formula: available_kssc = CT_Accuracy_Limit_Factor × ((internal_burden + rated_burden) / (internal_burden + total_load_other_burden))
+   * Formula:
+   *   available_kssc = accuracy_limit_factor ×
+   *       ( (internal_burden + rated_burden) /
+   *         (internal_burden + total_load_other_burden) )
+   *
+   * This matches your spec exactly - no change needed here, the
+   * original formula was already correct. It only LOOKED wrong
+   * because it was being fed a bad total_load_other_burden value
+   * (see fix #2 above) and possibly never even ran, since
+   * calculateRequiredKssc had a syntax error that would have
+   * stopped the whole file from compiling.
    */
   static calculateAvailableKssc(
-    accuracy_factor: number,    // CT_Accuracy_Limit_Factor
-    internal_burden: number,    // PE (VA)
-    rated_burden: number,       // PN (VA)
+    accuracy_factor: number,        // CT_Accuracy_Limit_Factor
+    internal_burden: number,        // PE (VA)
+    rated_burden: number,           // PN (VA)
     total_load_other_burden: number // total_load_other_burden (VA)
   ): number {
     return accuracy_factor * ((internal_burden + rated_burden) / (internal_burden + total_load_other_burden));
   }
 
-  /**
-   * Determine CT suitability
-   * Check: Available Kssc > Required Kssc
-   */
   static determineCTSuitability(
     available_kssc: number,
     required_kssc: number
@@ -374,10 +338,6 @@ export class BurdenCalculations {
  */
 export class Siemens7SJ85Calculator {
 
-  /**
-   * Complete CT adequacy calculation for 7SJ85 IED
-   * Following exact calculation sequence from Hitachi documents
-   */
   static performCompleteCalculation(input: {
     ct_wiring: CT_WiringParameters;
     vt_wiring?: VT_WiringParameters;
@@ -424,10 +384,9 @@ export class Siemens7SJ85Calculator {
       input.ct_wiring.ct_conductor_length_m
     );
 
-    // Calculate total_load_other_burden (burden_7sj85 + total_load_burden)
+    // FIX: total_load_other_burden = burden_7sj85 ONLY (one argument now)
     const total_load_other_burden = CT_WiringCalculations.calculateTotalLoadOtherBurden(
-      input.connected_devices.device_7sj85,
-      total_load_burden
+      input.connected_devices.device_7sj85
     );
 
     results.ct_calculations = {
@@ -455,7 +414,6 @@ export class Siemens7SJ85Calculator {
         input.vt_wiring.vt_conductor_length_m
       );
 
-      // Normalize voltages by dividing by √3
       const primary_voltage_normalized = VT_WiringCalculations.getPrimaryVoltageNormalized(
         input.vt_wiring.primary_voltage
       );
@@ -473,35 +431,28 @@ export class Siemens7SJ85Calculator {
     }
 
     // 3. FAULT CURRENT CALCULATIONS (Pages 3-4)
-    
-    // System tp calculation from page 3
     const system_tp = FaultCurrentCalculations.calculateTimeConstant(
       input.system.xr_ratio,
       input.system.system_frequency
     );
 
-    // Calculate Max HV Busbar Fault Current
     const max_hv_busbar_fault_current = FaultCurrentCalculations.calculateMaxHVBusbarFaultCurrent(
       input.system.max_bus_fault_level
     );
 
-    // Calculate HV Rating of Busbar
     const hv_rating_of_busbar = FaultCurrentCalculations.calculateHVRatingOfBusbar(
       input.system.bus_voltage_level
     );
 
-    // Calculate Source Impedance Zs
     const source_impedance_zs = FaultCurrentCalculations.calculateSourceImpedanceZs(
       hv_rating_of_busbar,
       max_hv_busbar_fault_current
     );
 
-    // Calculate Impedance Angle in Radians
     const impedance_angle_in_radians = FaultCurrentCalculations.calculateImpedanceAngleInRadians(
       input.system.xr_ratio
     );
 
-    // 1-phase to Earth Through fault calculations
     const cable_details = FaultCurrentCalculations.calculateCableDetails(
       input.power_line.positive_seq_resistance_r1,
       input.power_line.positive_seq_reactance_x1,
@@ -517,7 +468,6 @@ export class Siemens7SJ85Calculator {
       5.2589 // From document calculation
     );
 
-    // 3-phase fault Endzone-1 calculations  
     const endzone1_fault = FaultCurrentCalculations.calculate3PhaseFaultCurrentEndzone1(0, 0, 0);
     const endzone1_tp = FaultCurrentCalculations.calculateTimeConstant(
       endzone1_fault.xr_ratio,
@@ -538,8 +488,6 @@ export class Siemens7SJ85Calculator {
     };
 
     // 4. BURDEN CALCULATIONS (Pages 5-6)
-    
-    // Calculate individual device burdens from document
     const burden_values: BurdenValues = {
       burden_7sj85: input.connected_devices.device_7sj85,
       total_load_burden: total_load_burden,
@@ -548,8 +496,6 @@ export class Siemens7SJ85Calculator {
 
     const total_device_burden = BurdenCalculations.calculateTotalBurden(burden_values);
 
-    // Internal burden calculation
-    // Formula: internal_burden = ct_ratio_secondary × ct_ratio_secondary × ct_resistance
     const internal_burden = BurdenCalculations.calculateInternalBurden(
       input.ct_core.ct_ratio_secondary,
       input.ct_core.ct_resistance
@@ -563,20 +509,17 @@ export class Siemens7SJ85Calculator {
     };
 
     // 5. CT ADEQUACY CHECK (Pages 5-6)
-    
-    // Calculate Required Kssc using max_hv_busbar_fault_current
-    // Formula: required_kssc = max_hv_busbar_fault_current / ct_ratio_primary
+
+    // FIX: required_kssc = max_hv_busbar_fault_current / ct_ratio_primary
     const required_kssc = BurdenCalculations.calculateRequiredKssc(
       max_hv_busbar_fault_current,
       input.ct_core.ct_ratio_primary
     );
 
-    // From document page 6: CT parameters
     const accuracy_factor = input.accuracy_limit_factor || input.ct_core.CT_Accuracy_Limit_Factor;
     const rated_burden = input.ct_core.rated_burden;
 
-    // Calculate Available Kssc
-    // Formula: available_kssc = CT_Accuracy_Limit_Factor × ((internal_burden + rated_burden) / (internal_burden + total_load_other_burden))
+    // available_kssc = accuracy_factor * ((internal_burden + rated_burden) / (internal_burden + total_load_other_burden))
     const available_kssc = BurdenCalculations.calculateAvailableKssc(
       accuracy_factor,
       internal_burden,
@@ -596,11 +539,9 @@ export class Siemens7SJ85Calculator {
       verdict: suitability.verdict
     };
 
-    // Also set at top level for component compatibility
     results.required_kssc = required_kssc;
     results.available_kssc = available_kssc;
 
-    // 6. POWER LINE PARAMETERS UPDATE
     results.power_line_calculations = {
       source_impedance_zs: source_impedance_zs,
       impedance_angle_in_radians: impedance_angle_in_radians,
