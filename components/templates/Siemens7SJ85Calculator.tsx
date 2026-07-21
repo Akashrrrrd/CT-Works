@@ -105,7 +105,8 @@ export function Siemens7SJ85Calculator() {
       positive_seq_reactance_x1: 0.1600,
       zero_seq_resistance_r0: 0.1300,
       zero_seq_reactance_x0: 0.0600,
-      route_length: 1.74
+      route_length: 1.74,
+      source_impedance_zs: 1.0  // Default source impedance in pu
     },
     ct_core: {
       ct_ratio_primary: 3150,
@@ -151,12 +152,12 @@ export function Siemens7SJ85Calculator() {
     }
   };
 
-  const updateInput = (section: keyof Siemens7SJ85InputData, field: string, value: number | string) => {
+  const updateInput = (section: keyof Siemens7SJ85InputData, field: string, value: number | string | undefined) => {
     setInputData(prev => ({
       ...prev,
       [section]: {
         ...prev[section],
-        [field]: typeof value === 'string' ? value : Number(value)
+        [field]: value === undefined ? undefined : (typeof value === 'string' ? value : Number(value))
       }
     }));
   };
@@ -323,6 +324,110 @@ export function Siemens7SJ85Calculator() {
           </CardContent>
         </Card>
 
+        {/* Power Line Parameters */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Power Line Parameters</CardTitle>
+            <CardDescription>Cable and transmission line specifications</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Cable Type</Label>
+                <Input
+                  type="text"
+                  value={inputData.power_line.cable_type}
+                  onChange={(e) => updateInput('power_line', 'cable_type', e.target.value)}
+                />
+              </div>
+              <div>
+                <Label>Cable Cross Section (mm²)</Label>
+                <Input
+                  type="number"
+                  value={inputData.power_line.cable_mm2}
+                  onChange={(e) => updateInput('power_line', 'cable_mm2', parseFloat(e.target.value))}
+                />
+              </div>
+              <div>
+                <Label>Cables per Phase</Label>
+                <Input
+                  type="number"
+                  value={inputData.power_line.cables_per_phase}
+                  onChange={(e) => updateInput('power_line', 'cables_per_phase', parseFloat(e.target.value))}
+                />
+              </div>
+              <div>
+                <Label>Route Length (km)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={inputData.power_line.route_length}
+                  onChange={(e) => updateInput('power_line', 'route_length', parseFloat(e.target.value))}
+                />
+              </div>
+              <div>
+                <Label>Positive Seq. Resistance R1 (Ω/km)</Label>
+                <Input
+                  type="number"
+                  step="0.0001"
+                  value={inputData.power_line.positive_seq_resistance_r1}
+                  onChange={(e) => updateInput('power_line', 'positive_seq_resistance_r1', parseFloat(e.target.value))}
+                />
+              </div>
+              <div>
+                <Label>Positive Seq. Reactance X1 (Ω/km)</Label>
+                <Input
+                  type="number"
+                  step="0.0001"
+                  value={inputData.power_line.positive_seq_reactance_x1}
+                  onChange={(e) => updateInput('power_line', 'positive_seq_reactance_x1', parseFloat(e.target.value))}
+                />
+              </div>
+              <div>
+                <Label>Zero Seq. Resistance R0 (Ω/km)</Label>
+                <Input
+                  type="number"
+                  step="0.0001"
+                  value={inputData.power_line.zero_seq_resistance_r0}
+                  onChange={(e) => updateInput('power_line', 'zero_seq_resistance_r0', parseFloat(e.target.value))}
+                />
+              </div>
+              <div>
+                <Label>Zero Seq. Reactance X0 (Ω/km)</Label>
+                <Input
+                  type="number"
+                  step="0.0001"
+                  value={inputData.power_line.zero_seq_reactance_x0}
+                  onChange={(e) => updateInput('power_line', 'zero_seq_reactance_x0', parseFloat(e.target.value))}
+                />
+              </div>
+            </div>
+            <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200 mt-4">
+              <div className="flex items-start gap-3">
+                <div className="w-6 h-6 bg-yellow-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <span className="text-white text-sm font-bold">Z</span>
+                </div>
+                <div className="flex-1">
+                  <Label className="text-yellow-800 font-medium">
+                    Source Impedance Zs (per unit)
+                  </Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={inputData.power_line.source_impedance_zs}
+                    onChange={(e) => updateInput('power_line', 'source_impedance_zs', parseFloat(e.target.value))}
+                    className="mt-2 bg-white border-yellow-300 focus:border-yellow-500 focus:ring-yellow-500"
+                  />
+                  <p className="text-sm text-yellow-700 mt-2 leading-relaxed">
+                    ⚡ <strong>Source impedance in per unit:</strong> Typically 0.05 to 1.0 pu<br/>
+                    📐 <strong>Used for fault current calculations</strong>
+                  </p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* CT Core Parameters */}
         <Card>
           <CardHeader>
@@ -380,7 +485,10 @@ export function Siemens7SJ85Calculator() {
                     step="1"
                     placeholder="20"
                     value={inputData.ct_core.accuracy_limit_factor || ''}
-                    onChange={(e) => updateInput('ct_core', 'accuracy_limit_factor', parseFloat(e.target.value) || undefined)}
+                    onChange={(e) => {
+                      const value = parseFloat(e.target.value);
+                      updateInput('ct_core', 'accuracy_limit_factor', isNaN(value) ? undefined : value);
+                    }}
                     className="mt-2 bg-white border-blue-300 focus:border-blue-500 focus:ring-blue-500"
                   />
                   <p className="text-sm text-blue-700 mt-2 leading-relaxed">
