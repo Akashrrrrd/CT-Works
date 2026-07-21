@@ -81,6 +81,52 @@ export function AdequacyWizard() {
   const [isCalculating, setIsCalculating] = useState(false);
   const [results, setResults] = useState<CTVTAdequacyReport | null>(null);
   
+  // ... existing state variables ...
+
+  const renderStepIndicator = () => (
+    <div className="mb-8">
+      <div className="flex items-center justify-center mb-4">
+        <div className="flex items-center space-x-2">
+          {WIZARD_STEPS.map((step, index) => (
+            <div key={step.id} className="flex items-center">
+              <div className={`
+                w-10 h-10 rounded-full flex items-center justify-center font-semibold text-sm transition-all duration-300
+                ${currentStep === step.id 
+                  ? 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-lg scale-110' 
+                  : currentStep > step.id 
+                    ? 'bg-green-500 text-white' 
+                    : 'bg-gray-200 text-gray-500'
+                }
+              `}>
+                {currentStep > step.id ? '✓' : step.id}
+              </div>
+              <div className="ml-2 mr-4">
+                <div className={`text-sm font-medium ${
+                  currentStep === step.id ? 'text-blue-600' : 
+                  currentStep > step.id ? 'text-green-600' : 'text-gray-400'
+                }`}>
+                  {step.title}
+                </div>
+                <div className="text-xs text-gray-500">{step.description}</div>
+              </div>
+              {index < WIZARD_STEPS.length - 1 && (
+                <div className={`w-8 h-0.5 ${
+                  currentStep > step.id ? 'bg-green-500' : 'bg-gray-300'
+                } mr-4`} />
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="w-full bg-gray-200 rounded-full h-2 mb-4">
+        <div 
+          className="bg-gradient-to-r from-blue-500 to-indigo-500 h-2 rounded-full transition-all duration-300 ease-out" 
+          style={{ width: `${(currentStep / WIZARD_STEPS.length) * 100}%` }}
+        />
+      </div>
+    </div>
+  );
+  
   // Form data state
   const [projectInfo, setProjectInfo] = useState({
     name: "",
@@ -597,26 +643,48 @@ export function AdequacyWizard() {
       case 5:
         return (
           <div className="space-y-6">
-            <div className="text-center mb-6">
-              <h2 className="text-2xl font-bold">IED Selection</h2>
-              <p className="text-muted-foreground">Select protection, metering, and control devices</p>
+            <div className="text-center mb-8">
+              <div className="inline-flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-lg flex items-center justify-center">
+                  <span className="text-white text-lg">👥</span>
+                </div>
+                <div className="text-left">
+                  <h2 className="text-2xl font-bold text-gray-800">IED Selection & Configuration</h2>
+                  <p className="text-muted-foreground">Configure protection, metering, and control devices</p>
+                </div>
+              </div>
             </div>
             
-            <div className="space-y-4">
+            <div className="space-y-6">
               {ieds.map((ied, index) => (
-                <Card key={index}>
-                  <CardHeader>
+                <Card key={index} className="border-2 border-gray-200 hover:border-blue-300 transition-colors shadow-lg">
+                  <CardHeader className="bg-gradient-to-r from-gray-50 to-blue-50 border-b">
                     <CardTitle className="flex items-center justify-between">
-                      <span>IED #{index + 1}</span>
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
+                          <span className="text-white font-bold text-sm">{index + 1}</span>
+                        </div>
+                        <span className="text-gray-800">IED Configuration #{index + 1}</span>
+                        {ied.ied_name && (
+                          <Badge variant="secondary" className="ml-2 bg-green-100 text-green-800">
+                            {ied.ied_name}
+                          </Badge>
+                        )}
+                      </div>
                       {ieds.length > 1 && (
-                        <Button variant="ghost" size="sm" onClick={() => removeIED(index)}>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => removeIED(index)}
+                          className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                        >
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       )}
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <CardContent className="p-6 space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div>
                         <Label htmlFor={`ied-name-${index}`}>IED Name</Label>
                         <Select 
@@ -674,7 +742,9 @@ export function AdequacyWizard() {
                           </SelectContent>
                         </Select>
                       </div>
-                      
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div>
                         <Label htmlFor={`ct-resistance-${index}`}>CT Resistance (Ω)</Label>
                         <Input 
@@ -710,21 +780,33 @@ export function AdequacyWizard() {
                           onChange={(e) => updateIED(index, 'magnetizing_current', parseFloat(e.target.value) || 0)}
                         />
                       </div>
-                      
-                      <div>
-                        <Label htmlFor={`accuracy-limit-${index}`}>Accuracy Limit Factor</Label>
-                        <Input 
-                          id={`accuracy-limit-${index}`}
-                          type="number"
-                          step="1"
-                          placeholder="20"
-                          value={ied.accuracy_limit_factor}
-                          onChange={(e) => updateIED(index, 'accuracy_limit_factor', parseFloat(e.target.value) || 0)}
-                        />
-                        <p className="text-sm text-muted-foreground">
-                          CT Accuracy Limiting Factor (from CT test certificate)
-                        </p>
+                    </div>
+                    
+                    <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                      <div className="flex items-start gap-3">
+                        <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                          <span className="text-white text-sm font-bold">!</span>
+                        </div>
+                        <div className="flex-1">
+                          <Label htmlFor={`accuracy-limit-${index}`} className="text-blue-800 font-medium">
+                            Accuracy Limit Factor (ALF)
+                          </Label>
+                          <Input 
+                            id={`accuracy-limit-${index}`}
+                            type="number"
+                            step="1"
+                            placeholder="20"
+                            value={ied.accuracy_limit_factor}
+                            onChange={(e) => updateIED(index, 'accuracy_limit_factor', parseFloat(e.target.value) || 0)}
+                            className="mt-2 bg-white border-blue-300 focus:border-blue-500 focus:ring-blue-500"
+                          />
+                          <p className="text-sm text-blue-700 mt-2 leading-relaxed">
+                            📋 <strong>Find this value on:</strong> CT Test Certificate, Nameplate, or Manufacturer Datasheet<br/>
+                            💡 <strong>Common values:</strong> Protection CTs (10-30), Metering CTs (5-10)
+                          </p>
+                        </div>
                       </div>
+                    }
                     </div>
                     
                     {ied.ied_name && (
@@ -743,18 +825,33 @@ export function AdequacyWizard() {
                 </Card>
               ))}
               
-              <Button variant="outline" onClick={addIED} className="w-full">
-                <Plus className="w-4 h-4 mr-2" />
-                Add Another IED
-              </Button>
+              <div className="flex justify-center pt-4">
+                <Button 
+                  variant="outline" 
+                  onClick={addIED} 
+                  className="w-full max-w-md bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-dashed border-blue-300 hover:border-blue-500 hover:bg-gradient-to-r hover:from-blue-100 hover:to-indigo-100 text-blue-700 font-medium py-3"
+                >
+                  <Plus className="w-5 h-5 mr-2" />
+                  Add Another IED Device
+                </Button>
+              </div>
             </div>
             
-            <Alert>
-              <CheckCircle className="h-4 w-4" />
-              <AlertDescription>
-                💡 <strong>IED Parameters:</strong> Burden values automatically retrieved from database. CT specs from test certificates.
-              </AlertDescription>
-            </Alert>
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-200">
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <CheckCircle className="w-6 h-6 text-white" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-blue-800 mb-2">💡 IED Parameter Guidelines</h3>
+                  <div className="text-sm text-blue-700 space-y-1">
+                    <p><strong>Burden values:</strong> Automatically retrieved from our comprehensive IED database</p>
+                    <p><strong>CT specifications:</strong> From CT test certificates or manufacturer datasheets</p>
+                    <p><strong>Accuracy Limit Factor:</strong> Critical parameter - always verify from official documentation</p>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         );
 
