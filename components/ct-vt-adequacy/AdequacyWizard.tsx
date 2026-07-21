@@ -806,7 +806,6 @@ export function AdequacyWizard() {
                           </p>
                         </div>
                       </div>
-                    }
                     </div>
                     
                     {ied.ied_name && (

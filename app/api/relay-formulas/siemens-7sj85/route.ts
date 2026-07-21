@@ -28,8 +28,23 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Extract accuracy_limit_factor from ct_core and elevate it to top-level
+    // The calculation service expects it at the top level, not nested in ct_core
+    const accuracy_limit_factor = input.ct_core?.accuracy_limit_factor;
+    if (typeof accuracy_limit_factor !== 'number') {
+      return NextResponse.json({ 
+        error: 'accuracy_limit_factor must be a number in ct_core' 
+      }, { status: 400 });
+    }
+
+    // Prepare calculation input with accuracy_limit_factor at top level
+    const calculationInput = {
+      ...input,
+      accuracy_limit_factor  // Add as top-level parameter for the calculation service
+    };
+
     // Perform complete 7SJ85 calculation
-    const results = Siemens7SJ85Calculator.performCompleteCalculation(input);
+    const results = Siemens7SJ85Calculator.performCompleteCalculation(calculationInput);
 
     // Add calculation metadata
     const response = {

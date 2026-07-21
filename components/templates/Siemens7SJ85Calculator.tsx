@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { AlertCircle, Calculator, CheckCircle, FileText } from 'lucide-react';
+import { AlertCircle, Calculator, CheckCircle, FileText, Download } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface Siemens7SJ85InputData {
@@ -160,6 +160,209 @@ export function Siemens7SJ85Calculator() {
         [field]: value === undefined ? undefined : (typeof value === 'string' ? value : Number(value))
       }
     }));
+  };
+
+  const downloadReport = () => {
+    if (!result) return;
+
+    // Generate HTML report
+    const reportHTML = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SIEMENS 7SJ85 CT/VT Adequacy Report</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; background-color: #f5f5f5; }
+    .container { max-width: 900px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    .header { text-align: center; border-bottom: 2px solid #0066cc; padding-bottom: 20px; margin-bottom: 20px; }
+    .header h1 { margin: 0; color: #0066cc; }
+    .header p { margin: 5px 0; color: #666; }
+    .verdict { font-size: 24px; font-weight: bold; margin: 20px 0; padding: 15px; border-radius: 8px; text-align: center; }
+    .verdict.adequate { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+    .verdict.inadequate { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+    .section { margin: 25px 0; padding: 15px; border-left: 4px solid #0066cc; background-color: #f9f9f9; }
+    .section h2 { margin: 0 0 15px 0; color: #0066cc; font-size: 18px; }
+    .table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    .table th { background-color: #f0f0f0; padding: 10px; text-align: left; border-bottom: 2px solid #ddd; font-weight: bold; }
+    .table td { padding: 8px; border-bottom: 1px solid #ddd; }
+    .table tr:hover { background-color: #f5f5f5; }
+    .label { font-weight: bold; color: #333; min-width: 200px; }
+    .value { color: #0066cc; font-weight: bold; }
+    .unit { color: #666; font-size: 0.9em; }
+    .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 12px; color: #666; text-align: center; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    @media print { body { margin: 0; } .container { box-shadow: none; } }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>SIEMENS 7SJ85 CT/VT Adequacy Calculator</h1>
+      <p>Multi-function Protection Relay - Per Hitachi Standards N-19957 2-DF4W</p>
+      <p>Generated: ${new Date().toLocaleString()}</p>
+    </div>
+
+    <div class="verdict ${result.final_verdict === 'SUITABLY DIMENSIONED' ? 'adequate' : 'inadequate'}">
+      ${result.final_verdict}
+    </div>
+
+    <div class="section">
+      <h2>CT Adequacy Check</h2>
+      <table class="table">
+        <tr>
+          <td class="label">Required Kssc:</td>
+          <td class="value">${result.required_kssc?.toFixed(2)}</td>
+        </tr>
+        <tr>
+          <td class="label">Available Kssc:</td>
+          <td class="value">${result.available_kssc?.toFixed(2)}</td>
+        </tr>
+        <tr>
+          <td class="label">Status:</td>
+          <td class="value">${result.available_kssc > result.required_kssc ? 'PASS ✓' : 'FAIL ✗'}</td>
+        </tr>
+      </table>
+    </div>
+
+    <div class="section">
+      <h2>CT Wiring Calculations</h2>
+      <table class="table">
+        <tr>
+          <td class="label">Resistance at 75°C:</td>
+          <td class="value">${result.ct_calculations?.resistance_at_75c?.toFixed(5)} <span class="unit">Ω/km</span></td>
+        </tr>
+        <tr>
+          <td class="label">Lead Resistance (RL):</td>
+          <td class="value">${result.ct_calculations?.lead_resistance?.toFixed(2)} <span class="unit">Ω</span></td>
+        </tr>
+        <tr>
+          <td class="label">Loop Resistance (2RL):</td>
+          <td class="value">${result.ct_calculations?.loop_resistance?.toFixed(2)} <span class="unit">Ω</span></td>
+        </tr>
+        <tr>
+          <td class="label">VA Consumption (Pl):</td>
+          <td class="value">${result.ct_calculations?.va_consumption?.toFixed(2)} <span class="unit">VA</span></td>
+        </tr>
+      </table>
+    </div>
+
+    <div class="section">
+      <h2>Fault Current Calculations</h2>
+      <table class="table">
+        <tr>
+          <td class="label">System Time Constant (tp):</td>
+          <td class="value">${result.fault_calculations?.system_tp_ms?.toFixed(2)} <span class="unit">ms</span></td>
+        </tr>
+        <tr>
+          <td class="label">Through Fault Current:</td>
+          <td class="value">${result.fault_calculations?.through_fault_current_a?.toFixed(0)} <span class="unit">A</span></td>
+        </tr>
+        <tr>
+          <td class="label">X/R Ratio (Through):</td>
+          <td class="value">${result.fault_calculations?.xr_ratio_through?.toFixed(2)}</td>
+        </tr>
+      </table>
+    </div>
+
+    <div class="section">
+      <h2>Burden Calculations</h2>
+      <table class="table">
+        <tr>
+          <td class="label">Internal Burden (PE):</td>
+          <td class="value">${result.burden_calculations?.internal_burden_va?.toFixed(2)} <span class="unit">VA</span></td>
+        </tr>
+        <tr>
+          <td class="label">Total Load Burden:</td>
+          <td class="value">${result.burden_calculations?.total_load_burden_va?.toFixed(2)} <span class="unit">VA</span></td>
+        </tr>
+        <tr>
+          <td class="label">Total Load Other Burden:</td>
+          <td class="value">${result.burden_calculations?.total_load_other_burden_va?.toFixed(2)} <span class="unit">VA</span></td>
+        </tr>
+      </table>
+    </div>
+
+    <div class="section">
+      <h2>Input Parameters</h2>
+      <table class="table">
+        <tr>
+          <td class="label">CT Ratio Primary:</td>
+          <td class="value">${inputData.ct_core.ct_ratio_primary} <span class="unit">A</span></td>
+        </tr>
+        <tr>
+          <td class="label">CT Ratio Secondary:</td>
+          <td class="value">${inputData.ct_core.ct_ratio_secondary} <span class="unit">A</span></td>
+        </tr>
+        <tr>
+          <td class="label">CT Resistance:</td>
+          <td class="value">${inputData.ct_core.ct_resistance} <span class="unit">Ω</span></td>
+        </tr>
+        <tr>
+          <td class="label">Rated Burden:</td>
+          <td class="value">${inputData.ct_core.rated_burden} <span class="unit">VA</span></td>
+        </tr>
+        <tr>
+          <td class="label">Accuracy Limit Factor:</td>
+          <td class="value">${inputData.ct_core.accuracy_limit_factor || 'N/A'}</td>
+        </tr>
+        <tr>
+          <td class="label">Bus Voltage Level:</td>
+          <td class="value">${inputData.system.bus_voltage_level} <span class="unit">kV</span></td>
+        </tr>
+        <tr>
+          <td class="label">Max Bus Fault Level:</td>
+          <td class="value">${inputData.system.max_bus_fault_level} <span class="unit">kA</span></td>
+        </tr>
+        <tr>
+          <td class="label">CT Lead Length:</td>
+          <td class="value">${inputData.ct_wiring.conductor_length_m} <span class="unit">m</span></td>
+        </tr>
+      </table>
+    </div>
+
+    <div class="section">
+      <h2>Document Reference</h2>
+      <table class="table">
+        <tr>
+          <td class="label">Document No:</td>
+          <td class="value">N-19957 2-DF4W</td>
+        </tr>
+        <tr>
+          <td class="label">Title:</td>
+          <td class="value">CT/VT ADEQUACY CHECK</td>
+        </tr>
+        <tr>
+          <td class="label">Substation:</td>
+          <td class="value">132/33kV DF4W at Al Dhafra Area</td>
+        </tr>
+        <tr>
+          <td class="label">Contractor:</td>
+          <td class="value">HITACHI</td>
+        </tr>
+      </table>
+    </div>
+
+    <div class="footer">
+      <p>This report was generated by the SIEMENS 7SJ85 CT/VT Adequacy Calculator</p>
+      <p>Report generated on: ${new Date().toLocaleString()}</p>
+    </div>
+  </div>
+</body>
+</html>
+    `;
+
+    // Create blob and download
+    const blob = new Blob([reportHTML], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `7SJ85_Report_${new Date().toISOString().split('T')[0]}.html`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
   return (
     <div className="space-y-6">
@@ -550,7 +753,7 @@ export function Siemens7SJ85Calculator() {
       </Card>
 
       {/* Calculate Button */}
-      <div className="flex justify-center">
+      <div className="flex justify-center gap-4">
         <Button 
           onClick={handleCalculate} 
           disabled={loading}
@@ -560,6 +763,17 @@ export function Siemens7SJ85Calculator() {
           <Calculator className="mr-2 h-4 w-4" />
           {loading ? 'Calculating...' : 'Calculate CT/VT Adequacy'}
         </Button>
+        {result && (
+          <Button 
+            onClick={() => downloadReport()}
+            variant="outline"
+            size="lg"
+            className="min-w-48"
+          >
+            <Download className="mr-2 h-4 w-4" />
+            Download Report
+          </Button>
+        )}
       </div>
 
       {/* Error Display */}
