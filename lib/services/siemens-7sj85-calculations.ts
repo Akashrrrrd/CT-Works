@@ -3,17 +3,38 @@
  * Based on Hitachi Technical Documentation N-19957 2-DF4W
  * Implements exact formulas and calculations from the provided images
  *
- * FIXES APPLIED IN THIS VERSION:
- * 1. calculateRequiredKssc: restored the missing division operator
- *    (original code had "max_hv_busbar_fault_current  ct_ratio_primary"
- *    with no operator between the two variables, which is a syntax error).
- * 2. calculateTotalLoadOtherBurden: function signature now matches how it
- *    is called - total_load_other_burden = burden_7sj85 only.
- * 3. calculateAvailableKssc: unchanged, already matched the required formula:
- *    available_kssc = accuracy_limit_factor *
- *                      ((internal_burden + rated_burden) /
- *                       (internal_burden + total_load_other_burden))
- */ 
+ * ============================================================
+ * FIXES APPLIED IN THIS VERSION (v2)
+ * ============================================================
+ * 1. calculateRequiredKssc: restored the missing division operator.
+ *      required_kssc = max_hv_busbar_fault_current / ct_ratio_primary
+ *
+ * 2. total_load_other_burden = burden_7sj85 ONLY. This is the burden of
+ *    the connected IED, exactly as supplied by the user when they connect
+ *    it - NOT the CT wiring lead burden (total_load_burden), and NOT any
+ *    other "total burden" combination.
+ *
+ * 3. max_hv_busbar_fault_current is confirmed as:
+ *      max_hv_busbar_fault_current = 1000 * max_bus_fault_level
+ *    This is computed ONLY by calculateMaxHVBusbarFaultCurrent() and is
+ *    used as the ONLY source feeding required_kssc. It is never read from
+ *    (or overwritten by) any single-phase / through-fault current value
+ *    such as the output of calculate1PhaseFaultCurrent(). See the note on
+ *    SystemParams_7SJ85 below for why this matters.
+ *
+ * 4. available_kssc's four inputs are now sourced exactly as follows:
+ *      - accuracy_limit_factor   : REQUIRED, supplied directly by the user.
+ *                                  No more silent fallback to a CT
+ *                                  nameplate value.
+ *      - internal_burden         : calculated -
+ *                                  ct_ratio_secondary^2 * ct_resistance
+ *      - rated_burden            : supplied directly by the user
+ *                                  (ct_core.rated_burden), used as-is with
+ *                                  no further derivation.
+ *      - total_load_other_burden : supplied directly by the user as the
+ *                                  burden of the connected IED device
+ *                                  (connected_devices.device_7sj85).
+ */
 
 export interface CT_WiringParameters {
   ct_conductor_cross_section: number;    // A (mm²)
@@ -35,10 +56,21 @@ export interface VT_WiringParameters {
 export interface SystemParams_7SJ85 {
   system_frequency: number;             // f (Hz)
   bus_voltage_level: number;            // kV
-  max_bus_fault_level: number;          // kA
+  max_bus_fault_level: number;          // kA - SOURCE for max_hv_busbar_fault_current
   xr_ratio: number;                     // X/R ratio
-  max_hv_busbar_fault_current: number;  // A
-  hv_rating_of_busbar: number;          // V
+  /**
+   * NOTE: this field is not read anywhere in performCompleteCalculation.
+   * The authoritative max HV busbar fault current is ALWAYS derived from
+   * max_bus_fault_level via calculateMaxHVBusbarFaultCurrent() below - it
+   * is never taken from this field and never taken from a single-phase /
+   * through-fault current value. If your upstream code (a form, another
+   * calculation step, etc.) populates this field from a single-phase
+   * fault current, that mismatch stays isolated here and cannot leak into
+   * required_kssc, because required_kssc only ever uses the computed
+   * local variable, never this field.
+   */
+  max_hv_busbar_fault_current: number;  // A (reference only - see note above)
+  hv_rating_of_busbar: number;          // V (reference only - computed fresh below too)
 }
 
 export interface PowerLineParams_7SJ85 {
@@ -60,18 +92,25 @@ export interface CT_CoreParameters {
   ct_ratio_secondary: number;           // A
   class_of_accuracy: string;            // e.g., "5P 20"
   ct_resistance: number;                // Rct (Ω)
-  rated_burden: number;                 // PN (VA)
-  CT_Accuracy_Limit_Factor: number;     // CT Accuracy Limiting Factor
+  rated_burden: number;                 // PN (VA) - user-supplied, used directly in available_kssc
+  /**
+   * CT nameplate Accuracy Limiting Factor, kept here purely as reference/
+   * display data about the physical CT. The available_kssc CALCULATION
+   * itself does NOT read this field - it uses the required top-level
+   * accuracy_limit_factor input on performCompleteCalculation instead, so
+   * there is exactly one unambiguous source feeding the formula.
+   */
+  CT_Accuracy_Limit_Factor: number;     // CT Accuracy Limiting Factor (reference only)
 }
 
 export interface ConnectedDevices_7SJ85 {
-  device_7sj85: number;      // VA
+  device_7sj85: number;      // VA - burden of the connected IED, as supplied by the user
 }
 
 export interface BurdenValues {
-  burden_7sj85: number;           // VA
-  total_load_burden: number;      // VA - Calculated as 2 * R * l
-  total_load_other_burden: number; // PL (VA) - Equal to burden_7sj85
+  burden_7sj85: number;           // VA - burden of the connected IED (from the user)
+  total_load_burden: number;      // VA - CT wiring loop burden, calculated as 2 * R * l
+  total_load_other_burden: number; // VA - equals burden_7sj85 ONLY (see fix #2 above)
 }
 
 /**
@@ -120,8 +159,10 @@ export class CT_WiringCalculations {
   }
 
   /**
-   * Calculate total_load_burden
+   * Calculate total_load_burden - the CT wiring loop's own resistive burden.
    * Formula: total_load_burden = 2 * R * l where R = r20 * 0.00121615
+   * This is diagnostic/reference data about the wiring only - it does NOT
+   * feed into total_load_other_burden (see below).
    */
   static calculateTotalLoadBurden(r20: number, length_m: number): number {
     return 2 * r20 * 0.00121615 * length_m;
@@ -129,9 +170,10 @@ export class CT_WiringCalculations {
 
   /**
    * Calculate total_load_other_burden
-   * FIX: total_load_other_burden = burden_7sj85 (ONLY).
-   * Signature now takes exactly one argument to match how it is called
-   * in performCompleteCalculation - it does NOT add total_load_burden.
+   * FIX: total_load_other_burden = burden_7sj85, and ONLY burden_7sj85 -
+   * i.e. exactly the burden of the connected IED as supplied by the user
+   * when they connect it. It does NOT add total_load_burden (the CT
+   * wiring's own resistive burden) and it is NOT any other "total burden".
    */
   static calculateTotalLoadOtherBurden(burden_7sj85: number): number {
     return burden_7sj85;
@@ -181,6 +223,16 @@ export class FaultCurrentCalculations {
     return xr_ratio / (2 * Math.PI * frequency);
   }
 
+  /**
+   * Calculate Max HV Busbar Fault Current
+   * Formula: max_hv_busbar_fault_current = 1000 × max_bus_fault_level
+   *
+   * This is the ONLY function that produces max_hv_busbar_fault_current.
+   * It must never be substituted with calculate1PhaseFaultCurrent() or
+   * calculate3PhaseFaultCurrentEndzone1() output - those compute separate
+   * through-fault / single-phase-to-earth quantities used only for the
+   * time-constant / endzone diagnostics further down, not for CT sizing.
+   */
   static calculateMaxHVBusbarFaultCurrent(
     max_bus_fault_level: number  // kA
   ): number {
@@ -239,6 +291,11 @@ export class FaultCurrentCalculations {
     };
   }
 
+  /**
+   * Calculates a single-phase-to-earth "through fault" current - a
+   * SEPARATE diagnostic quantity from max_hv_busbar_fault_current. This
+   * value must never be assigned to / used as max_hv_busbar_fault_current.
+   */
   static calculate1PhaseFaultCurrent(
     voltage: number,        // System voltage
     multiplier: number,     // 1.0 for normal conditions
@@ -283,14 +340,13 @@ export class BurdenCalculations {
   }
 
   /**
-   * FIX: Calculate Required Kssc
+   * Calculate Required Kssc
    * Formula: required_kssc = max_hv_busbar_fault_current / ct_ratio_primary
-   *
-   * The original code was missing the "/" operator entirely
-   * (a syntax error - two variables written next to each other
-   * with nothing between them). This is now a plain division:
-   * how many times the CT primary rating "fits into" the max
-   * fault current on the HV busbar.
+   * FIX: restored the missing "/" operator (the previous version had two
+   * variable names typed next to each other with nothing between them,
+   * which is a syntax error). This is a plain division - since both
+   * operands are real numbers, a single "/" already yields the exact
+   * quotient; there is no separate "remainder" step to perform.
    */
   static calculateRequiredKssc(
     max_hv_busbar_fault_current: number,  // A (max fault current)
@@ -306,18 +362,17 @@ export class BurdenCalculations {
    *       ( (internal_burden + rated_burden) /
    *         (internal_burden + total_load_other_burden) )
    *
-   * This matches your spec exactly - no change needed here, the
-   * original formula was already correct. It only LOOKED wrong
-   * because it was being fed a bad total_load_other_burden value
-   * (see fix #2 above) and possibly never even ran, since
-   * calculateRequiredKssc had a syntax error that would have
-   * stopped the whole file from compiling.
+   * The four parameters, and where each one must come from:
+   *   1. accuracy_factor          - REQUIRED, directly from the user
+   *   2. internal_burden          - calculated: ct_ratio_secondary² × ct_resistance
+   *   3. rated_burden              - directly from the user (CT nameplate PN), used as-is
+   *   4. total_load_other_burden  - directly from the user: the connected IED's burden
    */
   static calculateAvailableKssc(
-    accuracy_factor: number,        // CT_Accuracy_Limit_Factor
-    internal_burden: number,        // PE (VA)
-    rated_burden: number,           // PN (VA)
-    total_load_other_burden: number // total_load_other_burden (VA)
+    accuracy_factor: number,        // REQUIRED - supplied directly by the user
+    internal_burden: number,        // PE (VA) - calculated
+    rated_burden: number,           // PN (VA) - supplied directly by the user
+    total_load_other_burden: number // VA - supplied directly by the user (connected IED burden)
   ): number {
     return accuracy_factor * ((internal_burden + rated_burden) / (internal_burden + total_load_other_burden));
   }
@@ -345,7 +400,12 @@ export class Siemens7SJ85Calculator {
     power_line: PowerLineParams_7SJ85;
     ct_core: CT_CoreParameters;
     connected_devices: ConnectedDevices_7SJ85;
-    accuracy_limit_factor?: number; // Optional override from IED parameters
+    /**
+     * REQUIRED - the CT Accuracy Limit Factor to use in available_kssc.
+     * Must be supplied directly by the user. There is no fallback to
+     * ct_core.CT_Accuracy_Limit_Factor - this is the single source used.
+     */
+    accuracy_limit_factor: number;
   }) {
     const results: any = {
       ct_calculations: {},
@@ -378,13 +438,14 @@ export class Siemens7SJ85Calculator {
       input.ct_wiring.ct_conductor_length_m
     );
 
-    // Calculate total_load_burden (2 * R * l)
+    // total_load_burden = 2 * R * l -> the CT wiring loop's own burden (reference only)
     const total_load_burden = CT_WiringCalculations.calculateTotalLoadBurden(
       input.ct_wiring.ct_resistance_w_km_20c,
       input.ct_wiring.ct_conductor_length_m
     );
 
-    // FIX: total_load_other_burden = burden_7sj85 ONLY (one argument now)
+    // FIX: total_load_other_burden = burden_7sj85 ONLY (the connected IED's
+    // burden as given by the user) - single argument, matches the signature.
     const total_load_other_burden = CT_WiringCalculations.calculateTotalLoadOtherBurden(
       input.connected_devices.device_7sj85
     );
@@ -436,6 +497,10 @@ export class Siemens7SJ85Calculator {
       input.system.system_frequency
     );
 
+    // max_hv_busbar_fault_current = 1000 * max_bus_fault_level.
+    // This is the SOLE source used below for required_kssc - it is never
+    // read from input.system.max_hv_busbar_fault_current and never taken
+    // from through_fault_current / calculate1PhaseFaultCurrent().
     const max_hv_busbar_fault_current = FaultCurrentCalculations.calculateMaxHVBusbarFaultCurrent(
       input.system.max_bus_fault_level
     );
@@ -461,6 +526,9 @@ export class Siemens7SJ85Calculator {
       input.power_line.route_length
     );
 
+    // This is a SEPARATE diagnostic quantity (single-phase-to-earth through
+    // fault current). It is NOT max_hv_busbar_fault_current and is never
+    // used in the required_kssc / available_kssc calculations.
     const through_fault_current = FaultCurrentCalculations.calculate1PhaseFaultCurrent(
       132000, // From document
       1.0,
@@ -496,6 +564,7 @@ export class Siemens7SJ85Calculator {
 
     const total_device_burden = BurdenCalculations.calculateTotalBurden(burden_values);
 
+    // internal_burden = ct_ratio_secondary^2 * ct_resistance (calculated, per parameter #2)
     const internal_burden = BurdenCalculations.calculateInternalBurden(
       input.ct_core.ct_ratio_secondary,
       input.ct_core.ct_resistance
@@ -510,16 +579,21 @@ export class Siemens7SJ85Calculator {
 
     // 5. CT ADEQUACY CHECK (Pages 5-6)
 
-    // FIX: required_kssc = max_hv_busbar_fault_current / ct_ratio_primary
+    // required_kssc = max_hv_busbar_fault_current / ct_ratio_primary
     const required_kssc = BurdenCalculations.calculateRequiredKssc(
       max_hv_busbar_fault_current,
       input.ct_core.ct_ratio_primary
     );
 
-    const accuracy_factor = input.accuracy_limit_factor || input.ct_core.CT_Accuracy_Limit_Factor;
+    // Parameter #1: accuracy_limit_factor - REQUIRED, straight from the user.
+    const accuracy_factor = input.accuracy_limit_factor;
+
+    // Parameter #3: rated_burden - straight from the user (ct_core.rated_burden), used as-is.
     const rated_burden = input.ct_core.rated_burden;
 
     // available_kssc = accuracy_factor * ((internal_burden + rated_burden) / (internal_burden + total_load_other_burden))
+    // Parameter #2 (internal_burden) and #4 (total_load_other_burden) are the
+    // variables computed/sourced earlier above.
     const available_kssc = BurdenCalculations.calculateAvailableKssc(
       accuracy_factor,
       internal_burden,
