@@ -25,6 +25,17 @@ import {
   getAccuracyLimitFactor 
 } from './ied-database';
 
+// Import the Siemens 7SJ85 calculator
+import { 
+  Siemens7SJ85Calculator,
+  type CT_WiringParameters,
+  type VT_WiringParameters,
+  type SystemParams_7SJ85,
+  type PowerLineParams_7SJ85,
+  type CT_CoreParameters,
+  type ConnectedDevices_7SJ85
+} from './siemens-7sj85-calculations';
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // SYSTEM PARAMETER CALCULATIONS
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -216,6 +227,11 @@ export class IEDCalculations {
     system_calc: CalculatedSystemParameters,
     wiring_calc: CalculatedWiringParameters
   ): IEDAdequacyResult {
+    
+    // Special handling for SIEMENS 7SJ85 - use dedicated calculator
+    if (ied.ied_name === 'SIEMENS 7SJ85' || ied.ied_name.includes('7SJ85')) {
+      return this.calculateSiemens7SJ85Adequacy(ied, system_calc, wiring_calc);
+    }
     
     // Parse CT ratio
     const ct_ratio_match = ied.ct_ratio.match(/(\d+)\/(\d+)/);
@@ -462,6 +478,132 @@ export class AutomatedCalculationEngine {
     };
   }
   
+  /**
+   * Specialized calculation for SIEMENS 7SJ85 IED
+   * Uses the dedicated Siemens 7SJ85 calculator with user-provided accuracy_limit_factor
+   */
+  static calculateSiemens7SJ85Adequacy(
+    ied: IEDParameters,
+    system_calc: CalculatedSystemParameters,
+    wiring_calc: CalculatedWiringParameters
+  ): IEDAdequacyResult {
+    
+    // Parse CT ratio
+    const ct_ratio_match = ied.ct_ratio.match(/(\d+)\/(\d+)/);
+    if (!ct_ratio_match) {
+      throw new Error(`Invalid CT ratio format: ${ied.ct_ratio}`);
+    }
+    
+    const ct_ratio_primary = parseInt(ct_ratio_match[1]);
+    const ct_ratio_secondary = parseInt(ct_ratio_match[2]);
+    
+    // Map AutomatedCalculationEngine data to Siemens calculator format
+    const siemens_input = {
+      ct_wiring: {
+        ct_conductor_cross_section: wiring_calc.ct_wiring.cross_section,
+        ct_resistance_w_km_20c: wiring_calc.ct_wiring.resistance_20c,
+        ct_specific_resistance_20c: COPPER_TEMP_COEFFICIENT,
+        ct_conductor_length_m: wiring_calc.ct_wiring.lead_length / 1000, // Convert mm to m
+        relay_rated_current: ct_ratio_secondary
+      } as CT_WiringParameters,
+      
+      system: {
+        system_frequency: system_calc.frequency,
+        bus_voltage_level: system_calc.phase_voltage * Math.sqrt(3) / 1000, // Convert to kV LL
+        max_bus_fault_level: system_calc.max_fault_current / 1000, // Convert A to kA
+        xr_ratio: system_calc.xr_ratio,
+        max_hv_busbar_fault_current: system_calc.max_fault_current,
+        hv_rating_of_busbar: system_calc.phase_voltage * Math.sqrt(3)
+      } as SystemParams_7SJ85,
+      
+      power_line: {
+        positive_seq_resistance_r1: 0.0271,
+        positive_seq_reactance_x1: 0.1600,
+        zero_seq_resistance_r0: 0.1300,
+        zero_seq_reactance_x0: 0.0600,
+        route_length: 1.74,
+        cable_positive_seq_impedance: 0,
+        cable_zero_seq_impedance: 0,
+        total_cable_positive_seq_impedance: 0,
+        total_cable_zero_seq_impedance: 0,
+        source_impedance_zs: 1.0,
+        impedance_angle_in_radians: Math.atan(system_calc.xr_ratio)
+      } as PowerLineParams_7SJ85,
+      
+      ct_core: {
+        ct_ratio_primary: ct_ratio_primary,
+        ct_ratio_secondary: ct_ratio_secondary,
+        class_of_accuracy: ied.accuracy_class,
+        ct_resistance: ied.ct_resistance,
+        rated_burden: 7.5, // Standard rated burden
+        CT_Accuracy_Limit_Factor: 20 // Default fallback
+      } as CT_CoreParameters,
+      
+      connected_devices: {
+        device_7sj85: IEDDatabaseService.getIEDBurden(ied.ied_name)
+      } as ConnectedDevices_7SJ85,
+      
+      // Pass the user-provided accuracy_limit_factor - THIS IS KEY!
+      accuracy_limit_factor: ied.accuracy_limit_factor
+    };
+    
+    // Call the specialized Siemens calculator with user's accuracy_limit_factor
+    const siemens_results = Siemens7SJ85Calculator.performCompleteCalculation(siemens_input);
+    
+    // Map results back to IEDAdequacyResult format
+    const adequacy_result: IEDAdequacyResult = {
+      ied_name: ied.ied_name,
+      ct_ratio: ied.ct_ratio,
+      verdict: siemens_results.final_verdict === 'SUITABLY DIMENSIONED' ? 'SUITABLE' : 'UNDER_DIMENSIONED',
+      
+      required_kssc: siemens_results.required_kssc || 0,
+      available_kssc: siemens_results.available_kssc || 0,
+      
+      // VT checks not applicable for 7SJ85 protection relay
+      required_vk: undefined,
+      available_vk: undefined,
+      
+      // Calculate safety margin
+      safety_margin: siemens_results.available_kssc && siemens_results.required_kssc 
+        ? ((siemens_results.available_kssc - siemens_results.required_kssc) / siemens_results.required_kssc) * 100
+        : 0,
+      
+      // Burden information from Siemens calculator
+      ct_internal_burden: siemens_results.burden_calculations?.internal_burden_va || 0,
+      lead_burden: siemens_results.ct_calculations?.total_load_burden || 0,
+      total_burden: siemens_results.burden_calculations?.total_load_other_burden_va || 0,
+      
+      // Detailed calculation steps showing user's accuracy_limit_factor is used
+      calculation_steps: [
+        {
+          step_name: "User Accuracy Limit Factor",
+          formula: "ALF = User Input",
+          inputs: { "User Input": ied.accuracy_limit_factor },
+          result: ied.accuracy_limit_factor,
+          unit: "",
+          description: "User-provided Accuracy Limit Factor from CT test certificate"
+        },
+        {
+          step_name: "Available Kssc (with User ALF)",
+          formula: "Kssc_avail = ALF × (PE + PN) / (PE + PL)",
+          inputs: { 
+            ALF: ied.accuracy_limit_factor, 
+            PE: siemens_results.burden_calculations?.internal_burden_va || 0,
+            PN: 7.5,
+            PL: siemens_results.burden_calculations?.total_load_other_burden_va || 0
+          },
+          result: siemens_results.available_kssc || 0,
+          unit: "",
+          description: "Calculated using YOUR provided Accuracy Limit Factor"
+        }
+      ],
+      
+      detailed_results: siemens_results
+    };
+    
+    return adequacy_result;
+  }
+
   /**
    * Quick adequacy check for single IED
    */

@@ -42,6 +42,7 @@ interface Siemens7SJ85InputData {
     zero_seq_resistance_r0: number;
     zero_seq_reactance_x0: number;
     route_length: number;
+    source_impedance_zs: number;  // pu - User provided source impedance
   };
   ct_core: {
     ct_ratio_primary: number;
@@ -49,6 +50,7 @@ interface Siemens7SJ85InputData {
     class_of_accuracy: string;
     ct_resistance: number;
     rated_burden: number;
+    accuracy_limit_factor?: number; // User override for CT Accuracy Limit Factor
   };
   connected_devices: {
     device_7sj85: number;
@@ -110,7 +112,8 @@ export function Siemens7SJ85Calculator() {
       ct_ratio_secondary: 1,
       class_of_accuracy: '5P 20',
       ct_resistance: 9,
-      rated_burden: 7.5
+      rated_burden: 7.5,
+      accuracy_limit_factor: 20 // Default ALF, user can override
     },
     connected_devices: {
       device_7sj85: 0.02,
@@ -361,6 +364,32 @@ export function Siemens7SJ85Calculator() {
                 />
               </div>
             </div>
+            
+            {/* Accuracy Limit Factor - Special highlighted section */}
+            <div className="bg-blue-50 p-4 rounded-lg border border-blue-200 mt-4">
+              <div className="flex items-start gap-3">
+                <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <span className="text-white text-sm font-bold">!</span>
+                </div>
+                <div className="flex-1">
+                  <Label className="text-blue-800 font-medium">
+                    Accuracy Limit Factor (ALF) - User Override
+                  </Label>
+                  <Input
+                    type="number"
+                    step="1"
+                    placeholder="20"
+                    value={inputData.ct_core.accuracy_limit_factor || ''}
+                    onChange={(e) => updateInput('ct_core', 'accuracy_limit_factor', parseFloat(e.target.value) || undefined)}
+                    className="mt-2 bg-white border-blue-300 focus:border-blue-500 focus:ring-blue-500"
+                  />
+                  <p className="text-sm text-blue-700 mt-2 leading-relaxed">
+                    📋 <strong>Enter your CT test certificate ALF:</strong> This will override the default value from CT class<br/>
+                    💡 <strong>Leave blank to use default from CT accuracy class</strong>
+                  </p>
+                </div>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -536,6 +565,19 @@ export function Siemens7SJ85Calculator() {
                     <span>Available Kssc:</span>
                     <span className="font-mono">{result.available_kssc?.toFixed(2)}</span>
                   </div>
+                  
+                  {/* Show if user's ALF is being used */}
+                  {inputData.ct_core.accuracy_limit_factor && (
+                    <div className="bg-blue-50 p-3 rounded border border-blue-200">
+                      <div className="text-sm text-blue-800">
+                        <strong>✅ Using Your ALF:</strong> {inputData.ct_core.accuracy_limit_factor}
+                      </div>
+                      <div className="text-xs text-blue-600">
+                        (Overriding default from CT accuracy class)
+                      </div>
+                    </div>
+                  )}
+                  
                   <div className="pt-2 border-t">
                     <div className="flex justify-between items-center">
                       <span className="font-medium">Check:</span>
