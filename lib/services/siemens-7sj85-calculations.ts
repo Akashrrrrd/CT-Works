@@ -13,7 +13,7 @@
  *    available_kssc = accuracy_limit_factor *
  *                      ((internal_burden + rated_burden) /
  *                       (internal_burden + total_load_other_burden))
- */
+ */ 
 
 export interface CT_WiringParameters {
   ct_conductor_cross_section: number;    // A (mm²)
