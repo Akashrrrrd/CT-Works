@@ -56,6 +56,7 @@ export interface IEDParameters {
   ct_resistance: number;         // Ω (measured or from datasheet)
   magnetizing_current: number;   // mA at Vk
   knee_point_voltage: number;    // V (Vk from CT test certificate)
+  accuracy_limit_factor: number; // CT Accuracy Limit Factor (user input)
   // Note: burden will be calculated from known IED specifications
 }
 

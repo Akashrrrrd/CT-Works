@@ -123,7 +123,8 @@ export function AdequacyWizard() {
       accuracy_class: "5P20",
       ct_resistance: 2.5,
       magnetizing_current: 10,
-      knee_point_voltage: 2000
+      knee_point_voltage: 2000,
+      accuracy_limit_factor: 20
     }
   ]);
 
@@ -195,7 +196,8 @@ export function AdequacyWizard() {
       accuracy_class: "5P20", 
       ct_resistance: 1.5,
       magnetizing_current: 10,
-      knee_point_voltage: 1000
+      knee_point_voltage: 1000,
+      accuracy_limit_factor: 20
     }]);
   };
 
@@ -707,6 +709,21 @@ export function AdequacyWizard() {
                           value={ied.magnetizing_current}
                           onChange={(e) => updateIED(index, 'magnetizing_current', parseFloat(e.target.value) || 0)}
                         />
+                      </div>
+                      
+                      <div>
+                        <Label htmlFor={`accuracy-limit-${index}`}>Accuracy Limit Factor</Label>
+                        <Input 
+                          id={`accuracy-limit-${index}`}
+                          type="number"
+                          step="1"
+                          placeholder="20"
+                          value={ied.accuracy_limit_factor}
+                          onChange={(e) => updateIED(index, 'accuracy_limit_factor', parseFloat(e.target.value) || 0)}
+                        />
+                        <p className="text-sm text-muted-foreground">
+                          CT Accuracy Limiting Factor (from CT test certificate)
+                        </p>
                       </div>
                     </div>
                     

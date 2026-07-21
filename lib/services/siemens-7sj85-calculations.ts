@@ -343,14 +343,13 @@ export class BurdenCalculations {
 
   /**
    * Calculate Available (effective) Kssc
-   * Formula: available_kssc = CT_Accuracy_Limit_Factor × ((internal_burden + rated_burden) / (internal_burden + burden_7sj85))
+   * Formula: available_kssc = CT_Accuracy_Limit_Factor × ((internal_burden + rated_burden) / (internal_burden + total_load_other_burden))
    */
   static calculateAvailableKssc(
     accuracy_factor: number,    // CT_Accuracy_Limit_Factor
     internal_burden: number,    // PE (VA)
     rated_burden: number,       // PN (VA)
-    burden_7sj85: number 
-    total_load_other_burden: number// burden_7sj85 (VA)
+    total_load_other_burden: number // total_load_other_burden (VA)
   ): number {
     return accuracy_factor * ((internal_burden + rated_burden) / (internal_burden + total_load_other_burden));
   }
@@ -386,6 +385,7 @@ export class Siemens7SJ85Calculator {
     power_line: PowerLineParams_7SJ85;
     ct_core: CT_CoreParameters;
     connected_devices: ConnectedDevices_7SJ85;
+    accuracy_limit_factor?: number; // Optional override from IED parameters
   }) {
     const results: any = {
       ct_calculations: {},
@@ -572,16 +572,16 @@ export class Siemens7SJ85Calculator {
     );
 
     // From document page 6: CT parameters
-    const accuracy_factor = input.ct_core.CT_Accuracy_Limit_Factor;
+    const accuracy_factor = input.accuracy_limit_factor || input.ct_core.CT_Accuracy_Limit_Factor;
     const rated_burden = input.ct_core.rated_burden;
 
     // Calculate Available Kssc
-    // Formula: available_kssc = CT_Accuracy_Limit_Factor × ((internal_burden + rated_burden) / (internal_burden + burden_7sj85))
+    // Formula: available_kssc = CT_Accuracy_Limit_Factor × ((internal_burden + rated_burden) / (internal_burden + total_load_other_burden))
     const available_kssc = BurdenCalculations.calculateAvailableKssc(
       accuracy_factor,
       internal_burden,
       rated_burden,
-      burden_values.burden_7sj85
+      burden_values.total_load_other_burden
     );
 
     const suitability = BurdenCalculations.determineCTSuitability(

@@ -60,7 +60,10 @@ export async function performProjectCalculation(
   // Route to appropriate IED template calculator
   switch (request.template_type) {
     case 'SIEMENS_7SJ85':
-      detailed_results = Siemens7SJ85Calculator.performCompleteCalculation(request.input_data);
+      detailed_results = Siemens7SJ85Calculator.performCompleteCalculation({
+        ...request.input_data,
+        accuracy_limit_factor: request.input_data.ieds?.[0]?.accuracy_limit_factor
+      });
       validation = validateSiemens7SJ85Results(detailed_results);
       break;
       
