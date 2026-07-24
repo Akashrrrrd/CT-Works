@@ -95,13 +95,13 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
       roles: ['ENGINEER','ADMIN','MANAGER'],
       badge: null
     },
-    { 
-      href: `/workspaces/${workspaceId}/analysis`, 
-      label: 'Full Analysis', 
-      icon: <Cpu className="h-4 w-4" />, 
-      roles: ['ENGINEER','ADMIN','MANAGER'],
-      badge: null
-    },
+    // { 
+    //   href: `/workspaces/${workspaceId}/analysis`, 
+    //   label: 'Full Analysis', 
+    //   icon: <Cpu className="h-4 w-4" />, 
+    //   roles: ['ENGINEER','ADMIN','MANAGER'],
+    //   badge: null
+    // },
     { 
       href: `/workspaces/${workspaceId}/relay-templates`, 
       label: 'Excel Processing', 
@@ -109,20 +109,20 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
       roles: ['ENGINEER','ADMIN','MANAGER'],
       badge: null
     },
-    { 
-      href: `/workspaces/${workspaceId}/computations`, 
-      label: 'CT Checks', 
-      icon: <Calculator className="h-4 w-4" />, 
-      roles: ['ENGINEER','ADMIN','MANAGER'],
-      badge: null
-    },
-    { 
-      href: `/workspaces/${workspaceId}/vt-check`, 
-      label: 'VT Checks', 
-      icon: <Activity className="h-4 w-4" />, 
-      roles: ['ENGINEER','ADMIN','MANAGER'],
-      badge: null
-    },
+    // { 
+    //   href: `/workspaces/${workspaceId}/computations`, 
+    //   label: 'CT Checks', 
+    //   icon: <Calculator className="h-4 w-4" />, 
+    //   roles: ['ENGINEER','ADMIN','MANAGER'],
+    //   badge: null
+    // },
+    // { 
+    //   href: `/workspaces/${workspaceId}/vt-check`, 
+    //   label: 'VT Checks', 
+    //   icon: <Activity className="h-4 w-4" />, 
+    //   roles: ['ENGINEER','ADMIN','MANAGER'],
+    //   badge: null
+    // },
     { 
       href: `/workspaces/${workspaceId}/templates`, 
       label: 'IED Templates', 
