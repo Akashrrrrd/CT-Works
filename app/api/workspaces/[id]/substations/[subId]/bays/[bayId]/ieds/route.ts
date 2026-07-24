@@ -29,7 +29,7 @@ export async function POST(
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const body = await req.json();
-  const { name, model, serialNumber, functions, ctRatio, ctClass, rct, vk, io } = body;
+  const { name, model, serialNumber, functions, ctRatio, ctClass, rct, ratedBurden, alf, vk, io } = body;
   if (!name || !model) return NextResponse.json({ error: 'name and model are required' }, { status: 400 });
 
   const col = await getIEDs();
@@ -45,11 +45,13 @@ export async function POST(
     functions:    functions    ?? [],   // ['tpl-differential', 'tpl-distance']
     // CT nameplate data stored with IED for reuse
     ct: {
-      ratio:   ctRatio ?? '',           // e.g. "800/1"
-      class:   ctClass ?? 'PX',
-      rct:     rct     ?? 0,
-      vk:      vk      ?? 0,
-      io:      io      ?? 0,
+      ratio:        ctRatio ?? '',           // e.g. "800/1"
+      class:        ctClass ?? 'PX',
+      rct:          rct     ?? 0,
+      ratedBurden:  ratedBurden ?? 0,
+      alf:          alf     ?? 0,
+      vk:           vk      ?? 0,
+      io:           io      ?? 0,
     },
     createdById:  new ObjectId(user.userId),
     createdAt:    now,
@@ -68,7 +70,7 @@ export async function PUT(
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const body = await req.json();
-  const { iedId, name, model, serialNumber, functions, ctRatio, ctClass, rct, vk, io } = body;
+  const { iedId, name, model, serialNumber, functions, ctRatio, ctClass, rct, ratedBurden, alf, vk, io } = body;
   
   if (!iedId) return NextResponse.json({ error: 'iedId is required' }, { status: 400 });
   if (!name || !model) return NextResponse.json({ error: 'name and model are required' }, { status: 400 });
@@ -88,11 +90,13 @@ export async function PUT(
         serialNumber: serialNumber ?? '',
         functions: functions ?? [],
         ct: {
-          ratio: ctRatio ?? '',
-          class: ctClass ?? 'PX',
-          rct: rct ?? 0,
-          vk: vk ?? 0,
-          io: io ?? 0,
+          ratio:        ctRatio ?? '',
+          class:        ctClass ?? 'PX',
+          rct:          rct ?? 0,
+          ratedBurden:  ratedBurden ?? 0,
+          alf:          alf ?? 0,
+          vk:           vk ?? 0,
+          io:           io ?? 0,
         },
         updatedAt: now,
       }

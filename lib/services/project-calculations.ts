@@ -157,37 +157,52 @@ export function convertLegacyInput(
     case 'SIEMENS_7SJ85':
       return {
         ct_wiring: {
-          conductor_cross_section: legacyInput.wiring.conductor_mm2,
-          resistance_20c: legacyInput.wiring.r20,
-          temperature_coefficient: legacyInput.wiring.alpha,
-          conductor_length: legacyInput.wiring.cable_length_m,
-          cores: legacyInput.wiring.cores
+          ct_conductor_cross_section: legacyInput.wiring.conductor_mm2,
+          ct_resistance_w_km_20c: legacyInput.wiring.r20,
+          ct_specific_resistance_20c: legacyInput.wiring.alpha,
+          ct_conductor_length_m: legacyInput.wiring.cable_length_m,
+          relay_rated_current: legacyInput.ct.ratio_secondary || 1
         },
         system: {
           system_frequency: legacyInput.system.frequency,
           bus_voltage_level: legacyInput.system.bus_voltage_kv,
           max_bus_fault_level: legacyInput.system.fault_current_ka,
-          xr_ratio: legacyInput.system.xr_ratio
+          xr_ratio: legacyInput.system.xr_ratio,
+          max_hv_busbar_fault_current: legacyInput.system.fault_current_ka * 1000,
+          hv_rating_of_busbar: legacyInput.system.bus_voltage_kv * 1000
         },
         power_line: {
-          positive_sequence_resistance: legacyInput.line.r1,
-          positive_sequence_reactance: legacyInput.line.x1,
-          zero_sequence_resistance: legacyInput.line.r0,
-          zero_sequence_reactance: legacyInput.line.x0,
-          route_length: legacyInput.line.length_km
+          positive_seq_resistance_r1: legacyInput.line.r1,
+          positive_seq_reactance_x1: legacyInput.line.x1,
+          zero_seq_resistance_r0: legacyInput.line.r0,
+          zero_seq_reactance_x0: legacyInput.line.x0,
+          route_length: legacyInput.line.length_km,
+          cable_positive_seq_impedance: Math.sqrt(legacyInput.line.r1 ** 2 + legacyInput.line.x1 ** 2),
+          cable_zero_seq_impedance: Math.sqrt(legacyInput.line.r0 ** 2 + legacyInput.line.x0 ** 2),
+          total_cable_positive_seq_impedance: Math.sqrt(
+            (legacyInput.line.r1 * legacyInput.line.length_km) ** 2 + 
+            (legacyInput.line.x1 * legacyInput.line.length_km) ** 2
+          ),
+          total_cable_zero_seq_impedance: Math.sqrt(
+            (legacyInput.line.r0 * legacyInput.line.length_km) ** 2 + 
+            (legacyInput.line.x0 * legacyInput.line.length_km) ** 2
+          ),
+          source_impedance_zs: 0, // Will be calculated by Siemens7SJ85Calculator
+          impedance_angle_in_radians: Math.atan(legacyInput.system.xr_ratio)
         },
         ct_core: {
           ct_ratio_primary: legacyInput.ct.ratio_primary,
           ct_ratio_secondary: legacyInput.ct.ratio_secondary,
           class_of_accuracy: legacyInput.ct.accuracy_class,
-          rated_burden: legacyInput.ct.rated_burden_va,
-          accuracy_limit_factor: legacyInput.ct.alf,
-          ct_resistance: legacyInput.ct.rct
+          ct_resistance: legacyInput.ct.rct,
+          rated_burden: legacyInput.ct.rated_burden_va || 7.5,
+          CT_Accuracy_Limit_Factor: legacyInput.ct.alf || 10
         },
-        connected_devices: {
-          ied_names: legacyInput.ieds.map(d => d.name),
-          burden_values: legacyInput.ieds.map(d => d.burden_va)
-        }
+        connected_devices: legacyInput.ieds.map(d => ({
+          device_name: d.name,
+          burden_va: d.burden_va
+        })),
+        accuracy_limit_factor: legacyInput.ct.alf || 10
       };
       
     case 'ABB_RET670':

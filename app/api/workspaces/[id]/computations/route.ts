@@ -77,14 +77,34 @@ export async function POST(
       sheet2: Sheet2Inputs;
     };
 
+    console.log('API Received sheet1:', {
+      ct_ratio_primary: sheet1.ct_ratio_primary,
+      ct_resistance: sheet1.ct_resistance,
+      resistance_20c: sheet1.resistance_20c,
+      cable_length: sheet1.cable_length,
+      accuracy_limit_factor: sheet1.accuracy_limit_factor
+    });
+
     if (!templateId || !sheet1 || !sheet2) {
       return NextResponse.json({ error: 'templateId, sheet1 and sheet2 are required' }, { status: 400 });
     }
 
     // Load template to get iedType
     const templates = await getTemplates();
-    const template  = await templates.findOne({ _id: new ObjectId(templateId) });
-    if (!template) return NextResponse.json({ error: 'Template not found' }, { status: 404 });
+    let template;
+    
+    // Try to find by ObjectId
+    try {
+      template = await templates.findOne({ _id: new ObjectId(templateId) });
+    } catch (e) {
+      // If invalid ObjectId, try string match
+      template = await templates.findOne({ id: templateId });
+    }
+    
+    if (!template) {
+      console.error(`Template not found with ID: ${templateId}`);
+      return NextResponse.json({ error: `Template not found: ${templateId}` }, { status: 404 });
+    }
 
     let result: any;
 
@@ -100,10 +120,112 @@ export async function POST(
 
     const iedTemplateType = iedTemplateMap[template.iedType] || iedTemplateMap[template.name];
 
-    if (iedTemplateType) {
-      // Use the new IED template calculation system
+    if (iedTemplateType === 'SIEMENS_7SJ85') {
+      // Use Siemens 7SJ85 calculation directly with proper data mapping
       try {
-        // Convert sheet inputs to FullAnalysisInput format
+        console.log('Loading Siemens7SJ85Calculator for template:', template.name, 'iedType:', template.iedType);
+        const { Siemens7SJ85Calculator } = await import('@/lib/services/siemens-7sj85-calculations');
+        console.log('Siemens7SJ85Calculator loaded successfully');
+        
+        // Build the calculator input from sheet1 and sheet2
+        // Sheet1 contains CT parameters, Sheet2 contains system/wiring parameters
+        const calculatorInput = {
+          ct_wiring: {
+            ct_conductor_cross_section: sheet1.conductor_cross_section || 2.5,
+            ct_resistance_w_km_20c: sheet1.resistance_20c || 7.41,
+            ct_specific_resistance_20c: sheet1.temp_coefficient || 0.00393,
+            ct_conductor_length_m: sheet1.cable_length || 50,
+            relay_rated_current: sheet1.ct_ratio_secondary || 1
+          },
+          system: {
+            system_frequency: sheet2.system_frequency || 50,
+            bus_voltage_level: sheet2.bus_voltage || 33,
+            max_bus_fault_level: sheet2.max_fault_current || 12.5,
+            xr_ratio: sheet2.xr_ratio || 15,
+            max_hv_busbar_fault_current: (sheet2.max_fault_current || 12.5) * 1000,
+            hv_rating_of_busbar: (sheet2.bus_voltage || 33) * 1000
+          },
+          power_line: {
+            positive_seq_resistance_r1: sheet2.positive_seq_resistance || 0.0221,
+            positive_seq_reactance_x1: sheet2.positive_seq_reactance || 0.1600,
+            zero_seq_resistance_r0: sheet2.zero_seq_resistance || 0.1300,
+            zero_seq_reactance_x0: sheet2.zero_seq_reactance || 0.0600,
+            route_length: sheet2.line_length || 1.74,
+            cable_positive_seq_impedance: Math.sqrt(
+              Math.pow(sheet2.positive_seq_resistance || 0.0221, 2) + 
+              Math.pow(sheet2.positive_seq_reactance || 0.1600, 2)
+            ),
+            cable_zero_seq_impedance: Math.sqrt(
+              Math.pow(sheet2.zero_seq_resistance || 0.1300, 2) + 
+              Math.pow(sheet2.zero_seq_reactance || 0.0600, 2)
+            ),
+            total_cable_positive_seq_impedance: Math.sqrt(
+              Math.pow((sheet2.positive_seq_resistance || 0.0221) * (sheet2.line_length || 1.74), 2) + 
+              Math.pow((sheet2.positive_seq_reactance || 0.1600) * (sheet2.line_length || 1.74), 2)
+            ),
+            total_cable_zero_seq_impedance: Math.sqrt(
+              Math.pow((sheet2.zero_seq_resistance || 0.1300) * (sheet2.line_length || 1.74), 2) + 
+              Math.pow((sheet2.zero_seq_reactance || 0.0600) * (sheet2.line_length || 1.74), 2)
+            ),
+            source_impedance_zs: 0,
+            impedance_angle_in_radians: Math.atan(sheet2.xr_ratio || 15)
+          },
+          ct_core: {
+            ct_ratio_primary: sheet1.ct_ratio_primary || 600,
+            ct_ratio_secondary: sheet1.ct_ratio_secondary || 1,
+            class_of_accuracy: sheet1.accuracy_class || '5P20',
+            ct_resistance: sheet1.ct_resistance || 3.5,
+            rated_burden: sheet1.rated_burden || 15,
+            CT_Accuracy_Limit_Factor: sheet1.accuracy_limit_factor || 20,
+            vk_available: sheet1.knee_point_voltage || 400
+          },
+          connected_devices: [
+            { 
+              device_name: template.name || 'SIEMENS 7SJ85', 
+              burden_va: sheet1.ied_burden || 0.02 
+            }
+          ],
+          accuracy_limit_factor: sheet1.accuracy_limit_factor || 20
+        };
+
+        // Call Siemens7SJ85Calculator directly
+        try {
+          const calcResult = Siemens7SJ85Calculator.performCompleteCalculation(calculatorInput);
+
+          result = {
+            verdict: calcResult.verdict === 'SUITABLY DIMENSIONED' ? 'SUITABLY DIMENSIONED' : 'UNDER DIMENSIONED',
+            ealreq_max: calcResult.ealreq_max || 0,
+            vk_required: calcResult.vk_required || 0,
+            vk_available: calcResult.vk_available || 0,
+            vk_breakdown: calcResult.vk_breakdown || [],
+            intermediates: {
+              template_type: 'SIEMENS_7SJ85',
+              calculation_method: 'Siemens 7SJ85 Direct Calculation',
+              hitachi_reference: 'N-19957 2-DF4W',
+              required_kssc: calcResult.required_kssc || 0,
+              available_kssc: calcResult.available_kssc || 0,
+              ct_calculations: calcResult.ct_calculations,
+              burden_calculations: calcResult.burden_calculations,
+              fault_calculations: calcResult.fault_calculations,
+              adequacy_check: calcResult.adequacy_check
+            }
+          };
+        } catch (calcError) {
+          console.error('Calculator error details:', {
+            error: calcError instanceof Error ? calcError.message : calcError,
+            calculatorInput: calculatorInput
+          });
+          throw calcError;
+        }
+
+      } catch (error) {
+        console.error('Siemens 7SJ85 calculation failed:', error);
+        throw error;
+      }
+    } else if (iedTemplateType) {
+      // For other IED templates (ABB_RET670, RED670)
+      // Use the project calculation service
+      try {
         const fullAnalysisInput: FullAnalysisInput = {
           ct: {
             ratio_primary: sheet1.ct_ratio_primary || 2000,
@@ -143,7 +265,6 @@ export async function POST(
           }
         };
 
-        // Use the project calculation service
         const projectResult = await calculateProjectCTAdequacy(
           fullAnalysisInput,
           iedTemplateType,
@@ -154,9 +275,8 @@ export async function POST(
           }
         );
 
-        // Convert project result to legacy format for compatibility
         result = {
-          verdict: projectResult.final_verdict === 'SUITABLY DIMENSIONED' ? 'ADEQUATE' : 'UNDER DIMENSIONED',
+          verdict: projectResult.final_verdict === 'SUITABLY DIMENSIONED' ? 'SUITABLY DIMENSIONED' : 'UNDER DIMENSIONED',
           ealreq_max: projectResult.detailed_results?.ct_adequacy_check?.highest_ealreq || 
                      projectResult.detailed_results?.ealreq_calculations?.highest_ealreq || 0,
           vk_required: projectResult.detailed_results?.ct_adequacy_check?.required_vk || 0,
@@ -173,13 +293,7 @@ export async function POST(
 
       } catch (error) {
         console.error('IED template calculation failed:', error);
-        // Fallback to legacy calculation
-        result = calculateCTAdequacy(template.iedType, sheet1, sheet2);
-        result.intermediates = {
-          ...result.intermediates,
-          calculation_method: 'Legacy (IED template failed)',
-          error: error instanceof Error ? error.message : 'Unknown error'
-        };
+        throw error;
       }
     } else {
       // Use legacy calculation for non-IED templates
@@ -250,7 +364,11 @@ export async function POST(
     }, { status: 201 });
 
   } catch (error) {
-    console.error('Computation POST error:', error);
-    return NextResponse.json({ error: 'Failed to run computation' }, { status: 500 });
+    const errorMessage = error instanceof Error ? error.message : JSON.stringify(error);
+    console.error('Computation POST error:', errorMessage, error);
+    return NextResponse.json({ 
+      error: 'Failed to run computation',
+      details: errorMessage 
+    }, { status: 500 });
   }
 }

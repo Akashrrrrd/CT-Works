@@ -321,13 +321,10 @@ export class Siemens7SJ85Calculator {
     // 1. CT WIRING CALCULATIONS (HITACHI PAGE 1)
     // ============================================================
     
-    // CRITICAL: Convert cable length from meters to kilometers
-    const cable_length_km = input.ct_wiring.ct_conductor_length_m / 1000;
-    
     const R_75C = input.ct_wiring.ct_resistance_w_km_20c * 1.21615;
-    const RL = R_75C * cable_length_km;
-    const loop_resistance = 2 * R_75C * cable_length_km;
-    const Pl = Math.pow(input.ct_core.ct_ratio_secondary, 2) * R_75C * cable_length_km;
+    const RL = R_75C * input.ct_wiring.ct_conductor_length_m;
+    const loop_resistance = 2 * R_75C * input.ct_wiring.ct_conductor_length_m;
+    const Pl = Math.pow(input.ct_core.ct_ratio_secondary, 2) * R_75C * input.ct_wiring.ct_conductor_length_m;
 
     results.ct_calculations = {
       resistance_at_75c: R_75C,

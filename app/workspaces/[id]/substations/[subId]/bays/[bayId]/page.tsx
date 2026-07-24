@@ -34,7 +34,7 @@ interface IED {
   name: string; 
   model: string; 
   functions: string[]; 
-  ct: { ratio: string; class: string; rct: number; vk: number; io: number };
+  ct: { ratio: string; class: string; rct: number; ratedBurden?: number; alf?: number; vk: number; io: number };
   latestResult?: { verdict: string; vk_required: number; vk_available: number } | null;
 }
 
@@ -90,16 +90,25 @@ export default function IEDsPage() {
   const [computing, setComputing] = useState(false);
   const [computationResult, setComputationResult] = useState<ComputationResult | null>(null);
   const [systemParams, setSystemParams] = useState({
-    frequency: '50',
+    // Wiring parameters - with default test values
+    conductor_mm2: '2.5',
+    resistance_20c: '7.41',
+    temp_coefficient: '0.00393',
+    temperature: '75',
+    cable_length_m: '50',
+    
+    // System parameters - with default test values
+    system_frequency: '50',
     bus_voltage_kv: '33',
-    max_bus_fault_mva: '1000',
-    r1: '0.1',
-    x1: '0.4',
-    r0: '0.3',
-    x0: '1.2',
-    route_length_km: '1.0',
-    relay_burden_va: '5.0',
-    lead_resistance: '0.05'
+    max_fault_current_ka: '12.5',
+    xr_ratio: '15',
+    
+    // Line parameters - with default test values
+    r1: '0.0221',
+    x1: '0.1600',
+    r0: '0.1300',
+    x0: '0.0600',
+    line_length_km: '1.74',
   });
   
   // Compare states
@@ -108,11 +117,14 @@ export default function IEDsPage() {
   
   const [iedForm, setIedForm] = useState({
     name: '', 
-    model: 'SIEMENS 7SJ85', 
-    functions: MODEL_FUNCTIONS['SIEMENS 7SJ85'] || [],
+    model: '', 
+    functions: [],
     ctRatio: '', 
-    ctClass: 'PX', 
+    ctSecondary: '1',
+    ctClass: '', 
     rct: '', 
+    ratedBurden: '',
+    alf: '',
     vk: '', 
     io: '',
   });
@@ -122,21 +134,76 @@ export default function IEDsPage() {
     model: 'SIEMENS 7SJ85', 
     functions: MODEL_FUNCTIONS['SIEMENS 7SJ85'] || [],
     ctRatio: '', 
+    ctSecondary: '1',
     ctClass: 'PX', 
     rct: '', 
+    ratedBurden: '',
+    alf: '',
     vk: '', 
     io: '',
   });
 
   const [saving, setSaving] = useState(false);
 
-  // Handle model change to automatically set functions
+  // Helper function to check if all required fields are filled
+  const validateFormComplete = (form: typeof iedForm): { valid: boolean; missingFields: string[] } => {
+    const missing: string[] = [];
+    if (!form.name.trim()) missing.push('IED Tag / Name');
+    if (!form.model) missing.push('Relay / IED Model');
+    if (!form.ctRatio) missing.push('CT Primary (Ipn)');
+    if (!form.ctSecondary) missing.push('CT Secondary (In)');
+    if (!form.ctClass) missing.push('Accuracy Class');
+    if (!form.rct) missing.push('Rct (Ω)');
+    if (!form.vk) missing.push('Vk Available (V)');
+    if (!form.io) missing.push('Io at Vk (mA)');
+    // System and line parameters
+    if (!systemParams.conductor_mm2) missing.push('Conductor (mm²)');
+    if (!systemParams.resistance_20c) missing.push('R at 20°C (Ω/km)');
+    if (!systemParams.temp_coefficient) missing.push('Temp. Coefficient');
+    if (!systemParams.temperature) missing.push('Temperature (°C)');
+    if (!systemParams.cable_length_m) missing.push('Cable Length (m)');
+    if (!systemParams.system_frequency) missing.push('Frequency (Hz)');
+    if (!systemParams.bus_voltage_kv) missing.push('Bus Voltage (kV)');
+    if (!systemParams.max_fault_current_ka) missing.push('Max Fault (kA)');
+    if (!systemParams.xr_ratio) missing.push('X/R Ratio');
+    if (!systemParams.r1) missing.push('R1 (Ω/km)');
+    if (!systemParams.x1) missing.push('X1 (Ω/km)');
+    if (!systemParams.r0) missing.push('R0 (Ω/km)');
+    if (!systemParams.x0) missing.push('X0 (Ω/km)');
+    if (!systemParams.line_length_km) missing.push('Line Length (km)');
+    return { valid: missing.length === 0, missingFields: missing };
+  };
+
+  // Handle model change to automatically set functions and template
   const handleModelChange = (model: string, isEdit: boolean = false) => {
     const functions = MODEL_FUNCTIONS[model] || [];
     if (isEdit) {
       setEditForm(p => ({ ...p, model, functions }));
     } else {
       setIedForm(p => ({ ...p, model, functions }));
+      // Auto-select template based on relay model - exact matching first
+      if (templates.length > 0) {
+        // Exact template name match first
+        const exactMatch = templates.find(t => 
+          t.name.toLowerCase() === model.toLowerCase() ||
+          t.iedType.toLowerCase().includes(model.toLowerCase().replace(/\s+/g, '-'))
+        );
+        
+        if (exactMatch) {
+          console.log('Template auto-selected (exact match):', exactMatch.name);
+          setSelectedTemplate(exactMatch);
+        } else {
+          // Fallback to partial match
+          const partialMatch = templates.find(t => 
+            t.name.toLowerCase().includes(model.toLowerCase()) && 
+            !t.name.toLowerCase().includes('differential') // Avoid RED670 transformer differential when looking for SIEMENS
+          );
+          if (partialMatch) {
+            console.log('Template auto-selected (partial match):', partialMatch.name);
+            setSelectedTemplate(partialMatch);
+          }
+        }
+      }
     }
   };
 
@@ -177,41 +244,30 @@ export default function IEDsPage() {
     setComputingIed(ied);
     setComputationResult(null);
     
-    // Auto-select template based on IED model
-    const modelToTemplate: Record<string, string> = {
-      'RED670': 'tpl-differential',
-      'REB670': 'tpl-differential', 
-      'REF615': 'tpl-differential',
-      'REL670': 'tpl-distance',
-      'REQ650': 'tpl-breaker-failure',
-      'REB500': 'tpl-differential',
-      'SEL-421': 'tpl-differential',
-      'SEL-311C': 'tpl-distance',
-      'P443': 'tpl-differential',
-      'P142': 'tpl-distance',
-    };
-    
-    const primaryFunction = modelToTemplate[ied.model];
-    if (primaryFunction && templates.length > 0) {
-      const matchingTemplate = templates.find(t => t.iedType === primaryFunction);
-      setSelectedTemplate(matchingTemplate || templates[0] || null);
-    }
-    
-    // Pre-fill system params from IED data
-    setSystemParams({
-      frequency: systemParams.frequency,
-      bus_voltage_kv: systemParams.bus_voltage_kv,
-      max_bus_fault_mva: systemParams.max_bus_fault_mva,
-      r1: systemParams.r1,
-      x1: systemParams.x1,
-      r0: systemParams.r0,
-      x0: systemParams.x0,
-      route_length_km: systemParams.route_length_km,
-      relay_burden_va: ied.ct.io.toString(),
-      lead_resistance: systemParams.lead_resistance,
+    // Pre-fill IED form with existing data
+    const [primary, secondary] = ied.ct.ratio.split('/');
+    setIedForm({
+      name: ied.name,
+      model: ied.model,
+      functions: ied.functions,
+      ctRatio: primary || '',
+      ctSecondary: secondary || '1',
+      ctClass: ied.ct.class,
+      rct: ied.ct.rct.toString(),
+      vk: ied.ct.vk.toString(),
+      io: ied.ct.io.toString(),
     });
     
-    setComputationOpen(true);
+    // Auto-select template based on model
+    handleModelChange(ied.model, false);
+    
+    // Do not force user to select - template should auto-select
+    // setSelectedTemplate(null);
+    
+    // Keep existing system params - they have good default values
+    // User can modify them in the form if needed
+    
+    setIedOpen(true);
   };
 
   const runComputation = async () => {
@@ -274,7 +330,11 @@ export default function IEDsPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ...iedForm,
+          name: iedForm.name,
+          model: iedForm.model,
+          functions: iedForm.functions,
+          ctRatio: `${iedForm.ctRatio}/${iedForm.ctSecondary}`,
+          ctClass: iedForm.ctClass,
           rct: parseFloat(iedForm.rct) || 0,
           vk: parseFloat(iedForm.vk) || 0,
           io: parseFloat(iedForm.io) || 0
@@ -303,13 +363,18 @@ export default function IEDsPage() {
 
   const handleEditIed = (ied: IED) => {
     setEditingIed(ied);
+    // Extract CT ratio primary/secondary parts
+    const [primary, secondary] = ied.ct.ratio.split('/');
     setEditForm({
       name: ied.name,
       model: ied.model,
       functions: [...ied.functions],
-      ctRatio: ied.ct.ratio,
+      ctRatio: primary || '',
+      ctSecondary: secondary || '1',
       ctClass: ied.ct.class,
       rct: ied.ct.rct.toString(),
+      ratedBurden: ied.ct.ratedBurden?.toString() || '',
+      alf: ied.ct.alf?.toString() || '',
       vk: ied.ct.vk.toString(),
       io: ied.ct.io.toString(),
     });
@@ -328,8 +393,14 @@ export default function IEDsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           iedId: editingIed.id,
-          ...editForm,
+          name: editForm.name,
+          model: editForm.model,
+          functions: editForm.functions,
+          ctRatio: editForm.ctRatio.includes('/') ? editForm.ctRatio : `${editForm.ctRatio}/${editForm.ctSecondary}`,
+          ctClass: editForm.ctClass,
           rct: parseFloat(editForm.rct) || 0,
+          ratedBurden: parseFloat(editForm.ratedBurden) || 0,
+          alf: parseFloat(editForm.alf) || 0,
           vk: parseFloat(editForm.vk) || 0,
           io: parseFloat(editForm.io) || 0
         }),
@@ -534,30 +605,33 @@ export default function IEDsPage() {
 
       {/* Dialogs */}
       <Dialog open={iedOpen} onOpenChange={setIedOpen}>
-        <DialogContent className="max-w-5xl max-h-[95vh] overflow-y-auto p-6">
-          <DialogHeader className="mb-6">
+        <DialogContent className="w-screen max-w-[99vw] max-h-[95vh] overflow-hidden flex flex-col p-8 mx-2">
+          <DialogHeader className="mb-6 shrink-0">
             <DialogTitle className="text-2xl font-bold">Create New IED - Complete CT Adequacy Analysis</DialogTitle>
+            <div className="sr-only">Form to create a new IED for CT adequacy analysis with template selection, CT data, wiring parameters, system parameters, and line parameters</div>
           </DialogHeader>
           
-          <div className="space-y-6">
+          
+          <div className="flex-1 overflow-y-auto space-y-6 pr-6">
             {error && <Alert variant="destructive"><AlertCircle className="h-4 w-4" /><AlertDescription>{error}</AlertDescription></Alert>}
             
-            {/* Project + Relay Info - Side by Side */}
-            <div className="grid grid-cols-2 gap-6 bg-slate-50 dark:bg-slate-900 p-6 rounded-lg">
+            {!computationResult && (<>
+            <div className="grid grid-cols-2 gap-6 bg-slate-50 dark:bg-slate-900 p-6 rounded-lg shrink-0">
               <div className="space-y-2">
                 <label className="text-sm font-semibold">IED Tag / Name *</label>
                 <Input 
                   value={iedForm.name} 
                   onChange={e => setIedForm(p => ({ ...p, name: e.target.value }))} 
-                  placeholder="e.g. T1-RED670" 
-                  className="h-10 text-base"
+                  className="h-10 text-base border border-gray-300"
                   required 
                 />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-semibold">Relay / IED Model *</label>
-                <Select value={iedForm.model} onValueChange={v => handleModelChange(v, false)}>
-                  <SelectTrigger className="h-10 text-base"><SelectValue /></SelectTrigger>
+                <Select value={iedForm.model || ''} onValueChange={v => handleModelChange(v, false)}>
+                  <SelectTrigger className="h-10 text-base border border-gray-300">
+                    <SelectValue placeholder="Select a relay model" />
+                  </SelectTrigger>
                   <SelectContent>
                     {IED_MODELS.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}
                   </SelectContent>
@@ -565,6 +639,15 @@ export default function IEDsPage() {
               </div>
             </div>
 
+            {/* Selected Template Display */}
+            {selectedTemplate && (
+              <div className="bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 p-3 rounded shrink-0">
+                <p className="text-xs text-green-800 dark:text-green-200">
+                  <span className="font-semibold">✓ Template:</span> {selectedTemplate.name}
+                </p>
+              </div>
+            )}
+            
             {/* Tabbed Content with better styling */}
             <Tabs defaultValue="ct" className="w-full border rounded-lg overflow-hidden">
               <TabsList className="grid grid-cols-5 w-full bg-slate-100 dark:bg-slate-800 rounded-none border-b">
@@ -576,177 +659,344 @@ export default function IEDsPage() {
               </TabsList>
 
               {/* CT Data Tab */}
-              <TabsContent value="ct" className="p-6 space-y-4">
+              <TabsContent value="ct" className="p-6 space-y-4 m-0">
                 <div>
                   <h3 className="font-semibold mb-4">CT Nameplate Parameters</h3>
-                  <p className="text-sm text-muted-foreground mb-4">From CT manufacturer datasheet</p>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <p className="text-sm text-muted-foreground mb-6">From CT manufacturer datasheet</p>
+                  <div className="grid grid-cols-4 gap-6">
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">CT Primary (Ipn)</label>
-                      <Input type="number" step="any" value={iedForm.ctRatio} onChange={e => setIedForm(p => ({...p, ctRatio: e.target.value}))} placeholder="600" className="h-10 font-mono" />
+                      <label className="text-sm font-medium h-10 flex items-center">CT Primary (Ipn)</label>
+                      <Input type="number" step="any" value={iedForm.ctRatio} onChange={e => setIedForm(p => ({...p, ctRatio: e.target.value}))} className="h-10 font-mono border border-gray-300" />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">CT Secondary (In)</label>
-                      <Input type="number" step="any" placeholder="1" className="h-10 font-mono" />
+                      <label className="text-sm font-medium h-10 flex items-center">CT Secondary (In)</label>
+                      <Input type="number" step="any" value={iedForm.ctSecondary} onChange={e => setIedForm(p => ({...p, ctSecondary: e.target.value}))} className="h-10 font-mono border border-gray-300" />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">Accuracy Class</label>
-                      <Input type="text" value={iedForm.ctClass} onChange={e => setIedForm(p => ({...p, ctClass: e.target.value}))} placeholder="5P20" className="h-10" />
+                      <label className="text-sm font-medium h-10 flex items-center">Accuracy Class</label>
+                      <Input type="text" value={iedForm.ctClass} onChange={e => setIedForm(p => ({...p, ctClass: e.target.value}))} className="h-10 border border-gray-300" />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">Rct (Ω)</label>
-                      <Input type="number" step="any" value={iedForm.rct} onChange={e => setIedForm(p => ({...p, rct: e.target.value}))} placeholder="3.5" className="h-10 font-mono" />
+                      <label className="text-sm font-medium h-10 flex items-center">Rct (Ω)</label>
+                      <Input type="number" step="any" value={iedForm.rct} onChange={e => setIedForm(p => ({...p, rct: e.target.value}))} className="h-10 font-mono border border-gray-300" />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">Rated Burden (VA)</label>
-                      <Input type="number" step="any" placeholder="15" className="h-10 font-mono" />
+                      <label className="text-sm font-medium h-10 flex items-center">Rated Burden (VA)</label>
+                      <Input type="number" step="any" value={iedForm.ratedBurden} onChange={e => setIedForm(p => ({...p, ratedBurden: e.target.value}))} className="h-10 font-mono border border-gray-300" />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">ALF</label>
-                      <Input type="number" step="any" placeholder="20" className="h-10 font-mono" />
+                      <label className="text-sm font-medium h-10 flex items-center">ALF</label>
+                      <Input type="number" step="any" value={iedForm.alf} onChange={e => setIedForm(p => ({...p, alf: e.target.value}))} className="h-10 font-mono border border-gray-300" />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">Vk Available (V)</label>
-                      <Input type="number" step="any" value={iedForm.vk} onChange={e => setIedForm(p => ({...p, vk: e.target.value}))} placeholder="400" className="h-10 font-mono" />
+                      <label className="text-sm font-medium h-10 flex items-center">Vk Available (V)</label>
+                      <Input type="number" step="any" value={iedForm.vk} onChange={e => setIedForm(p => ({...p, vk: e.target.value}))} className="h-10 font-mono border border-gray-300" />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">Io at Vk (mA)</label>
-                      <Input type="number" step="any" value={iedForm.io} onChange={e => setIedForm(p => ({...p, io: e.target.value}))} placeholder="30" className="h-10 font-mono" />
+                      <label className="text-sm font-medium h-10 flex items-center">Io at Vk (mA)</label>
+                      <Input type="number" step="any" value={iedForm.io} onChange={e => setIedForm(p => ({...p, io: e.target.value}))} className="h-10 font-mono border border-gray-300" />
                     </div>
                   </div>
                 </div>
               </TabsContent>
 
               {/* Wiring Tab */}
-              <TabsContent value="wiring" className="p-6 space-y-4">
+              <TabsContent value="wiring" className="p-6 space-y-4 m-0">
                 <div>
                   <h3 className="font-semibold mb-4">CT Wiring Parameters</h3>
-                  <p className="text-sm text-muted-foreground mb-4">Cable from CT to relay panel</p>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  <p className="text-sm text-muted-foreground mb-6">Cable from CT to relay panel</p>
+                  <div className="grid grid-cols-3 gap-6">
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">Conductor (mm²)</label>
-                      <Input type="number" step="any" placeholder="2.5" className="h-10 font-mono" />
+                      <label className="text-sm font-medium h-10 flex items-center">Conductor (mm²)</label>
+                      <Input type="number" step="any" value={systemParams.conductor_mm2} onChange={e => setSystemParams(p => ({...p, conductor_mm2: e.target.value}))} className="h-10 font-mono border border-gray-300" />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">R at 20°C (Ω/km)</label>
-                      <Input type="number" step="any" placeholder="7.41" className="h-10 font-mono" />
+                      <label className="text-sm font-medium h-10 flex items-center">R at 20°C (Ω/km)</label>
+                      <Input type="number" step="any" value={systemParams.resistance_20c} onChange={e => setSystemParams(p => ({...p, resistance_20c: e.target.value}))} className="h-10 font-mono border border-gray-300" />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">Temp. Coefficient</label>
-                      <Input type="number" step="any" placeholder="0.00393" className="h-10 font-mono" />
+                      <label className="text-sm font-medium h-10 flex items-center">Temp. Coefficient</label>
+                      <Input type="number" step="any" value={systemParams.temp_coefficient} onChange={e => setSystemParams(p => ({...p, temp_coefficient: e.target.value}))} className="h-10 font-mono border border-gray-300" />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">Temperature (°C)</label>
-                      <Input type="number" step="any" placeholder="75" className="h-10 font-mono" />
+                      <label className="text-sm font-medium h-10 flex items-center">Temperature (°C)</label>
+                      <Input type="number" step="any" value={systemParams.temperature} onChange={e => setSystemParams(p => ({...p, temperature: e.target.value}))} className="h-10 font-mono border border-gray-300" />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">Cable Length (m)</label>
-                      <Input type="number" step="any" placeholder="50" className="h-10 font-mono" />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Cores (1/2)</label>
-                      <Input type="number" min="1" max="2" placeholder="2" className="h-10 font-mono" />
+                      <label className="text-sm font-medium h-10 flex items-center">Cable Length (m)</label>
+                      <Input type="number" step="any" value={systemParams.cable_length_m} onChange={e => setSystemParams(p => ({...p, cable_length_m: e.target.value}))} className="h-10 font-mono border border-gray-300" />
                     </div>
                   </div>
                 </div>
               </TabsContent>
 
               {/* System Tab */}
-              <TabsContent value="system" className="p-6 space-y-4">
+              <TabsContent value="system" className="p-6 space-y-4 m-0">
                 <div>
                   <h3 className="font-semibold mb-4">System Parameters</h3>
-                  <p className="text-sm text-muted-foreground mb-4">Network / power system data</p>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <p className="text-sm text-muted-foreground mb-6">Network / power system data</p>
+                  <div className="grid grid-cols-4 gap-6">
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">Frequency (Hz)</label>
-                      <Input type="number" step="any" placeholder="50" className="h-10 font-mono" />
+                      <label className="text-sm font-medium h-10 flex items-center">Frequency (Hz)</label>
+                      <Input type="number" step="any" value={systemParams.system_frequency} onChange={e => setSystemParams(p => ({...p, system_frequency: e.target.value}))} className="h-10 font-mono border border-gray-300" />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">Bus Voltage (kV)</label>
-                      <Input type="number" step="any" placeholder="33" className="h-10 font-mono" />
+                      <label className="text-sm font-medium h-10 flex items-center">Bus Voltage (kV)</label>
+                      <Input type="number" step="any" value={systemParams.bus_voltage_kv} onChange={e => setSystemParams(p => ({...p, bus_voltage_kv: e.target.value}))} className="h-10 font-mono border border-gray-300" />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">Max Fault (kA)</label>
-                      <Input type="number" step="any" placeholder="12.5" className="h-10 font-mono" />
+                      <label className="text-sm font-medium h-10 flex items-center">Max Fault (kA)</label>
+                      <Input type="number" step="any" value={systemParams.max_fault_current_ka} onChange={e => setSystemParams(p => ({...p, max_fault_current_ka: e.target.value}))} className="h-10 font-mono border border-gray-300" />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">X/R Ratio</label>
-                      <Input type="number" step="any" placeholder="15" className="h-10 font-mono" />
+                      <label className="text-sm font-medium h-10 flex items-center">X/R Ratio</label>
+                      <Input type="number" step="any" value={systemParams.xr_ratio} onChange={e => setSystemParams(p => ({...p, xr_ratio: e.target.value}))} className="h-10 font-mono border border-gray-300" />
                     </div>
                   </div>
                 </div>
               </TabsContent>
 
               {/* Line Tab */}
-              <TabsContent value="line" className="p-6 space-y-4">
+              <TabsContent value="line" className="p-6 space-y-4 m-0">
                 <div>
                   <h3 className="font-semibold mb-4">Line / Cable Parameters</h3>
-                  <p className="text-sm text-muted-foreground mb-4">Sequence impedances of the protected feeder</p>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  <p className="text-sm text-muted-foreground mb-6">Sequence impedances of the protected feeder</p>
+                  <div className="grid grid-cols-3 gap-6">
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">R1 (Ω/km)</label>
-                      <Input type="number" step="any" placeholder="0.125" className="h-10 font-mono" />
+                      <label className="text-sm font-medium h-10 flex items-center">R1 (Ω/km)</label>
+                      <Input type="number" step="any" value={systemParams.r1} onChange={e => setSystemParams(p => ({...p, r1: e.target.value}))} className="h-10 font-mono border border-gray-300" />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">X1 (Ω/km)</label>
-                      <Input type="number" step="any" placeholder="0.112" className="h-10 font-mono" />
+                      <label className="text-sm font-medium h-10 flex items-center">X1 (Ω/km)</label>
+                      <Input type="number" step="any" value={systemParams.x1} onChange={e => setSystemParams(p => ({...p, x1: e.target.value}))} className="h-10 font-mono border border-gray-300" />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">R0 (Ω/km)</label>
-                      <Input type="number" step="any" placeholder="0.375" className="h-10 font-mono" />
+                      <label className="text-sm font-medium h-10 flex items-center">R0 (Ω/km)</label>
+                      <Input type="number" step="any" value={systemParams.r0} onChange={e => setSystemParams(p => ({...p, r0: e.target.value}))} className="h-10 font-mono border border-gray-300" />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">X0 (Ω/km)</label>
-                      <Input type="number" step="any" placeholder="0.336" className="h-10 font-mono" />
+                      <label className="text-sm font-medium h-10 flex items-center">X0 (Ω/km)</label>
+                      <Input type="number" step="any" value={systemParams.x0} onChange={e => setSystemParams(p => ({...p, x0: e.target.value}))} className="h-10 font-mono border border-gray-300" />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">Line Length (km)</label>
-                      <Input type="number" step="any" placeholder="5" className="h-10 font-mono" />
+                      <label className="text-sm font-medium h-10 flex items-center">Line Length (km)</label>
+                      <Input type="number" step="any" value={systemParams.line_length_km} onChange={e => setSystemParams(p => ({...p, line_length_km: e.target.value}))} className="h-10 font-mono border border-gray-300" />
                     </div>
                   </div>
                 </div>
               </TabsContent>
 
               {/* IEDs Tab */}
-              <TabsContent value="ieds" className="p-6 space-y-4">
+              <TabsContent value="ieds" className="p-6 space-y-4 m-0">
                 <div>
                   <h3 className="font-semibold mb-4">Connected IEDs / Relays</h3>
                   <p className="text-sm text-muted-foreground mb-4">All devices connected to this CT core</p>
                   <div className="grid grid-cols-12 gap-3 items-center">
-                    <Input className="col-span-5 h-10 text-sm" placeholder="IED name" defaultValue={iedForm.name} />
-                    <Input className="col-span-4 h-10 text-sm font-mono" type="number" step="any" placeholder="Burden VA" />
-                    <Input className="col-span-3 h-10 text-sm" placeholder="Type" />
+                    <Input className="col-span-5 h-10 text-sm border border-gray-300" defaultValue={iedForm.name} />
+                    <Input className="col-span-4 h-10 text-sm font-mono border border-gray-300" type="number" step="any" />
+                    <Input className="col-span-3 h-10 text-sm border border-gray-300" />
                   </div>
                 </div>
               </TabsContent>
             </Tabs>
-
-            {/* Compute Button - Full Width */}
-            <div className="pt-4 border-t">
-              <Button 
-                onClick={() => runComputation()} 
-                disabled={computing || !iedForm.name || !iedForm.model}
-                className="w-full h-12 text-lg font-semibold bg-blue-600 hover:bg-blue-700"
-              >
-                {computing ? <><Loader2 className="h-5 w-5 animate-spin mr-2" />Computing...</> : <><Zap className="h-5 w-5 mr-2" />Compute CT Adequacy</>}
-              </Button>
-            </div>
+            </>
+            )}
           </div>
+
+          {/* Compute & Modify Buttons */}
+          <div className="pt-4 border-t shrink-0 mt-6 flex gap-2">
+            {!computationResult && (
+              <Button 
+                onClick={async () => {
+                  const validation = validateFormComplete(iedForm);
+                  if (!validation.valid) {
+                    setError(`Missing required fields: ${validation.missingFields.join(', ')}`);
+                    return;
+                  }
+                  
+                  if (!selectedTemplate || !selectedTemplate.id) {
+                    setError('Please select or ensure a template is auto-selected for the relay model.');
+                    return;
+                  }
+                  
+                  setSaving(true);
+                  setError('');
+                  try {
+                    // Build sheet1 from CT Data tab
+                    const sheet1 = {
+                      ct_ratio_primary: parseFloat(iedForm.ctRatio || '1'),
+                      ct_ratio_secondary: parseFloat(iedForm.ctSecondary || '1'),
+                      accuracy_class: iedForm.ctClass || '5P20',
+                      ct_resistance: parseFloat(iedForm.rct || '0'),
+                      rated_burden: parseFloat(iedForm.ratedBurden || '15'),
+                      accuracy_limit_factor: parseFloat(iedForm.alf || '20'),
+                      knee_point_voltage: parseFloat(iedForm.vk || '400'),
+                      magnetizing_current: parseFloat(iedForm.io || '30'),
+                      ied_burden: 0.02, // Default IED burden
+                      conductor_cross_section: parseFloat(systemParams.conductor_mm2 || '2.5'),
+                      resistance_20c: parseFloat(systemParams.resistance_20c || '7.41'),
+                      temp_coefficient: parseFloat(systemParams.temp_coefficient || '0.00393'),
+                      operating_temperature: parseFloat(systemParams.temperature || '75'),
+                      cable_length: parseFloat(systemParams.cable_length_m || '50'),
+                    };
+                    
+                    // Build sheet2 from System and Line tabs
+                    const sheet2 = {
+                      system_frequency: parseFloat(systemParams.system_frequency || '50'),
+                      bus_voltage: parseFloat(systemParams.bus_voltage_kv || '33'),
+                      max_fault_current: parseFloat(systemParams.max_fault_current_ka || '12.5'),
+                      xr_ratio: parseFloat(systemParams.xr_ratio || '15'),
+                      positive_seq_resistance: parseFloat(systemParams.r1 || '0.0221'),
+                      positive_seq_reactance: parseFloat(systemParams.x1 || '0.1600'),
+                      zero_seq_resistance: parseFloat(systemParams.r0 || '0.1300'),
+                      zero_seq_reactance: parseFloat(systemParams.x0 || '0.0600'),
+                      line_length: parseFloat(systemParams.line_length_km || '1.74'),
+                    };
+                    
+                    console.log('Sending to API:', {
+                      templateId: selectedTemplate?.id,
+                      templateName: selectedTemplate?.name,
+                      iedFormData: {
+                        name: iedForm.name,
+                        model: iedForm.model,
+                        ctRatio: iedForm.ctRatio,
+                        rct: iedForm.rct,
+                        vk: iedForm.vk,
+                        io: iedForm.io
+                      },
+                      sheet1: sheet1,
+                      sheet2: sheet2
+                    });
+                    
+                    const res = await fetch(`/api/workspaces/${workspaceId}/computations`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ templateId: selectedTemplate.id, sheet1, sheet2 }),
+                    });
+                    
+                    console.log('Response status:', res.status, 'ok:', res.ok);
+                    const data = await res.json();
+                    console.log('API Response data:', data);
+                    
+                    if (!res.ok) {
+                      console.error('API Error Response:', data);
+                      const errorMsg = data.error || data.message || data.details || `API Error: ${res.status}`;
+                      throw new Error(errorMsg);
+                    }
+                    
+                    setComputationResult(data);
+                  } catch (e) {
+                    const msg = e instanceof Error ? e.message : 'Computation failed';
+                    setError(msg);
+                    console.error('Compute error:', e);
+                  } finally {
+                    setSaving(false);
+                  }
+                }}
+                disabled={saving}
+                size="sm"
+                className="gap-1.5 bg-blue-600 hover:bg-blue-700"
+              >
+                {saving ? <><Loader2 className="h-4 w-4 animate-spin" /></> : <><Zap className="h-4 w-4" />Compute</>}
+              </Button>
+            )}
+            
+            {computationResult && (
+              <Button 
+                onClick={() => {
+                  setComputationResult(null);
+                }}
+                size="sm"
+                className="gap-1.5 border border-gray-300"
+              >
+                Modify
+              </Button>
+            )}
+          </div>
+
+          {/* Computation Results - Display Below */}
+          {computationResult && (
+            <div className="pt-6 border-t shrink-0">
+              <Card className={computationResult.verdict === 'SUITABLY DIMENSIONED' ? 'border-green-700 bg-green-950/20' : 'border-red-700 bg-red-950/20'}>
+                <CardHeader className="pb-3">
+                  <div className="flex items-center gap-3">
+                    {computationResult.verdict === 'SUITABLY DIMENSIONED' ? 
+                      <CheckCircle className="h-6 w-6 text-green-500" /> : 
+                      <AlertTriangle className="h-6 w-6 text-red-500" />
+                    }
+                    <div>
+                      <CardTitle className={computationResult.verdict === 'SUITABLY DIMENSIONED' ? 'text-green-400' : 'text-red-400'}>
+                        {computationResult.verdict}
+                      </CardTitle>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="bg-muted rounded p-4 text-center">
+                      <p className="text-xs text-muted-foreground mb-2">Vk Required</p>
+                      <p className="text-2xl font-bold">{computationResult.vk_required}</p>
+                      <p className="text-xs text-muted-foreground">V</p>
+                    </div>
+                    <div className="bg-muted rounded p-4 text-center">
+                      <p className="text-xs text-muted-foreground mb-2">Vk Available</p>
+                      <p className="text-2xl font-bold">{computationResult.vk_available}</p>
+                      <p className="text-xs text-muted-foreground">V</p>
+                    </div>
+                    <div className="bg-muted rounded p-4 text-center">
+                      <p className="text-xs text-muted-foreground mb-2">Ealreq Max</p>
+                      <p className="text-2xl font-bold">{computationResult.ealreq_max}</p>
+                      <p className="text-xs text-muted-foreground">V</p>
+                    </div>
+                  </div>
+
+                  {computationResult.vk_breakdown && (
+                    <div>
+                      <h4 className="font-semibold mb-3 text-sm">Calculation Breakdown</h4>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm border rounded-lg overflow-hidden">
+                          <thead>
+                            <tr className="bg-muted">
+                              <th className="text-left p-3 font-semibold">Fault Condition</th>
+                              <th className="text-right p-3 font-semibold">Ealreq (V)</th>
+                              <th className="text-right p-3 font-semibold">Vk Req (V)</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {computationResult.vk_breakdown.map((row, ri) => (
+                              <tr key={ri} className={`border-t ${row.isMax ? 'bg-yellow-50 dark:bg-yellow-950/20 font-semibold' : ''}`}>
+                                <td className="p-3">
+                                  {row.label}
+                                  {row.isMax && <span className="ml-2 text-xs text-yellow-700 bg-yellow-100 px-1 rounded">MAX</span>}
+                                </td>
+                                <td className="p-3 text-right">{row.ealreq}</td>
+                                <td className="p-3 text-right">{row.vk}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 
       {/* Edit IED Dialog - Shows Full Analysis Form */}
       <Dialog open={editIedOpen} onOpenChange={setEditIedOpen}>
-        <DialogContent className="max-w-5xl max-h-[95vh] overflow-y-auto p-6">
-          <DialogHeader className="mb-6">
+        <DialogContent className="w-screen max-w-[99vw] max-h-[95vh] overflow-hidden flex flex-col p-8 mx-2">
+          <DialogHeader className="mb-6 shrink-0">
             <DialogTitle className="text-2xl font-bold">Edit IED - Complete CT Adequacy Analysis</DialogTitle>
           </DialogHeader>
           
-          <div className="space-y-6">
+          <div className="flex-1 overflow-y-auto space-y-6 pr-6">
             {error && <Alert variant="destructive"><AlertCircle className="h-4 w-4" /><AlertDescription>{error}</AlertDescription></Alert>}
             
             {/* IED Info - Side by Side */}
-            <div className="grid grid-cols-2 gap-6 bg-slate-50 dark:bg-slate-900 p-6 rounded-lg">
+            <div className="grid grid-cols-2 gap-6 bg-slate-50 dark:bg-slate-900 p-6 rounded-lg shrink-0">
               <div className="space-y-2">
                 <label className="text-sm font-semibold">IED Tag / Name *</label>
                 <Input 
@@ -779,76 +1029,76 @@ export default function IEDsPage() {
               </TabsList>
 
               {/* CT Data Tab */}
-              <TabsContent value="ct" className="p-6 space-y-4">
+              <TabsContent value="ct" className="p-6 space-y-4 m-0">
                 <div>
                   <h3 className="font-semibold mb-4">CT Nameplate Parameters</h3>
-                  <p className="text-sm text-muted-foreground mb-4">From CT manufacturer datasheet</p>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <p className="text-sm text-muted-foreground mb-6">From CT manufacturer datasheet</p>
+                  <div className="grid grid-cols-4 gap-6">
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">CT Primary (Ipn)</label>
-                      <Input type="number" step="any" value={editForm.ctRatio} onChange={e => setEditForm(p => ({...p, ctRatio: e.target.value}))} placeholder="600" className="h-10 font-mono" />
+                      <label className="text-sm font-medium h-10 flex items-center">CT Primary (Ipn)</label>
+                      <Input type="number" step="any" value={editForm.ctRatio} onChange={e => setEditForm(p => ({...p, ctRatio: e.target.value}))} placeholder="600" className="h-10 font-mono border border-gray-300" />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">CT Secondary (In)</label>
-                      <Input type="number" step="any" placeholder="1" className="h-10 font-mono" />
+                      <label className="text-sm font-medium h-10 flex items-center">CT Secondary (In)</label>
+                      <Input type="number" step="any" value={editForm.ctSecondary} onChange={e => setEditForm(p => ({...p, ctSecondary: e.target.value}))} placeholder="1" className="h-10 font-mono border border-gray-300" />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">Accuracy Class</label>
-                      <Input type="text" value={editForm.ctClass} onChange={e => setEditForm(p => ({...p, ctClass: e.target.value}))} placeholder="5P20" className="h-10" />
+                      <label className="text-sm font-medium h-10 flex items-center">Accuracy Class</label>
+                      <Input type="text" value={editForm.ctClass} onChange={e => setEditForm(p => ({...p, ctClass: e.target.value}))} placeholder="5P20" className="h-10 border border-gray-300" />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">Rct (Ω)</label>
-                      <Input type="number" step="any" value={editForm.rct} onChange={e => setEditForm(p => ({...p, rct: e.target.value}))} placeholder="3.5" className="h-10 font-mono" />
+                      <label className="text-sm font-medium h-10 flex items-center">Rct (Ω)</label>
+                      <Input type="number" step="any" value={editForm.rct} onChange={e => setEditForm(p => ({...p, rct: e.target.value}))} placeholder="3.5" className="h-10 font-mono border border-gray-300" />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">Rated Burden (VA)</label>
-                      <Input type="number" step="any" placeholder="15" className="h-10 font-mono" />
+                      <label className="text-sm font-medium h-10 flex items-center">Rated Burden (VA)</label>
+                      <Input type="number" step="any" value={editForm.ratedBurden} onChange={e => setEditForm(p => ({...p, ratedBurden: e.target.value}))} placeholder="15" className="h-10 font-mono border border-gray-300" />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">ALF</label>
-                      <Input type="number" step="any" placeholder="20" className="h-10 font-mono" />
+                      <label className="text-sm font-medium h-10 flex items-center">ALF</label>
+                      <Input type="number" step="any" value={editForm.alf} onChange={e => setEditForm(p => ({...p, alf: e.target.value}))} placeholder="20" className="h-10 font-mono border border-gray-300" />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">Vk Available (V)</label>
-                      <Input type="number" step="any" value={editForm.vk} onChange={e => setEditForm(p => ({...p, vk: e.target.value}))} placeholder="400" className="h-10 font-mono" />
+                      <label className="text-sm font-medium h-10 flex items-center">Vk Available (V)</label>
+                      <Input type="number" step="any" value={editForm.vk} onChange={e => setEditForm(p => ({...p, vk: e.target.value}))} placeholder="400" className="h-10 font-mono border border-gray-300" />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">Io at Vk (mA)</label>
-                      <Input type="number" step="any" value={editForm.io} onChange={e => setEditForm(p => ({...p, io: e.target.value}))} placeholder="30" className="h-10 font-mono" />
+                      <label className="text-sm font-medium h-10 flex items-center">Io at Vk (mA)</label>
+                      <Input type="number" step="any" value={editForm.io} onChange={e => setEditForm(p => ({...p, io: e.target.value}))} placeholder="30" className="h-10 font-mono border border-gray-300" />
                     </div>
                   </div>
                 </div>
               </TabsContent>
 
               {/* Wiring Tab */}
-              <TabsContent value="wiring" className="p-6 space-y-4">
+              <TabsContent value="wiring" className="p-6 space-y-4 m-0">
                 <div>
                   <h3 className="font-semibold mb-4">CT Wiring Parameters</h3>
                   <p className="text-sm text-muted-foreground mb-4">Cable from CT to relay panel</p>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Conductor (mm²)</label>
-                      <Input type="number" step="any" placeholder="2.5" className="h-10 font-mono" />
+                      <Input type="number" step="any" placeholder="2.5" className="h-10 font-mono border border-gray-300" />
                     </div>
                     <div className="space-y-2">
                       <label className="text-sm font-medium">R at 20°C (Ω/km)</label>
-                      <Input type="number" step="any" placeholder="7.41" className="h-10 font-mono" />
+                      <Input type="number" step="any" placeholder="7.41" className="h-10 font-mono border border-gray-300" />
                     </div>
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Temp. Coefficient</label>
-                      <Input type="number" step="any" placeholder="0.00393" className="h-10 font-mono" />
+                      <Input type="number" step="any" placeholder="0.00393" className="h-10 font-mono border border-gray-300" />
                     </div>
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Temperature (°C)</label>
-                      <Input type="number" step="any" placeholder="75" className="h-10 font-mono" />
+                      <Input type="number" step="any" placeholder="75" className="h-10 font-mono border border-gray-300" />
                     </div>
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Cable Length (m)</label>
-                      <Input type="number" step="any" placeholder="50" className="h-10 font-mono" />
+                      <Input type="number" step="any" placeholder="50" className="h-10 font-mono border border-gray-300" />
                     </div>
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Cores (1/2)</label>
-                      <Input type="number" min="1" max="2" placeholder="2" className="h-10 font-mono" />
+                      <Input type="number" min="1" max="2" placeholder="2" className="h-10 font-mono border border-gray-300" />
                     </div>
                   </div>
                 </div>
@@ -924,14 +1174,24 @@ export default function IEDsPage() {
               </TabsContent>
             </Tabs>
 
-            {/* Compute Button - Full Width */}
-            <div className="pt-4 border-t">
+            {/* Compute & Modify Buttons */}
+            <div className="pt-4 border-t flex gap-2">
               <Button 
                 onClick={() => runComputation()} 
                 disabled={computing || !editForm.name || !editForm.model}
-                className="w-full h-12 text-lg font-semibold bg-blue-600 hover:bg-blue-700"
+                size="sm"
+                className="gap-1.5 bg-blue-600 hover:bg-blue-700"
               >
-                {computing ? <><Loader2 className="h-5 w-5 animate-spin mr-2" />Computing...</> : <><Zap className="h-5 w-5 mr-2" />Compute CT Adequacy</>}
+                {computing ? <><Loader2 className="h-4 w-4 animate-spin" /></> : <><Zap className="h-4 w-4" />Compute</>}
+              </Button>
+              <Button 
+                onClick={() => {
+                  setComputationResult(null);
+                }}
+                size="sm"
+                className="gap-1.5 bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+              >
+                Modify
               </Button>
             </div>
           </div>
