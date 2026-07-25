@@ -10,10 +10,11 @@ A comprehensive web-based platform for performing Current Transformer (CT) and V
 2. [Features](#features)
 3. [System Architecture](#system-architecture)
 4. [Getting Started](#getting-started)
-5. [User Guide](#user-guide)
-6. [IED Templates](#ied-templates)
-7. [Technical Details](#technical-details)
-8. [API Documentation](#api-documentation)
+5. **[📖 INPUT GUIDES - START HERE](#input-guides)** ⭐
+6. [User Guide](#user-guide)
+7. [IED Templates](#ied-templates)
+8. [Technical Details](#technical-details)
+9. [API Documentation](#api-documentation)
 
 ---
 
@@ -178,6 +179,58 @@ The system automatically initializes with 2 IED templates:
 - RED670 – Transformer Differential
 
 No additional seeding required for new installations.
+
+---
+
+---
+
+## 📖 INPUT GUIDES ⭐ START HERE
+
+**New to CT adequacy calculations? Here are three guides to help you understand what inputs to give:**
+
+### 🚀 **Option 1: Quick Start (5 minutes)**
+👉 **Read:** `INPUT_CHEAT_SHEET.md`
+- Standard values table for common cable sizes
+- Quick "where to find" checklist  
+- Common mistakes to avoid
+- Fastest way to get started
+
+### 📊 **Option 2: Visual Explanation (15 minutes)**
+👉 **Read:** `INPUT_VISUAL_GUIDE.md`
+- Diagrams showing physical locations
+- Visual flowcharts of data collection
+- Example: "Where does this value come from?"
+- Best if you learn by seeing pictures
+
+### 📚 **Option 3: Complete Reference (30 minutes)**
+👉 **Read:** `INPUT_GUIDE.md`
+- Detailed explanation of EVERY field
+- WHERE to find each value (source document)
+- WHAT each value means (engineering definition)  
+- Real-world examples and scenarios
+- Complete verification checklist
+
+### 🎯 How to Use These Guides:
+
+1. **First time creating an IED?**
+   - Start with `INPUT_CHEAT_SHEET.md` (5 min)
+   - Then read `INPUT_VISUAL_GUIDE.md` (10 min)
+   - Now you understand the big picture
+
+2. **Creating your first computation?**
+   - Use the cheat sheet as your reference
+   - When unsure about a field, search `INPUT_GUIDE.md`
+   - Takes 15-20 min for first one, 2 min for repeats
+
+3. **Don't know a specific field value?**
+   - Search `INPUT_GUIDE.md` for that field
+   - Follow the "Where to find" instructions
+   - Look at the example values
+
+4. **Got all values? Ready to submit?**
+   - Use the verification checklist
+   - Make sure all values have correct units
+   - Click "Compute"
 
 ---
 

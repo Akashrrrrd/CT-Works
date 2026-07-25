@@ -2,19 +2,27 @@
  * INTELLIGENT CT/VT ADEQUACY ANALYSIS ENGINE
  * Implements all formulas from the system spec exactly.
  * No hardcoded relay logic — relay formulas are loaded dynamically.
+ *
+ * FIX: FullAnalysisInput.ct now carries ratio_primary_tap2 and active_tap so
+ * RED670's two real CT taps (not a fabricated placeholder) can flow all the
+ * way from the frontend through to the calculator. runFullAnalysis's RED670
+ * branch previously always read tap_comparison.tap2 regardless of which tap
+ * was actually in service — it now reads whichever tap the caller specified.
  */
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 export interface CTParameters {
-  ratio_primary:    number;   // Ipn — A
-  ratio_secondary:  number;   // In — A
-  accuracy_class:   string;   // e.g. 5P20, Class X, PX
-  rct:              number;   // CT winding resistance — Ω
-  rated_burden_va:  number;   // Rated burden — VA
-  alf:              number;   // Accuracy Limit Factor
-  vk_available:     number;   // Knee point voltage — V
-  io_at_vk:         number;   // Magnetising current at Vk — mA
+  ratio_primary:      number;   // Ipn — A (Tap-1 for RED670, the only tap for others)
+  ratio_primary_tap2?: number;  // RED670 only — Tap-2 primary. Defaults to ratio_primary if absent.
+  active_tap?:         'tap1' | 'tap2'; // RED670 only — which tap is actually in service.
+  ratio_secondary:    number;   // In — A
+  accuracy_class:     string;   // e.g. 5P20, Class X, PX
+  rct:                number;   // CT winding resistance — Ω
+  rated_burden_va:    number;   // Rated burden — VA
+  alf:                number;   // Accuracy Limit Factor
+  vk_available:       number;   // Knee point voltage — V
+  io_at_vk:           number;   // Magnetising current at Vk — mA
 }
 
 export interface VTParameters {
@@ -126,7 +134,7 @@ export function runFullAnalysis(input: FullAnalysisInput, templateType?: string)
   if (templateType === 'tpl-siemens-7sj85' || templateType === 'SIEMENS 7SJ85' || templateType === 'siemens-7sj85') {
     // Delegate to specialized 7SJ85 calculator
     const result = Siemens7SJ85Calculator.performCompleteCalculation(input as any);
-    
+
     // Convert to standard AnalysisResult format
     return {
       verdict: result.final_verdict === 'SUITABLY DIMENSIONED' ? 'ADEQUATE' : 'UNDER DIMENSIONED',
@@ -159,7 +167,7 @@ export function runFullAnalysis(input: FullAnalysisInput, templateType?: string)
         pe: result.burden_calculations?.internal_burden_va || 0,
         pl: result.burden_calculations?.total_load_burden_va || 0,
         ied_total_va: result.burden_calculations?.total_load_burden_va || 0,
-        total_va: (result.burden_calculations?.internal_burden_va || 0) + 
+        total_va: (result.burden_calculations?.internal_burden_va || 0) +
                   (result.burden_calculations?.total_load_burden_va || 0)
       },
       kssc: {
@@ -171,11 +179,11 @@ export function runFullAnalysis(input: FullAnalysisInput, templateType?: string)
     };
   }
 
-  // Check if this is an ABB RET670 calculation request  
+  // Check if this is an ABB RET670 calculation request
   if (templateType === 'tpl-abb-ret670' || templateType === 'ABB RET670' || templateType === 'abb-ret670') {
     // Delegate to specialized RET670 calculator
     const result = ABB_RET670_Calculator.performCompleteCalculation(input as any);
-    
+
     // Convert to standard AnalysisResult format
     return {
       verdict: result.final_verdict === 'SUITABLY DIMENSIONED' ? 'ADEQUATE' : 'UNDER DIMENSIONED',
@@ -223,10 +231,14 @@ export function runFullAnalysis(input: FullAnalysisInput, templateType?: string)
   if (templateType === 'tpl-red670' || templateType === 'RED670' || templateType === 'red670') {
     // Delegate to specialized RED670 calculator
     const result = RED670_Calculator.performCompleteCalculation(input as any);
-    
-    // Get recommended tap results (tap2 - 1800A)
-    const tapResults = result.tap_comparison?.tap2 || result.tap_comparison?.tap1;
-    
+
+    // FIX: previously always read tap_comparison.tap2 ("recommended tap
+    // (1800A)") no matter which tap was actually in service. The calculator
+    // now returns result.active_tap based on what the caller specified —
+    // read that dynamically instead of hardcoding tap2.
+    const activeTapKey: 'tap1' | 'tap2' = result.active_tap === 'tap1' ? 'tap1' : 'tap2';
+    const tapResults = result.tap_comparison?.[activeTapKey] || result.tap_comparison?.tap1 || result.tap_comparison?.tap2;
+
     // Convert to standard AnalysisResult format
     return {
       verdict: result.final_verdict === 'SUITABLY DIMENSIONED' ? 'ADEQUATE' : 'UNDER DIMENSIONED',

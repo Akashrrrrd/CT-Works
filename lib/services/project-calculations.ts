@@ -2,6 +2,31 @@
  * PROJECT CALCULATION SERVICE
  * Routes all project CT/VT adequacy calculations to the appropriate IED templates
  * Ensures all projects use the exact Hitachi N-19957 2-DF4W formulas and calculations
+ *
+ * FIXES in this version (RED670 branch of convertLegacyInput):
+ *  1. CT tap ratios were hardcoded to 3200/1800 regardless of the actual CT
+ *     ratio entered by the user. Now uses legacyInput.ct.ratio_primary as the
+ *     active tap.
+ *  2. Lead ("total_lead_resistance") was computed as a one-way, 20°C value
+ *     (cable_length_m/1000 * r20) instead of the loop resistance at 75°C
+ *     that the document's Ealreq formulas actually require
+ *     (2 * R20 * 1.21615 * length_km).
+ *  3. Through-fault / endzone-1 fault currents were hardcoded fractions of
+ *     the close-in fault current (×0.85 / ×0.87 / ×0.87 / ×0.89) instead of
+ *     being derived from the actual system + line parameters (Zs, Z1L, Z0L,
+ *     the 80% endzone-1 reach, and the 3×Z1+Z0 one-phase-to-earth
+ *     combination) exactly as done on pages 3-5 of the reference document.
+ *     This means R1/X1/R0/X0/line-length/bus-voltage/X-R-ratio inputs were
+ *     previously ignored entirely for RED670 — they are now the actual
+ *     drivers of the result.
+ *  4. NEW FIX: CT Tap-1 and Tap-2 were never both real. "tap1" used to be a
+ *     fabricated placeholder (activePrimary × 1.78, Rct × 1.75, Vk × 1.6,
+ *     Io × 2 — none of these came from the user), and active_tap was always
+ *     hardcoded to 'tap2'. FullAnalysisInput.ct now carries a real
+ *     ratio_primary_tap2 and active_tap from the caller, and both taps use
+ *     the SAME real Rct/Vk/Io the user entered (no invented scale factors),
+ *     since the form only collects one set of CT nameplate values shared by
+ *     both taps.
  */
 
 import { runFullAnalysis, type FullAnalysisInput, type AnalysisResult } from './calculation-engine';
@@ -14,7 +39,7 @@ export type IEDTemplateType = 'SIEMENS_7SJ85' | 'ABB_RET670' | 'RED670';
 
 export interface ProjectCalculationRequest {
   template_type: IEDTemplateType;
-  input_data: any; // Template-specific input structure
+  input_data: any;
   project_id: string;
   workspace_id: string;
   calculated_by: string;
@@ -43,21 +68,85 @@ export interface ProjectCalculationResult {
 }
 
 /**
+ * ============================================================
+ * REAL FAULT-CURRENT DERIVATION (Hitachi doc pages 2-5)
+ * Complex-impedance method: Zs from source, Z1L/Z0L from line data,
+ * endzone-1 reach at 80%, 1-ph-to-earth as Z1+Z2+Z0 (Z2=Z1).
+ * ============================================================
+ */
+interface Complex { r: number; x: number }
+
+function cAdd(a: Complex, b: Complex): Complex {
+  return { r: a.r + b.r, x: a.x + b.x };
+}
+function cScale(a: Complex, k: number): Complex {
+  return { r: a.r * k, x: a.x * k };
+}
+function cMag(a: Complex): number {
+  return Math.sqrt(a.r * a.r + a.x * a.x);
+}
+
+function deriveRED670FaultCurrents(system: {
+  frequency: number;
+  bus_voltage_kv: number;
+  fault_current_ka: number; // max HV busbar fault current (close-in), Ikmax
+  xr_ratio: number;
+}, line: {
+  r1: number; x1: number; r0: number; x0: number; length_km: number;
+}) {
+  const V_LL = system.bus_voltage_kv * 1000;     // V, line-to-line
+  const Ikmax = system.fault_current_ka * 1000;   // A, close-in fault current (given directly)
+
+  // Source impedance magnitude + angle
+  const Zs_mag = V_LL / (Math.sqrt(3) * Ikmax);
+  const theta = Math.atan(system.xr_ratio);
+  const Zs: Complex = { r: Zs_mag * Math.cos(theta), x: Zs_mag * Math.sin(theta) };
+
+  // Full-length line impedances
+  const Z1L: Complex = { r: line.r1 * line.length_km, x: line.x1 * line.length_km };
+  const Z0L: Complex = { r: line.r0 * line.length_km, x: line.x0 * line.length_km };
+  // 80% reach for endzone-1
+  const Z1L_80: Complex = cScale(Z1L, 0.8);
+  const Z0L_80: Complex = cScale(Z0L, 0.8);
+
+  // --- Through-fault (100% line length) ---
+  const Z1t = cAdd(Zs, Z1L);                 // 3-phase through-fault impedance
+  const If_3ph_through = V_LL / (Math.sqrt(3) * cMag(Z1t));
+
+  const Z0t = cAdd(Zs, Z0L);
+  const Z0f_through = cAdd(cAdd(Z1t, Z1t), Z0t); // Z1t + Z2t + Z0t, Z2t = Z1t
+  const If_1ph_through = (3 * V_LL) / (Math.sqrt(3) * cMag(Z0f_through));
+
+  // --- Endzone-1 (80% reach) ---
+  const Z1zone1 = cAdd(Zs, Z1L_80);
+  const If_3ph_endzone1 = V_LL / (Math.sqrt(3) * cMag(Z1zone1));
+
+  const Z0zone1 = cAdd(Zs, Z0L_80);
+  const Z0f_zone1 = cAdd(cAdd(Z1zone1, Z1zone1), Z0zone1);
+  const If_1ph_endzone1 = (3 * V_LL) / (Math.sqrt(3) * cMag(Z0f_zone1));
+
+  return {
+    max_hv_fault_current: Ikmax,
+    max_through_fault_3ph: If_3ph_through,
+    max_through_fault_1ph: If_1ph_through,
+    max_endzone1_3ph: If_3ph_endzone1,
+    max_endzone1_1ph: If_1ph_endzone1,
+  };
+}
+
+/**
  * MAIN PROJECT CALCULATION FUNCTION
- * All project calculations MUST go through this function to ensure
- * consistent use of Hitachi N-19957 2-DF4W formulas
  */
 export async function performProjectCalculation(
   request: ProjectCalculationRequest
 ): Promise<ProjectCalculationResult> {
-  
+
   const calculation_id = `calc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   const calculation_date = new Date().toISOString();
 
   let detailed_results: any;
   let validation: any;
-  
-  // Route to appropriate IED template calculator
+
   switch (request.template_type) {
     case 'SIEMENS_7SJ85':
       detailed_results = Siemens7SJ85Calculator.performCompleteCalculation({
@@ -66,23 +155,22 @@ export async function performProjectCalculation(
       });
       validation = validateSiemens7SJ85Results(detailed_results);
       break;
-      
+
     case 'ABB_RET670':
       detailed_results = ABB_RET670_Calculator.performCompleteCalculation(request.input_data);
       validation = ABB_RET670_Calculator.validateAgainstDocument(detailed_results);
       break;
-      
+
     case 'RED670':
       detailed_results = RED670_Calculator.performCompleteCalculation(request.input_data);
       validation = RED670_Calculator.validateAgainstDocument(detailed_results);
       break;
-      
+
     default:
       throw new Error(`Unsupported IED template type: ${request.template_type}`);
   }
 
-  // Determine final verdict
-  const final_verdict = detailed_results.final_verdict === 'SUITABLY DIMENSIONED' ? 
+  const final_verdict = detailed_results.final_verdict === 'SUITABLY DIMENSIONED' ?
     'SUITABLY DIMENSIONED' : 'UNDER DIMENSIONED';
 
   return {
@@ -104,21 +192,17 @@ export async function performProjectCalculation(
   };
 }
 
-/**
- * Get multiple calculations for comparative analysis
- */
 export async function performMultipleProjectCalculations(
   requests: ProjectCalculationRequest[]
 ): Promise<ProjectCalculationResult[]> {
   const results: ProjectCalculationResult[] = [];
-  
+
   for (const request of requests) {
     try {
       const result = await performProjectCalculation(request);
       results.push(result);
     } catch (error) {
       console.error(`Failed calculation for ${request.template_type}:`, error);
-      // Add failed calculation result
       results.push({
         calculation_id: `failed_${Date.now()}`,
         template_type: request.template_type,
@@ -142,7 +226,7 @@ export async function performMultipleProjectCalculations(
       });
     }
   }
-  
+
   return results;
 }
 
@@ -150,7 +234,7 @@ export async function performMultipleProjectCalculations(
  * Convert legacy calculation inputs to IED template format
  */
 export function convertLegacyInput(
-  legacyInput: FullAnalysisInput, 
+  legacyInput: FullAnalysisInput,
   templateType: IEDTemplateType
 ): any {
   switch (templateType) {
@@ -177,18 +261,6 @@ export function convertLegacyInput(
           zero_seq_resistance_r0: legacyInput.line.r0,
           zero_seq_reactance_x0: legacyInput.line.x0,
           route_length: legacyInput.line.length_km,
-          cable_positive_seq_impedance: Math.sqrt(legacyInput.line.r1 ** 2 + legacyInput.line.x1 ** 2),
-          cable_zero_seq_impedance: Math.sqrt(legacyInput.line.r0 ** 2 + legacyInput.line.x0 ** 2),
-          total_cable_positive_seq_impedance: Math.sqrt(
-            (legacyInput.line.r1 * legacyInput.line.length_km) ** 2 + 
-            (legacyInput.line.x1 * legacyInput.line.length_km) ** 2
-          ),
-          total_cable_zero_seq_impedance: Math.sqrt(
-            (legacyInput.line.r0 * legacyInput.line.length_km) ** 2 + 
-            (legacyInput.line.x0 * legacyInput.line.length_km) ** 2
-          ),
-          source_impedance_zs: 0, // Will be calculated by Siemens7SJ85Calculator
-          impedance_angle_in_radians: Math.atan(legacyInput.system.xr_ratio)
         },
         ct_core: {
           ct_ratio_primary: legacyInput.ct.ratio_primary,
@@ -204,12 +276,12 @@ export function convertLegacyInput(
         })),
         accuracy_limit_factor: legacyInput.ct.alf || 10
       };
-      
+
     case 'ABB_RET670':
       return {
         ct_parameters: {
           ct_ratio_tap1: 3200,
-          ct_ratio_tap2: 600, // Most common for transformers
+          ct_ratio_tap2: legacyInput.ct.ratio_primary || 600,
           ct_ratio_secondary: legacyInput.ct.ratio_secondary,
           class_of_accuracy: legacyInput.ct.accuracy_class,
           ct_resistance: legacyInput.ct.rct,
@@ -219,14 +291,14 @@ export function convertLegacyInput(
         system_parameters: {
           system_frequency: legacyInput.system.frequency,
           hv_bus_voltage: legacyInput.system.bus_voltage_kv,
-          mv_bus_voltage: legacyInput.system.bus_voltage_kv * 0.25, // Assume step-down
+          mv_bus_voltage: legacyInput.system.bus_voltage_kv * 0.25,
           max_hv_fault_current: legacyInput.system.fault_current_ka * 1000,
           max_mv_fault_current: legacyInput.system.fault_current_ka * 1000 * 0.8,
-          transformer_rating_mva: 100, // Standard assumption
+          transformer_rating_mva: 100,
           percentage_impedance: 25
         },
         wiring_parameters: {
-          total_lead_resistance: legacyInput.wiring.cable_length_m / 1000 * legacyInput.wiring.r20,
+          total_lead_resistance: 2 * (legacyInput.wiring.cable_length_m / 1000) * (legacyInput.wiring.r20 * 1.21615),
           conductor_length: legacyInput.wiring.cable_length_m,
           conductor_cross_section: legacyInput.wiring.conductor_mm2,
           resistance_per_km: legacyInput.wiring.r20
@@ -236,37 +308,64 @@ export function convertLegacyInput(
           other_devices_burden: 0
         }
       };
-      
-    case 'RED670':
+
+    case 'RED670': {
+      // FIX: derive real fault currents instead of fixed multipliers.
+      const faults = deriveRED670FaultCurrents(legacyInput.system, legacyInput.line);
+
+      // FIX: loop resistance at 75°C, not one-way resistance at 20°C.
+      const loop_resistance_75c =
+        2 * (legacyInput.wiring.cable_length_m / 1000) * (legacyInput.wiring.r20 * 1.21615);
+
+      // FIX: use the REAL Tap-1 and Tap-2 CT ratios the user entered — no
+      // more fabricated placeholder ("×1.78") for tap1. If the caller only
+      // ever sends one tap (ratio_primary_tap2 absent), both taps fall back
+      // to the same value so the calculation still runs sensibly.
+      const tap1Primary = legacyInput.ct.ratio_primary;
+      const tap2Primary = legacyInput.ct.ratio_primary_tap2 ?? tap1Primary;
+
+      // Rct/Vk/Io are a single set of nameplate values shared by both taps
+      // (the form only collects one of each) — no more invented per-tap
+      // scale factors (×1.75 / ×1.6 / ×2) that had no basis in user input.
+      const activeRct = legacyInput.ct.rct;
+      const activeVk = legacyInput.ct.vk_available;
+      const activeIo = legacyInput.ct.io_at_vk;
+
+      // FIX: which tap is actually in service now comes from the caller
+      // instead of being hardcoded to 'tap2'. Defaults to 'tap1' if the
+      // caller doesn't specify (Tap-1 is generally the primary/higher-ratio
+      // tap on the CT nameplate).
+      const activeTap: 'tap1' | 'tap2' = legacyInput.ct.active_tap ?? 'tap1';
+
       return {
         ct_parameters: {
-          ct_ratio_tap1: 3200,
-          ct_ratio_tap2: 1800, // Most common for feeders
+          ct_ratio_tap1: tap1Primary,
+          ct_ratio_tap2: tap2Primary,
           ct_ratio_secondary: legacyInput.ct.ratio_secondary,
           class_of_accuracy: legacyInput.ct.accuracy_class,
-          ct_resistance_tap1: legacyInput.ct.rct * 1.75, // Scale for different taps
-          ct_resistance_tap2: legacyInput.ct.rct,
-          knee_point_voltage_tap1: legacyInput.ct.vk_available * 1.6,
-          knee_point_voltage_tap2: legacyInput.ct.vk_available,
-          magnetizing_current_tap1: legacyInput.ct.io_at_vk,
-          magnetizing_current_tap2: legacyInput.ct.io_at_vk * 2
+          ct_resistance_tap1: activeRct,
+          ct_resistance_tap2: activeRct,
+          knee_point_voltage_tap1: activeVk,
+          knee_point_voltage_tap2: activeVk,
+          magnetizing_current_tap1: activeIo,
+          magnetizing_current_tap2: activeIo
         },
         system_parameters: {
           system_frequency: legacyInput.system.frequency,
           hv_bus_voltage: legacyInput.system.bus_voltage_kv,
           mv_bus_voltage: legacyInput.system.bus_voltage_kv,
-          max_hv_fault_current: legacyInput.system.fault_current_ka * 1000,
-          max_through_fault_3ph: legacyInput.system.fault_current_ka * 1000 * 0.85,
-          max_through_fault_1ph: legacyInput.system.fault_current_ka * 1000 * 0.87,
-          max_endzone1_3ph: legacyInput.system.fault_current_ka * 1000 * 0.87,
-          max_endzone1_1ph: legacyInput.system.fault_current_ka * 1000 * 0.89,
+          max_hv_fault_current: faults.max_hv_fault_current,
+          max_through_fault_3ph: faults.max_through_fault_3ph,
+          max_through_fault_1ph: faults.max_through_fault_1ph,
+          max_endzone1_3ph: faults.max_endzone1_3ph,
+          max_endzone1_1ph: faults.max_endzone1_1ph,
           xr_ratio: legacyInput.system.xr_ratio,
-          system_time_constant_3ph: 47.73,
-          system_time_constant_1ph_through: 27.37,
-          system_time_constant_1ph_endzone: 29.64
+          system_time_constant_3ph: (legacyInput.system.xr_ratio / (2 * Math.PI * legacyInput.system.frequency)) * 1000,
+          system_time_constant_1ph_through: (legacyInput.system.xr_ratio / (2 * Math.PI * legacyInput.system.frequency)) * 1000,
+          system_time_constant_1ph_endzone: (legacyInput.system.xr_ratio / (2 * Math.PI * legacyInput.system.frequency)) * 1000
         },
         wiring_parameters: {
-          total_lead_resistance: legacyInput.wiring.cable_length_m / 1000 * legacyInput.wiring.r20,
+          total_lead_resistance: loop_resistance_75c,
           conductor_length: legacyInput.wiring.cable_length_m,
           conductor_cross_section: legacyInput.wiring.conductor_mm2,
           resistance_per_km: legacyInput.wiring.r20
@@ -281,15 +380,16 @@ export function convertLegacyInput(
           zero_sequence_resistance: legacyInput.line.r0,
           zero_sequence_reactance: legacyInput.line.x0,
           route_length: legacyInput.line.length_km
-        }
+        },
+        active_tap: activeTap
       };
-      
+    }
+
     default:
       throw new Error(`Cannot convert legacy input for template type: ${templateType}`);
   }
 }
 
-// Helper functions
 function getApplicationDescription(templateType: IEDTemplateType): string {
   switch (templateType) {
     case 'SIEMENS_7SJ85':
@@ -304,34 +404,22 @@ function getApplicationDescription(templateType: IEDTemplateType): string {
 }
 
 function validateSiemens7SJ85Results(results: any): any {
-  // Basic validation for SIEMENS 7SJ85
-  const tolerance = 2; // 2% tolerance
   const differences: string[] = [];
-  
-  // Expected values would be specific to the project configuration
-  // This is a simplified validation
+
   const hasRequiredKssc = results.adequacy_check?.required_kssc || results.required_kssc;
   const hasAvailableKssc = results.adequacy_check?.available_kssc || results.available_kssc;
-  
-  if (!hasRequiredKssc) {
-    differences.push('Missing required Kssc value');
-  }
-  
-  if (!hasAvailableKssc) {
-    differences.push('Missing available Kssc value');
-  }
-  
+
+  if (!hasRequiredKssc) differences.push('Missing required Kssc value');
+  if (!hasAvailableKssc) differences.push('Missing available Kssc value');
+
   const validation = differences.length === 0;
-  const summary = validation 
-    ? '✅ All calculations completed successfully'
-    : `❌ ${differences.length} validation issue(s) found`;
+  const summary = validation
+    ? 'All calculations completed successfully'
+    : `${differences.length} validation issue(s) found`;
 
   return { validation, differences, summary };
 }
 
-/**
- * Project calculation wrapper that automatically uses appropriate IED template
- */
 export function calculateProjectCTAdequacy(
   input: FullAnalysisInput,
   templateType: IEDTemplateType,
@@ -341,9 +429,9 @@ export function calculateProjectCTAdequacy(
     calculated_by: string;
   }
 ): Promise<ProjectCalculationResult> {
-  
+
   const convertedInput = convertLegacyInput(input, templateType);
-  
+
   const request: ProjectCalculationRequest = {
     template_type: templateType,
     input_data: convertedInput,
@@ -351,6 +439,6 @@ export function calculateProjectCTAdequacy(
     workspace_id: projectMetadata.workspace_id,
     calculated_by: projectMetadata.calculated_by
   };
-  
+
   return performProjectCalculation(request);
 }

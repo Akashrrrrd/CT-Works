@@ -43,10 +43,13 @@ export async function GET(
       id:             c._id.toString(),
       templateId:     c.templateId?.toString(),
       templateName:   c.templateName,
+      templateType:   c.templateType ?? c.intermediates?.template_type ?? null,
       verdict:        c.verdict,
       vk_required:    c.vk_required,
       vk_available:   c.vk_available,
       ealreq_max:     c.ealreq_max,
+      required_kssc:  c.intermediates?.required_kssc,
+      available_kssc: c.intermediates?.available_kssc,
       vk_breakdown:   c.vk_breakdown  ?? [],
       intermediates:  c.intermediates ?? {},
       sheet1:         c.sheet1        ?? {},
@@ -73,12 +76,13 @@ export async function POST(
     const body = await request.json();
     const { templateId, sheet1, sheet2 } = body as {
       templateId: string;
-      sheet1: Sheet1Inputs;
+      sheet1: Sheet1Inputs & { ct_ratio_tap2?: number };
       sheet2: Sheet2Inputs;
     };
 
     console.log('API Received sheet1:', {
       ct_ratio_primary: sheet1.ct_ratio_primary,
+      ct_ratio_tap2: sheet1.ct_ratio_tap2,
       ct_resistance: sheet1.ct_resistance,
       resistance_20c: sheet1.resistance_20c,
       cable_length: sheet1.cable_length,
@@ -134,7 +138,7 @@ export async function POST(
             ct_conductor_cross_section: sheet1.conductor_cross_section || 2.5,
             ct_resistance_w_km_20c: sheet1.resistance_20c || 7.41,
             ct_specific_resistance_20c: sheet1.temp_coefficient || 0.00393,
-            ct_conductor_length_m: sheet1.cable_length || 50,
+            ct_conductor_length_m: sheet1.cable_length ?? 50,
             relay_rated_current: sheet1.ct_ratio_secondary || 1
           },
           system: {
@@ -193,10 +197,13 @@ export async function POST(
           const calcResult = Siemens7SJ85Calculator.performCompleteCalculation(calculatorInput);
 
           result = {
+            templateType: 'SIEMENS_7SJ85',
             verdict: calcResult.verdict === 'SUITABLY DIMENSIONED' ? 'SUITABLY DIMENSIONED' : 'UNDER DIMENSIONED',
             ealreq_max: calcResult.ealreq_max || 0,
             vk_required: calcResult.vk_required || 0,
             vk_available: calcResult.vk_available || 0,
+            required_kssc: calcResult.required_kssc || 0,
+            available_kssc: calcResult.available_kssc || 0,
             vk_breakdown: calcResult.vk_breakdown || [],
             intermediates: {
               template_type: 'SIEMENS_7SJ85',
@@ -229,6 +236,11 @@ export async function POST(
         const fullAnalysisInput: FullAnalysisInput = {
           ct: {
             ratio_primary: sheet1.ct_ratio_primary || 2000,
+            // NOTE: Tap-2 primary. Confirm FullAnalysisInput/calculateProjectCTAdequacy
+            // in project-calculations.ts actually consumes this field — if it doesn't,
+            // Tap-2 entered on the frontend will silently have no effect on the result,
+            // same class of bug as the old hardcoded "always tap2" issue.
+            ratio_primary_tap2: sheet1.ct_ratio_tap2 || sheet1.ct_ratio_primary || 2000,
             ratio_secondary: sheet1.ct_ratio_secondary || 1,
             accuracy_class: sheet1.accuracy_class || '5P20',
             rct: sheet1.ct_resistance || 0.5,
@@ -242,7 +254,7 @@ export async function POST(
             r20: sheet1.resistance_20c || 3.69,
             alpha: sheet1.temp_coefficient || 0.00393,
             temperature: sheet1.operating_temperature || 75,
-            cable_length_m: sheet1.cable_length || 120,
+            cable_length_m: sheet1.cable_length ?? 120,
             cores: 2
           },
           ieds: [{
@@ -276,11 +288,14 @@ export async function POST(
         );
 
         result = {
+          templateType: iedTemplateType,
           verdict: projectResult.final_verdict === 'SUITABLY DIMENSIONED' ? 'SUITABLY DIMENSIONED' : 'UNDER DIMENSIONED',
           ealreq_max: projectResult.detailed_results?.ct_adequacy_check?.highest_ealreq || 
                      projectResult.detailed_results?.ealreq_calculations?.highest_ealreq || 0,
           vk_required: projectResult.detailed_results?.ct_adequacy_check?.required_vk || 0,
           vk_available: projectResult.detailed_results?.ct_adequacy_check?.available_vk || 0,
+          required_kssc: projectResult.detailed_results?.ct_adequacy_check?.required_kssc,
+          available_kssc: projectResult.detailed_results?.ct_adequacy_check?.available_kssc,
           vk_breakdown: [],
           intermediates: {
             template_type: iedTemplateType,
@@ -298,6 +313,7 @@ export async function POST(
     } else {
       // Use legacy calculation for non-IED templates
       result = calculateCTAdequacy(template.iedType, sheet1, sheet2);
+      result.templateType = result.templateType ?? 'LEGACY';
       result.intermediates = {
         ...result.intermediates,
         calculation_method: 'Legacy'
@@ -314,6 +330,7 @@ export async function POST(
       workspaceId:    new ObjectId(id),
       templateId:     template._id,
       templateName:   template.name,
+      templateType:   result.templateType,
       iedType:        template.iedType,
       sheet1,
       sheet2,
