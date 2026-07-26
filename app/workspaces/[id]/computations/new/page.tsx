@@ -339,50 +339,64 @@ export default function NewComputationPage() {
     console.log('🚀 Using NEW PROFESSIONAL PDF Generator from computations page');
     
     // Use the new professional PDF generator instead of the old HITACHI one
-    const { generateDevicePDFReport } = await import('@/lib/services/pdf-report');
+    const { generateEngineReport } = await import('@/lib/services/engine-pdf-report');
     
-    // Convert result to DeviceResult format
-    const deviceResult = {
-      device_name: selectedTemplate.name,
-      device_index: 0,
-      device_type: 'COMPUTATION_DEVICE' as any,
-      verdict: result.verdict as any,
-      vk_available: result.vk_available,
-      vk_required: result.vk_required,
-      ealreq_max: result.ealreq_max,
-      vk_breakdown: result.vk_breakdown.map(v => ({ ...v, formula: v.formula || v.label })),
-      intermediates: result.intermediates,
-      inputs: {
-        ct_ratio_primary: parseFloat(lastSheet1.ct_ratio_primary),
-        ct_ratio_secondary: parseFloat(lastSheet1.ct_ratio_secondary),
-        accuracy_class: lastSheet1.accuracy_class,
-        rct: parseFloat(lastSheet1.rct),
-        lead_resistance: parseFloat(lastSheet2.lead_resistance),
-        relay_burden_va: parseFloat(lastSheet2.relay_burden_va),
+    const inputPayload = {
+      system: {
         frequency: parseFloat(lastSheet2.frequency),
         bus_voltage_kv: parseFloat(lastSheet2.bus_voltage_kv),
-        max_bus_fault_kA: parseFloat(lastSheet2.max_bus_fault_mva),
+        fault_current_ka: parseFloat(lastSheet2.max_bus_fault_mva),
+        xr_ratio: 10 // default
+      },
+      line: {
         r1: parseFloat(lastSheet2.r1),
         x1: parseFloat(lastSheet2.x1),
         r0: parseFloat(lastSheet2.r0),
         x0: parseFloat(lastSheet2.x0),
-        route_length_km: parseFloat(lastSheet2.route_length_km)
-      }
+        length_km: parseFloat(lastSheet2.route_length_km)
+      },
+      wiring: {
+        conductor_mm2: 6,
+        r20: parseFloat(lastSheet1.resistance_20c || '3.69'),
+        alpha: 0.00393,
+        temperature: 75,
+        cable_length_m: parseFloat(lastSheet2.lead_resistance),
+        cores: 2 as 2|1
+      },
+      ct: {
+        ratio_primary: parseFloat(lastSheet1.ct_ratio_primary),
+        ratio_secondary: parseFloat(lastSheet1.ct_ratio_secondary),
+        accuracy_class: lastSheet1.accuracy_class,
+        rct: parseFloat(lastSheet1.rct),
+        vk_available: result.vk_available || 0,
+        io_at_vk: parseFloat(lastSheet1.magnetizing_current || '0'),
+        alf: 20,
+        rated_burden_va: 0
+      },
+      vt: {
+        ratio_primary: 132000,
+        ratio_secondary: 110,
+        wiring_resistance: 0
+      },
+      ieds: [{ name: selectedTemplate.name, burden_va: 0, type: 'protection' }]
     };
-    
-    const systemParams = {
-      bus_fault_level: `${lastSheet2.max_bus_fault_mva}kA`,
-      system_frequency: `${lastSheet2.frequency}Hz`,
-      bus_voltage_level: `${lastSheet2.bus_voltage_kv}kV`,
-      xr_ratio: 'N/A',
-      route_length: `${lastSheet2.route_length_km}km`,
-      positive_seq_resistance_r1: `${lastSheet2.r1}`,
-      positive_seq_reactance_z1: `${lastSheet2.x1}`,
-      negative_seq_resistance_r0: `${lastSheet2.r0}`,
-      negative_seq_reactance_z0: `${lastSheet2.x0}`
+
+    const analysisResult = {
+      verdict: result.verdict === 'SUITABLY DIMENSIONED' ? 'ADEQUATE' : 'UNDER DIMENSIONED',
+      kssc_required: result.required_kssc || 0,
+      kssc_available: result.available_kssc || 0,
+      vk_required: result.vk_required || 0,
+      vk_available: result.vk_available || 0,
+      wiring: {} as any,
+      source: {} as any,
+      faults: {} as any,
+      burden: {} as any,
+      kssc: {} as any,
+      intermediates: result.intermediates || {},
+      conclusion: result.verdict === 'SUITABLY DIMENSIONED' ? 'Suitably Dimensioned' : 'Under Dimensioned'
     };
-    
-    generateDevicePDFReport(deviceResult, systemParams);
+
+    generateEngineReport(inputPayload, analysisResult as any);
   };
 
   const isSuitable = result?.verdict === 'SUITABLY DIMENSIONED';
