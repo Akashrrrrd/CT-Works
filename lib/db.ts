@@ -1,13 +1,13 @@
 import { MongoClient, Db, ObjectId } from 'mongodb';
 
-const DB_NAME = process.env.DB_NAME || 'ct-adequacy';
+const DB_NAME = process.env.DB_NAME_2 || process.env.DB_NAME || 'ct-adequacy';
 
 // Reuse client across hot-reloads in dev
 const globalForMongo = global as unknown as { _mongoClient?: MongoClient };
 
 function getClient(): MongoClient {
-  const uri = process.env.DATABASE_URL;
-  if (!uri) throw new Error('DATABASE_URL environment variable is not set');
+  const uri = process.env.DATABASE_URL_2 || process.env.DATABASE_URL;
+  if (!uri) throw new Error('DATABASE_URL or DATABASE_URL_2 environment variable is not set');
 
   if (process.env.NODE_ENV === 'development') {
     if (!globalForMongo._mongoClient) {

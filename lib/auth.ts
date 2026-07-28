@@ -15,9 +15,9 @@ export interface JwtPayload {
 const COOKIE_NAME = 'auth-token';
 
 function getSecret(): string {
-  const s = process.env.JWT_SECRET;
+  const s = process.env.JWT_SECRET_2 || process.env.JWT_SECRET;
   if (!s || s.length < 32) {
-    throw new Error('JWT_SECRET must be set and at least 32 characters long');
+    throw new Error('JWT_SECRET or JWT_SECRET_2 must be set and at least 32 characters long');
   }
   return s;
 }
