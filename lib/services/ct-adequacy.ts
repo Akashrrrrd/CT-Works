@@ -41,15 +41,18 @@ export interface DeviceInput {
 
 // Per-device calculation result
 export interface DeviceResult {
-  device_name:    string;
-  device_index:   number;
-  device_type:    DeviceType;
-  verdict:        'SUITABLY DIMENSIONED' | 'UNDER DIMENSIONED' | 'NOT APPLICABLE';
-  vk_available:   number;
-  vk_required:    number;
-  ealreq_max:     number;
-  vk_breakdown:   VkBreakdownEntry[];
-  intermediates:  Record<string, number | string>;
+  device_name:      string;
+  device_index:     number;
+  device_type:      DeviceType;
+  verdict:          'SUITABLY DIMENSIONED' | 'UNDER DIMENSIONED' | 'NOT APPLICABLE';
+  vk_available:     number;
+  vk_required:      number;
+  ealreq_max:       number;
+  kssc_available?:  number;  // Optional: for Kssc method devices
+  kssc_required?:   number;  // Optional: for Kssc method devices
+  calculation_method?: 'KSSC' | 'VK_METHOD';  // Indicates which calculation method was used
+  vk_breakdown:     VkBreakdownEntry[];
+  intermediates:    Record<string, number | string>;
   inputs: {
     ct_ratio_primary:   number;
     ct_ratio_secondary: number;
@@ -220,15 +223,18 @@ export function calculateDeviceCTAdequacy(
   // If critical inputs are missing, return a clear error result
   if (Ipn === 0 || Isn === 0) {
     return {
-      device_name:  device.device_name,
-      device_index: deviceIndex,
-      device_type:  deviceType,
-      verdict:      'NOT APPLICABLE',
-      vk_available: Vk,
-      vk_required:  0,
-      ealreq_max:   0,
-      vk_breakdown: [],
-      intermediates: { 'ERROR': `CT Ratio missing or invalid ("${device.ct_ratio}"). Cannot calculate.` },
+      device_name:        device.device_name,
+      device_index:       deviceIndex,
+      device_type:        deviceType,
+      verdict:            'NOT APPLICABLE',
+      vk_available:       Vk,
+      vk_required:        0,
+      ealreq_max:         0,
+      calculation_method: 'VK_METHOD',
+      kssc_available:     undefined,
+      kssc_required:      undefined,
+      vk_breakdown:       [],
+      intermediates:      { 'ERROR': `CT Ratio missing or invalid ("${device.ct_ratio}"). Cannot calculate.` },
       inputs: {
         ct_ratio_primary: Ipn, ct_ratio_secondary: Isn, accuracy_class: device.accuracy_class || 'N/A',
         rct: Rct, lead_resistance: 0, relay_burden_va: Sr,
@@ -383,13 +389,17 @@ export function calculateDeviceCTAdequacy(
   }
 
   return {
-    device_name:   device.device_name,
-    device_index:  deviceIndex,
-    device_type:   deviceType,
+    device_name:        device.device_name,
+    device_index:       deviceIndex,
+    device_type:        deviceType,
     verdict,
-    vk_available:  Vk,
+    vk_available:       Vk,
     vk_required,
-    ealreq_max:    +ealreq_max.toFixed(2),
+    ealreq_max:         +ealreq_max.toFixed(2),
+    calculation_method: 'VK_METHOD',  // This function uses Vk method
+    // Kssc fields are not used in this legacy path (remains undefined)
+    kssc_available:     undefined,
+    kssc_required:      undefined,
     vk_breakdown,
     intermediates,
     inputs: {

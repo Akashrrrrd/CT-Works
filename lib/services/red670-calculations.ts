@@ -297,10 +297,40 @@ export class RED670_Calculator {
       { label: 'Distance — Endzone-1 (3ph)', ealreq: active.distance_protection.endzone1_3ph, vk: active.distance_protection.endzone1_3ph * 0.8, isMax: false },
       { label: 'Distance — Endzone-1 (1ph)', ealreq: active.distance_protection.endzone1_1ph, vk: active.distance_protection.endzone1_1ph * 0.8, isMax: false },
     ].map((row) => ({ ...row, isMax: Math.abs(row.ealreq - active.overall_assessment.highest_ealreq) < 1e-6 }));
+    // Comprehensive intermediates for PDF reporting (all values computed from user inputs)
     results.intermediates = {
-      required_kssc: undefined,
-      available_kssc: undefined,
+      // Method Identification
+      'calculation_method': 'VK_METHOD',
+      
+      // Core CT Parameters
+      'Ipn_active': active.tap_info.primary_current,
+      'Rct': active.tap_info.ct_resistance,
+      'Vk_available': active.tap_info.available_vk,
+      
+      // Differential Protection Results
+      'diff_close_in_ealreq': Math.round(active.differential_protection.close_in_faults * 100) / 100,
+      'diff_through_3ph_ealreq': Math.round(active.differential_protection.through_faults_3ph * 100) / 100,
+      'diff_through_1ph_ealreq': Math.round(active.differential_protection.through_faults_1ph * 100) / 100,
+      'diff_controlling': active.differential_protection.controlling_equation,
+      
+      // Distance Protection Results
+      'dist_close_in_ealreq': Math.round(active.distance_protection.close_in_faults * 100) / 100,
+      'dist_endzone1_3ph_ealreq': Math.round(active.distance_protection.endzone1_3ph * 100) / 100,
+      'dist_endzone1_1ph_ealreq': Math.round(active.distance_protection.endzone1_1ph * 100) / 100,
+      'dist_controlling': active.distance_protection.controlling_equation,
+      
+      // Overall CT Adequacy
+      'Ealreq_max': Math.round(active.overall_assessment.highest_ealreq * 100) / 100,
+      'required_vk': results.vk_required,
+      'available_vk': results.vk_available,
+      'safety_margin_pct': Math.round(active.overall_assessment.safety_margin * 100) / 100,
+      
+      // Kssc fields (not applicable for RED670, but set to undefined for consistency)
+      'required_kssc': undefined,
+      'available_kssc': undefined,
     };
+    
+    results.calculation_method = 'VK_METHOD';  // Explicitly mark this as Vk method
 
     return results;
   }

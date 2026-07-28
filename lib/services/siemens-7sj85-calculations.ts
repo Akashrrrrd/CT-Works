@@ -310,9 +310,39 @@ export class Siemens7SJ85Calculator {
     results.available_kssc = Math.round(available_kssc * 100) / 100;
     results.verdict = verdict;
     results.final_verdict = verdict;
+    results.calculation_method = 'KSSC';  // Explicitly mark this as Kssc method
+    
+    // Comprehensive intermediates for PDF reporting (all values computed from user inputs)
     results.intermediates = {
+      // Fault Current Parameters
+      Itkmax: Itkmax,
+      Ipn: input.ct_core.ct_ratio_primary,
+      
+      // CT Secondary Current
+      In: input.ct_core.ct_ratio_secondary,
+      Rct: input.ct_core.ct_resistance,
+      
+      // Burden Parameters
+      PE: Math.round(PE * 100) / 100,  // Internal burden
+      PN: PN,  // Rated burden
+      'wiring_burden': Math.round(wiring_burden_va * 100) / 100,
+      'devices_burden': Math.round(PL_devices * 100) / 100,
+      PL: Math.round(PL_total * 100) / 100,  // Total lead burden
+      
+      // Accuracy & Method
+      n: input.accuracy_limit_factor,
+      'calculation_method': 'KSSC',
+      
+      // Final Results (computed from all above)
       required_kssc: results.required_kssc,
       available_kssc: results.available_kssc,
+      
+      // Wiring Details
+      'cable_R20': input.ct_wiring.ct_resistance_w_km_20c,
+      'cable_length_m': input.ct_wiring.ct_conductor_length_m,
+      'R_75C': Math.round(R_75C * 100) / 100,
+      'RL_one_way': Math.round(RL * 100) / 100,
+      'loop_resistance': Math.round(loop_resistance_ohm * 100) / 100,
     };
 
     return results;
