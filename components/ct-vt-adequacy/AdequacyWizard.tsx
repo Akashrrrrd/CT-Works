@@ -40,6 +40,7 @@ import type {
 
 import { AutomatedCalculationEngine } from '@/lib/services/automated-calculation-engine';
 import { IEDDatabaseService } from '@/lib/services/ied-database';
+import { ReportDownloadService } from '@/lib/services/report-download';
 
 interface WizardStep {
   id: number;
@@ -963,15 +964,45 @@ export function AdequacyWizard() {
                 )}
 
                 {/* Action Buttons */}
-                <div className="flex justify-center space-x-4">
-                  <Button onClick={() => handleDownloadReport()}>
-                    <Download className="w-4 h-4 mr-2" />
-                    Download Report
-                  </Button>
-                  <Button variant="outline" onClick={() => {
-                    setCurrentStep(1);
-                    setResults(null);
-                  }}>
+                <div className="space-y-3 pt-6 border-t">
+                  <div className="flex flex-col sm:flex-row justify-center gap-2">
+                    <Button 
+                      onClick={() => handleDownloadReport('html')}
+                      className="flex-1 bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white font-semibold py-2 px-4 rounded-lg shadow-lg hover:shadow-xl transition-all"
+                      size="lg"
+                    >
+                      <Download className="w-5 h-5 mr-2" />
+                      📥 HTML Report
+                    </Button>
+                    
+                    <Button 
+                      onClick={() => handleDownloadReport('json')}
+                      variant="outline"
+                      className="flex-1 py-2 px-4 rounded-lg font-semibold"
+                      size="lg"
+                    >
+                      📊 JSON Data
+                    </Button>
+                    
+                    <Button 
+                      onClick={() => handleDownloadReport('csv')}
+                      variant="outline"
+                      className="flex-1 py-2 px-4 rounded-lg font-semibold"
+                      size="lg"
+                    >
+                      📈 CSV Export
+                    </Button>
+                  </div>
+                  
+                  <Button 
+                    variant="outline" 
+                    onClick={() => {
+                      setCurrentStep(1);
+                      setResults(null);
+                    }}
+                    className="w-full py-2 px-4 rounded-lg font-semibold"
+                    size="lg"
+                  >
                     🔄 New Analysis
                   </Button>
                 </div>
@@ -989,77 +1020,49 @@ export function AdequacyWizard() {
     }
   };
 
-  const handleDownloadReport = () => {
+  const handleDownloadReport = async (format: 'html' | 'json' | 'csv' = 'html') => {
     if (!results) return;
 
-    const iedResults = results.ied_results.map(r => `
-    <div style="margin: 15px 0; padding: 10px; border-left: 3px solid ${r.verdict === 'SUITABLE' ? '#28a745' : '#dc3545'};">
-      <strong>${r.ied_name}</strong> - ${r.verdict}
-      <table style="font-size: 12px;">
-        <tr><td>CT Ratio:</td><td>${r.ct_ratio_primary}/${r.ct_ratio_secondary}A</td></tr>
-        <tr><td>Total Burden:</td><td>${r.total_burden} VA</td></tr>
-        <tr><td>Required Vk:</td><td>${r.required_vk} V</td></tr>
-        <tr><td>Available Vk:</td><td>${r.available_vk} V</td></tr>
-        <tr><td>Safety Margin:</td><td>${r.safety_margin}%</td></tr>
-      </table>
-    </div>
-    `).join('');
+    try {
+      const projectName = projectInfo.name || 'CT_VT_Analysis';
+      
+      let content: string;
+      let filename: string;
+      let mimeType: string;
 
-    const html = `<!DOCTYPE html>
-<html>
-<head>
-  <title>CT/VT Adequacy Report</title>
-  <style>
-    body { font-family: Arial; margin: 20px; }
-    .header { text-align: center; border-bottom: 2px solid #0066cc; padding: 20px 0; }
-    .verdict { font-size: 32px; font-weight: bold; padding: 20px; text-align: center; margin: 20px 0; border-radius: 8px; }
-    .suitable { background: #d4edda; color: #155724; }
-    .section { margin: 20px 0; padding: 15px; border-left: 4px solid #0066cc; }
-    table { width: 100%; border-collapse: collapse; margin: 10px 0; }
-    th { background: #0066cc; color: white; padding: 10px; text-align: left; }
-    td { padding: 8px; border-bottom: 1px solid #ddd; }
-    tr:hover { background: #f5f5f5; }
-  </style>
-</head>
-<body>
-  <div class="header">
-    <h1>CT/VT Adequacy Analysis Report</h1>
-    <p>Generated: ${new Date().toLocaleString()}</p>
-  </div>
-  
-  <div class="verdict suitable">
-    ${results.overall_summary.overall_verdict === 'ALL_SUITABLE' ? '✅ ALL SUITABLE' : '⚠️ ISSUES FOUND'}
-  </div>
+      switch (format) {
+        case 'json':
+          content = ReportDownloadService.generateJSONReport(results, { projectName });
+          filename = `CT_VT_Report_${projectName.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.json`;
+          mimeType = 'application/json;charset=utf-8';
+          break;
 
-  <div class="section">
-    <h2>Summary</h2>
-    <table>
-      <tr><th>Metric</th><th>Value</th></tr>
-      <tr><td>Suitable IEDs</td><td>${results.overall_summary.suitable_ieds}/${results.overall_summary.total_ieds_checked}</td></tr>
-      <tr><td>Success Rate</td><td>${Math.round((results.overall_summary.suitable_ieds / results.overall_summary.total_ieds_checked) * 100)}%</td></tr>
-    </table>
-  </div>
+        case 'csv':
+          content = ReportDownloadService.generateCSVReport(results, { projectName });
+          filename = `CT_VT_Report_${projectName.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.csv`;
+          mimeType = 'text/csv;charset=utf-8';
+          break;
 
-  <div class="section">
-    <h2>Individual Results</h2>
-    ${iedResults}
-  </div>
+        case 'html':
+        default:
+          content = ReportDownloadService.generateHTMLReport(
+            results,
+            projectInfo,
+            systemParams,
+            ctWiring,
+            vtWiring,
+            { projectName }
+          );
+          filename = `CT_VT_Report_${projectName.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.html`;
+          mimeType = 'text/html;charset=utf-8';
+          break;
+      }
 
-  <div class="section">
-    <p style="font-size: 12px; color: #666;">Report generated by CT/VT Adequacy Analysis System</p>
-  </div>
-</body>
-</html>`;
-
-    const blob = new Blob([html], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `CT_VT_Report_${new Date().toISOString().split('T')[0]}.html`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+      ReportDownloadService.downloadReport(content, filename, mimeType);
+    } catch (error) {
+      console.error('Error downloading report:', error);
+      alert('Failed to download report. Please try again.');
+    }
   };
 
   return (

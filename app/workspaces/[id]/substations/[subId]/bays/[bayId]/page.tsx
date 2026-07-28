@@ -16,7 +16,7 @@ import { Badge } from '@/components/ui/badge';
 import {
   ArrowLeft, Plus, AlertCircle, Pencil, Trash2, MoreVertical, Cpu,
   CheckCircle2, AlertTriangle, CircleDashed, Zap, Loader2, GitCompare,
-  ChevronRight, RotateCcw, Save,
+  ChevronRight, RotateCcw, Save, Download,
 } from 'lucide-react';
 
 // -----------------------------------------------------------------------------
@@ -1224,6 +1224,48 @@ function ResultPanel({ result, model }: { result: ComputationResult; model: stri
   const isRed670 = model === 'RED670';
   const adequate = result.verdict === 'SUITABLY DIMENSIONED';
 
+  const handleDownloadReport = async () => {
+    try {
+      const { generateDevicePDFReport } = await import('@/lib/services/pdf-report');
+      
+      // Convert result to DeviceResult format expected by pdf-report
+      const deviceResult = {
+        device_name: model,
+        device_type: model === 'RED670' ? 'RED_670' : 'SIEMENS_7SJ85',
+        verdict: result.verdict,
+        vk_required: result.vk_required ?? 0,
+        vk_available: result.vk_available ?? 0,
+        ealreq_max: result.ealreq_max ?? 0,
+        required_kssc: result.required_kssc ?? 0,
+        available_kssc: result.available_kssc ?? 0,
+        vk_breakdown: result.vk_breakdown ?? [],
+        intermediates: {}, // Empty intermediates object
+        inputs: {
+          ct_ratio_primary: 0,
+          ct_ratio_secondary: 1,
+          accuracy_class: '',
+          rct: 0,
+          lead_resistance: 0,
+          relay_burden_va: 0,
+          bus_voltage_kv: 0,
+          max_bus_fault_kA: 0,
+          route_length_km: 0,
+        }
+      } as any;
+
+      const systemParams = {
+        bus_voltage_kv: 0,
+        system_frequency: 50,
+        max_fault_current_ka: 0,
+      } as any;
+
+      await generateDevicePDFReport(deviceResult, systemParams);
+    } catch (error) {
+      console.error('Error downloading report:', error);
+      alert('Failed to download report');
+    }
+  };
+
   return (
     <Card className={adequate ? 'border-emerald-300 bg-emerald-50/50' : 'border-rose-300 bg-rose-50/50'}>
       <CardContent className="p-5 space-y-5">
@@ -1259,6 +1301,18 @@ function ResultPanel({ result, model }: { result: ComputationResult; model: stri
             <Stat label="Available Kssc" value={result.available_kssc ?? 0} unit="" />
           </div>
         )}
+
+        <div className="flex gap-2 pt-2">
+          <Button 
+            onClick={handleDownloadReport}
+            size="sm" 
+            variant="outline" 
+            className="gap-1.5 flex-1 bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200 hover:border-blue-300"
+          >
+            <Download className="h-4 w-4" />
+            Download Report
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );

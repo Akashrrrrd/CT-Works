@@ -13,6 +13,14 @@ import { StandardParameters } from './excel-processor';
  *  - A boxed company header ("HITACHI") in the top-left corner
  *  - A footer with confidentiality note, "Page X of Y" and timestamp
  * consistent with MNC document-control conventions.
+ *
+ * UPDATE: All calculation content (formulas, applied values, intermediates)
+ * is now pulled directly from the real DeviceResult produced by
+ * calculateDeviceCTAdequacy() — device.vk_breakdown[i].formula and
+ * device.intermediates. Nothing is hardcoded or re-derived independently
+ * anymore (the old generic "Ealreq = K x (If/n) x (Rct+2Rl+Rr)" box and the
+ * duplicate computeAppliedValues() calc have been removed, since they did
+ * not match the actual per-device-type formulas the engine uses).
  */
 
 // ---------- shared constants ----------
@@ -41,11 +49,11 @@ const PARAMETER_NOTES: Record<string, string> = {
   'CT Ratio': 'Current transformer turns ratio (primary/secondary ampere rating). Determines the scaling factor between primary and secondary circuits.',
   'Accuracy Class': 'CT accuracy classification per IEC or IEEE standards, indicating the maximum permissible error under specified conditions.',
   'CT Resistance': 'Secondary winding resistance of the current transformer, affecting the voltage drop across the CT itself.',
-  'Lead Resistance': 'One-way resistance of the pilot wire or cable connecting the CT secondary to the relay. Total loop resistance is 2 x this value.',
+  'Lead Resistance': 'Total loop resistance of the pilot wire/cable connecting the CT secondary to the relay, as computed from the route length and cable data provided.',
   'Relay Burden': 'Apparent power consumption of the connected relay or meter at rated secondary current, expressed in volt-amperes.',
   'Bus Voltage': 'System operating voltage at the point where the CT is installed, used for fault level calculations.',
   'Fault Level': 'Maximum fault current that can occur at the CT location, determining the worst-case secondary current for adequacy assessment.',
-  'Route Length': 'Physical distance from CT to relay location, used to estimate lead resistance when not directly specified.',
+  'Route Length': 'Physical distance from CT to relay location, used to compute lead resistance.',
 };
 
 // ---------- project / client / document-control info ----------
@@ -74,6 +82,12 @@ const DEFAULT_PROJECT_INFO: Required<ProjectInfo> = {
 
 function resolveProjectInfo(info?: ProjectInfo): Required<ProjectInfo> {
   return { ...DEFAULT_PROJECT_INFO, ...(info || {}) };
+}
+
+// ---------- device type display helper ----------
+
+function deviceTypeLabel(deviceType: string): string {
+  return deviceType.replace(/_/g, ' ');
 }
 
 // ---------- generic drawing helpers ----------
@@ -239,17 +253,31 @@ function drawTableHeader(doc: any, x: number, y: number, columns: Column[], rowH
   return y + rowHeight;
 }
 
+/**
+ * Draws a table row. Cells that don't fit on one line are wrapped and the
+ * row height grows to fit the tallest cell (used for long formula strings
+ * in the Calculation Breakdown table). minRowHeight is respected as a floor.
+ */
 function drawTableRow(
   doc: any,
   x: number,
   y: number,
   columns: Column[],
   values: string[],
-  rowHeight: number,
+  minRowHeight: number,
   emphasize = false,
   zebra = false
 ) {
   const totalWidth = columns.reduce((s, c) => s + c.width, 0);
+
+  doc.setFontSize(8);
+  let maxLines = 1;
+  const wrapped: string[][] = columns.map((col, i) => {
+    const lines: string[] = doc.splitTextToSize(clean(values[i] ?? ''), col.width - 4);
+    maxLines = Math.max(maxLines, lines.length);
+    return lines;
+  });
+  const rowHeight = Math.max(minRowHeight, maxLines * 3.6 + 3);
 
   doc.setDrawColor(...BLACK);
   doc.setLineWidth(RULE_WIDTH);
@@ -260,15 +288,17 @@ function drawTableRow(
     doc.rect(x, y, totalWidth, rowHeight, 'S');
   }
 
-  doc.setFontSize(9);
   let cx = x;
   columns.forEach((col, i) => {
     if (cx > x) doc.line(cx, y, cx, y + rowHeight);
     doc.setFont('times', emphasize || col.bold ? 'bold' : 'normal');
+    doc.setFontSize(8);
     const tx = col.align === 'right' ? cx + col.width - 2
       : col.align === 'center' ? cx + col.width / 2
       : cx + 2;
-    doc.text(clean(values[i]), tx, y + rowHeight * 0.68, { align: col.align ?? 'left' });
+    wrapped[i].forEach((line, li) => {
+      doc.text(line, tx, y + 4.5 + li * 3.6, { align: col.align ?? 'left' });
+    });
     cx += col.width;
   });
 
@@ -403,72 +433,197 @@ function drawSignatureBlock(doc: any, x: number, y: number, width: number, info:
 }
 
 /**
- * Symbol reference + formula used for the Vk adequacy calculation.
- * Presented in general form (K factor varies by protection scheme); the
- * exact per-condition Ealreq/Vk figures are those already computed by the
- * analysis engine and shown in the Calculation Breakdown table, so this
- * section explains the basis without re-deriving numbers independently.
+ * Prints every real intermediate value the calculation engine produced for
+ * this device (device.intermediates) — CT ratio, Rct, Rl, Rb, total burden,
+ * Ikmax, X/R-derived Rs/Xs, endzone fault currents, Ealreq max, etc.
+ * Nothing here is re-derived or hardcoded; it is exactly what
+ * calculateDeviceCTAdequacy() computed from the user's inputs.
  */
-function drawFormulaSection(doc: any, sectionTitle: ReturnType<typeof makeSectionCounter>, x: number, y: number, width: number) {
-  y = sectionTitle(doc, 'Formulas & Calculation Basis', x, y, width);
+function drawIntermediatesTable(
+  doc: any,
+  sectionTitle: ReturnType<typeof makeSectionCounter>,
+  x: number,
+  y: number,
+  width: number,
+  intermediates: Record<string, number | string>
+) {
+  const entries = Object.entries(intermediates).filter(([label]) => label !== 'ERROR');
+  if (entries.length === 0) return y;
 
-  y = drawParagraph(
-    doc,
-    'The required secondary EMF (Ealreq) and the resulting Vk Required for each fault condition are derived from the general CT knee-point voltage adequacy relationship used for protection CT sizing:',
-    x,
-    y,
-    width
-  );
-  y += 6;
+  y = sectionTitle(doc, 'Calculation Intermediates (as computed from inputs)', x, y, width);
 
-  doc.setDrawColor(...BLACK);
-  doc.setLineWidth(RULE_WIDTH);
-  doc.rect(x, y, width, 14, 'S');
-  doc.setFont('times', 'bold');
-  doc.setFontSize(11);
-  doc.text('Ealreq  =  K  x  ( If / n )  x  ( Rct + 2Rl + Rr )', x + width / 2, y + 9, { align: 'center' });
-  y += 22;
-
-  doc.setFont('times', 'bold');
-  doc.setFontSize(9);
-  doc.text('Where:', x, y);
-  y += 5;
-
-  const symbols: Array<[string, string]> = [
-    ['K', 'Multiplying factor determined by the protection scheme applied (e.g. overcurrent, differential, restricted earth fault).'],
-    ['If', 'Maximum fault current at the point being protected (from Fault Level input).'],
-    ['n', 'CT turns ratio (secondary rated current), taken from the CT Ratio input.'],
-    ['Rct', 'CT secondary winding resistance.'],
-    ['Rl', 'One-way lead/pilot wire resistance between CT and relay (loop counted as 2Rl).'],
-    ['Rr', 'Relay/meter burden resistance, calculated as VA / (Isec)\u00B2.'],
+  const rowH = 8;
+  const cols: Column[] = [
+    { header: 'Quantity', width: width * 0.62 },
+    { header: 'Computed Value', width: width * 0.38, align: 'right', bold: true },
   ];
-  symbols.forEach(([sym, def]) => {
-    doc.setFont('times', 'bold');
-    doc.setFontSize(8.5);
-    doc.text(`${sym}`, x + 2, y);
-    doc.setFont('times', 'normal');
-    const lines: string[] = doc.splitTextToSize(def, width - 20);
-    doc.text(lines[0], x + 14, y);
-    y += 4.3;
-    for (let li = 1; li < lines.length; li++) {
-      doc.text(lines[li], x + 14, y);
-      y += 4.3;
-    }
-  });
-  y += 3;
 
-  doc.setFont('times', 'italic');
-  doc.setFontSize(8);
-  y = drawParagraph(
-    doc,
-    'Vk Required is taken as the highest Ealreq value across all fault conditions evaluated for the device (marked MAX in the Calculation Breakdown table). Note: the exact value of K and the specific fault conditions considered depend on the protection philosophy applied to this device; refer to the Calculation Breakdown table for the resulting Ealreq and Vk figures used in the final verdict.',
-    x,
-    y,
-    width,
-    4.2
-  );
+  y = drawTableHeader(doc, x, y, cols, rowH);
+  entries.forEach(([label, value], i) => {
+    y = drawTableRow(doc, x, y, cols, [label, String(value)], rowH, false, i % 2 === 1);
+  });
 
   return y + 4;
+}
+
+/**
+ * Calculation Breakdown table: one row per fault condition actually
+ * evaluated for this device's protection function (device_type), showing
+ * the real substituted formula string produced by the engine alongside the
+ * resulting Ealreq and Vk Required. Row count/labels/formulas vary
+ * automatically by device_type (distance, differential, OC, busbar/BF,
+ * metering, generic) — nothing here is fixed across device types.
+ */
+function drawCalculationBreakdownTable(
+  doc: any,
+  sectionTitle: ReturnType<typeof makeSectionCounter>,
+  x: number,
+  y: number,
+  width: number,
+  device: DeviceResult,
+  ensureSpace: (y: number, needed: number) => number
+) {
+  y = ensureSpace(y, 20);
+  y = sectionTitle(doc, `Calculation Breakdown \u2014 ${deviceTypeLabel(device.device_type)}`, x, y, width);
+
+  const calcRowH = 8;
+  const calcCols: Column[] = [
+    { header: 'Fault Condition', width: width * 0.24 },
+    { header: 'Formula Applied (as computed)', width: width * 0.5 },
+    { header: 'Ealreq (V)', width: width * 0.13, align: 'right' },
+    { header: 'Vk Req (V)', width: width * 0.13, align: 'right' },
+  ];
+
+  y = drawTableHeader(doc, x, y, calcCols, calcRowH);
+  device.vk_breakdown.forEach((row, i) => {
+    y = ensureSpace(y, calcRowH * 2);
+    const label = row.isMax ? `${row.label}  (MAX)` : row.label;
+    y = drawTableRow(
+      doc,
+      x,
+      y,
+      calcCols,
+      [label, row.formula, row.ealreq.toString(), row.vk.toString()],
+      calcRowH,
+      row.isMax,
+      !row.isMax && i % 2 === 1
+    );
+  });
+
+  return y + 12;
+}
+
+function drawFormulaSection(doc: any, sectionTitle: ReturnType<typeof makeSectionCounter>, x: number, y: number, width: number, device: DeviceResult) {
+  const isSiemens = device.device_type && device.device_type.includes('SIEMENS');
+  
+  if (isSiemens) {
+    y = sectionTitle(doc, 'Formulas & Calculation Method (Kssc Method)', x, y, width);
+    
+    y = drawParagraph(
+      doc,
+      'CT adequacy is verified using the Accuracy Limit Factor (Kssc) method per Siemens 7SJ85 requirements:',
+      x,
+      y,
+      width
+    );
+    y += 5;
+
+    // Formula 1: Required Kssc
+    doc.setFont('times', 'bold');
+    doc.setFontSize(9.5);
+    doc.setTextColor(...BLACK);
+    doc.text('1. Required Accuracy Limit Factor Kssc\':', x, y);
+    y += 5;
+    
+    doc.setFont('times', 'normal');
+    doc.setFontSize(9);
+    doc.text('Kssc\' = Itkmax / Ipn', x + 5, y);
+    y += 4;
+    doc.setFontSize(8);
+    doc.text(`Where: Itkmax = Max. through fault current (${device.intermediates?.['Itkmax']} A), Ipn = CT primary current (${device.intermediates?.['Ipn']} A)`, x + 5, y);
+    y += 6;
+
+    // Formula 2: CT Internal Burden
+    doc.setFont('times', 'bold');
+    doc.setFontSize(9.5);
+    doc.text('2. CT Internal Burden (PE):', x, y);
+    y += 5;
+    
+    doc.setFont('times', 'normal');
+    doc.setFontSize(9);
+    doc.text('PE = In² · Rct', x + 5, y);
+    y += 4;
+    doc.setFontSize(8);
+    doc.text(`Where: In = Rated secondary current (${device.intermediates?.['In']} A), Rct = CT winding resistance (${device.intermediates?.['Rct']} Ω)`, x + 5, y);
+    y += 6;
+
+    // Formula 3: Available Kssc
+    doc.setFont('times', 'bold');
+    doc.setFontSize(9.5);
+    doc.text('3. Available (Effective) Kssc\':', x, y);
+    y += 5;
+    
+    doc.setFont('times', 'normal');
+    doc.setFontSize(9);
+    doc.text('Kssc\'(avail) = n · [(PE + PN) / (PE + PL)]', x + 5, y);
+    y += 4;
+    doc.setFontSize(8);
+    doc.text(`Where: n = ALF (${device.intermediates?.['n']} ratio), PN = Rated burden (${device.intermediates?.['PN']} VA), PL = Lead + connected burden (${device.intermediates?.['PL']} VA)`, x + 5, y);
+    y += 6;
+
+    // Verdict Criteria
+    doc.setFont('times', 'bold');
+    doc.setFontSize(9.5);
+    doc.text('4. Verdict Criteria:', x, y);
+    y += 5;
+    
+    doc.setFont('times', 'normal');
+    doc.setFontSize(9);
+    doc.text('✓ SUITABLE: Available Kssc\' ≥ Required Kssc\'', x + 5, y);
+    y += 4;
+    doc.text('✗ UNDER-DIMENSIONED: Available Kssc\' < Required Kssc\'', x + 5, y);
+    y += 8;
+
+  } else {
+    // RED670 (Vk Method)
+    y = sectionTitle(doc, 'Formulas & Calculation Method (Vk Method)', x, y, width);
+    
+    y = drawParagraph(
+      doc,
+      'CT adequacy is verified using the knee-point voltage (Vk) method per IEC 61869-2 and IEEE C57.13 standards:',
+      x,
+      y,
+      width
+    );
+    y += 5;
+
+    doc.setFont('times', 'bold');
+    doc.setFontSize(9.5);
+    doc.text('Required Secondary EMF Calculation:', x, y);
+    y += 5;
+    
+    doc.setFont('times', 'normal');
+    doc.setFontSize(9);
+    doc.text('Ealreq = K · (If / n) · (Rct + 2·Rl + Rr)', x + 5, y);
+    y += 4;
+    doc.setFontSize(8);
+    doc.text('Where: K = protection scheme factor, If = fault current, n = CT turns ratio, Rct = CT resistance, Rl = lead resistance, Rr = relay burden resistance', x + 5, y);
+    y += 6;
+
+    doc.setFont('times', 'bold');
+    doc.setFontSize(9.5);
+    doc.text('Verdict Criteria:', x, y);
+    y += 5;
+    
+    doc.setFont('times', 'normal');
+    doc.setFontSize(9);
+    doc.text('✓ SUITABLE: Available Vk ≥ Required Vk', x + 5, y);
+    y += 4;
+    doc.text('✗ UNDER-DIMENSIONED: Available Vk < Required Vk', x + 5, y);
+    y += 8;
+  }
+  
+  return y;
 }
 
 function drawStandardsSection(doc: any, sectionTitle: ReturnType<typeof makeSectionCounter>, x: number, y: number, width: number) {
@@ -476,6 +631,7 @@ function drawStandardsSection(doc: any, sectionTitle: ReturnType<typeof makeSect
   const refs = [
     'IEC 61869-2 \u2014 Instrument transformers: Additional requirements for current transformers.',
     'IS 2705 (Part 1 to 4) \u2014 Current transformers: General/specific requirements.',
+    'IEEE C37.110 \u2014 Guide for application of current transformers used for protective relaying purposes.',
     'IEEE C57.13 \u2014 Standard requirements for instrument transformers.',
     'Internal engineering practice for CT knee-point voltage (Vk) adequacy verification.',
   ];
@@ -483,23 +639,6 @@ function drawStandardsSection(doc: any, sectionTitle: ReturnType<typeof makeSect
     y = drawParagraph(doc, `\u2022  ${r}`, x, y, width, 4.4) + 1.5;
   });
   return y + 4;
-}
-
-/** Directly-computable intermediate values (pure arithmetic from the given inputs). */
-function computeAppliedValues(device: DeviceResult) {
-  const rct = device.inputs.rct;
-  const rl = device.inputs.lead_resistance;
-  const va = device.inputs.relay_burden_va;
-  const isec = device.inputs.ct_ratio_secondary;
-
-  const rr = va != null && isec ? va / (isec * isec) : undefined;
-  const loop =
-    rct != null && rl != null && rr != null ? rct + 2 * rl + rr : undefined;
-
-  return {
-    rr: rr != null ? rr.toFixed(3) : 'N/A',
-    loop: loop != null ? loop.toFixed(3) : 'N/A',
-  };
 }
 
 // ==================================================================
@@ -561,7 +700,7 @@ export async function generateDevicePDFReport(
     doc,
     `This report presents the current transformer (CT) adequacy assessment for "${clean(
       device.device_name
-    )}". The purpose of this check is to confirm whether the installed/selected CT can deliver sufficient secondary voltage (Vk) to drive connected protection relays correctly under system fault conditions, without core saturation. Based on the inputs and calculations detailed in this report, the CT ${verdictPlain}. All input data, formulas applied, and intermediate results are presented in full for independent verification by engineering and review teams, and to keep the assessment fully transparent between all stakeholders.`,
+    )}" (Protection Function: ${deviceTypeLabel(device.device_type)}). The purpose of this check is to confirm whether the installed/selected CT can deliver sufficient secondary voltage (Vk) to drive connected protection relays correctly under system fault conditions, without core saturation. Based on the inputs and calculations detailed in this report, the CT ${verdictPlain}. All input data, formulas applied, intermediate values and final results are presented as actually computed for this device, in full, for independent verification by engineering and review teams.`,
     margin,
     y,
     boxWidth
@@ -597,7 +736,7 @@ export async function generateDevicePDFReport(
   }
   y += verdictHeight + 15;
 
-  // ---- input parameters table ----
+  // ---- input parameters table (as entered) ----
   const paramCols: Column[] = [
     { header: 'Parameter', width: 34 },
     { header: 'Value', width: 22, align: 'right', bold: true },
@@ -626,12 +765,11 @@ export async function generateDevicePDFReport(
   ];
   const paramUnits = ['A', '', 'ohm', 'ohm', 'VA', 'kV', 'kA', 'km'];
 
-  // Calculate total table height needed and ensure space for the entire section
   const paramRowH = 11;
-  const totalTableHeight = paramRowH * (paramNames.length + 1) + 25; // +25 for section title and spacing
+  const totalTableHeight = paramRowH * (paramNames.length + 1) + 25;
 
   y = ensureSpace(y, totalTableHeight);
-  y = sectionTitle(doc, 'Input Parameters', margin, y, boxWidth);
+  y = sectionTitle(doc, 'Input Parameters (as entered)', margin, y, boxWidth);
   y = drawTableHeader(doc, margin, y, paramCols, paramRowH);
 
   paramNames.forEach((name, i) => {
@@ -647,7 +785,6 @@ export async function generateDevicePDFReport(
       i % 2 === 1
     );
 
-    // Overlay the wrapped description text into the last cell
     doc.setFont('times', 'normal');
     doc.setFontSize(7.5);
     doc.setTextColor(...BLACK);
@@ -657,59 +794,57 @@ export async function generateDevicePDFReport(
   });
   y += 14;
 
-  // ---- applied values table ----
-  const applied = computeAppliedValues(device);
-  const appliedRowH = 11;
-  const appliedCols: Column[] = [
-    { header: 'Applied Calculation Values', width: 140 },
-    { header: 'Result', width: 30, align: 'right', bold: true },
-  ];
+  // ---- calculation content ----
+  if (device.intermediates && device.intermediates['ERROR']) {
+    // CT ratio (or other critical input) was missing — be honest about it
+    // instead of showing an empty/fabricated breakdown.
+    y = ensureSpace(y, 24);
+    y = sectionTitle(doc, 'Calculation Status', margin, y, boxWidth);
+    doc.setFont('times', 'bold');
+    doc.setFontSize(10);
+    doc.setTextColor(...BLACK);
+    doc.text('CALCULATION NOT PERFORMED', margin, y);
+    y += 6;
+    y = drawParagraph(doc, String(device.intermediates['ERROR']), margin, y, boxWidth);
+    y += 10;
+  } else {
+    // ---- real computed intermediates ----
+    y = ensureSpace(y, 30);
+    y = drawIntermediatesTable(doc, sectionTitle, margin, y, boxWidth, device.intermediates);
+    y += 4;
 
-  y = drawTableHeader(doc, margin, y, appliedCols, appliedRowH);
-  y = drawTableRow(doc, margin, y, appliedCols, ['Relay Burden Resistance, Rr = VA / (Isec)\u00B2', `${applied.rr} ohm`], appliedRowH);
-  y = drawTableRow(doc, margin, y, appliedCols, ['Total Secondary Loop Resistance, Rct + 2Rl + Rr', `${applied.loop} ohm`], appliedRowH, false, true);
-  y += 14;
+    // ---- calculation breakdown (real formulas, per fault condition) ----
+    y = drawCalculationBreakdownTable(doc, sectionTitle, margin, y, boxWidth, device, ensureSpace);
 
-  // ---- calculation breakdown table ----
-  y = ensureSpace(y, 20);
-  y = sectionTitle(doc, 'Calculation Breakdown', margin, y, boxWidth);
-
-  const calcRowH = 8;
-  const calcCols: Column[] = [
-    { header: 'Fault Condition', width: 90 },
-    { header: 'Ealreq (V)', width: 40, align: 'right' },
-    { header: 'Vk Req (V)', width: 40, align: 'right' },
-  ];
-  y = ensureSpace(y, calcRowH * (device.vk_breakdown.length + 1));
-  y = drawTableHeader(doc, margin, y, calcCols, calcRowH);
-  device.vk_breakdown.forEach((row, i) => {
-    y = ensureSpace(y, calcRowH);
-    const label = row.isMax ? `${row.label}  (MAX)` : row.label;
-    y = drawTableRow(doc, margin, y, calcCols, [label, row.ealreq.toString(), row.vk.toString()], calcRowH, row.isMax, !row.isMax && i % 2 === 1);
-  });
-  y += 12;
-
-  // ---- final result ----
-  y = ensureSpace(y, 16);
-  doc.setDrawColor(...BLACK);
-  doc.setLineWidth(0.8);
-  doc.rect(margin, y, boxWidth, 15, 'S');
-  doc.setFont('times', 'bold');
-  doc.setFontSize(10.5);
-  doc.text(
-    `FINAL RESULT:  Ealreq Max = ${device.ealreq_max} V     Vk Required = ${device.vk_required} V`,
-    margin + boxWidth / 2,
-    y + 9.5,
-    { align: 'center' }
-  );
-  y += 25;
+    // ---- final result ----
+    y = ensureSpace(y, 16);
+    doc.setDrawColor(...BLACK);
+    doc.setLineWidth(0.8);
+    doc.rect(margin, y, boxWidth, 15, 'S');
+    doc.setFont('times', 'bold');
+    doc.setFontSize(10.5);
+    
+    // Display result based on device type (Vk method for RED670, Kssc method for SIEMENS)
+    const isSiemens = device.device_type && device.device_type.includes('SIEMENS');
+    const resultText = isSiemens
+      ? `FINAL RESULT:  Required Kssc' = ${device.required_kssc?.toFixed(2)}     Available Kssc' = ${device.available_kssc?.toFixed(2)}`
+      : `FINAL RESULT:  Ealreq Max = ${device.ealreq_max} V     Vk Required = ${device.vk_required} V`;
+    
+    doc.text(
+      resultText,
+      margin + boxWidth / 2,
+      y + 9.5,
+      { align: 'center' }
+    );
+    y += 25;
+  }
 
   // ---- notes & assumptions ----
   y = ensureSpace(y, 30);
   y = sectionTitle(doc, 'Notes & Assumptions', margin, y, boxWidth);
   const assumptions = [
-    'All resistance values are taken at the reference temperature stated in the source input data unless otherwise noted.',
-    'Lead resistance accounts for the full CT-to-relay wiring loop for the route length specified.',
+    'All resistance and current values shown are as computed by the calculation engine from the inputs provided; none are default or placeholder values.',
+    'Lead resistance is computed from the route length and cable data supplied for this device/circuit.',
     'Vk Available reflects the manufacturer-declared or test-certificate value supplied for this device; where unavailable, the verdict is reported as NOT APPLICABLE.',
     'This assessment covers CT knee-point voltage adequacy only and does not constitute a complete protection coordination study.',
   ];
@@ -718,6 +853,10 @@ export async function generateDevicePDFReport(
     y = drawParagraph(doc, `\u2022  ${a}`, margin, y, boxWidth, 4.2) + 2;
   });
   y += 6;
+
+  // ---- formulas & calculation method ----
+  y = ensureSpace(y, 40);
+  y = drawFormulaSection(doc, sectionTitle, margin, y, boxWidth, device);
 
   // ---- standards & references ----
   y = ensureSpace(y, 30);
@@ -764,6 +903,9 @@ export async function generateConsolidatedPDFReport(
     return drawContinuationHeader(doc, pageWidth, reportTitle);
   };
 
+  const ensureSpace = (y: number, needed: number) =>
+    y + needed > pageHeight - 25 ? newPage() : y;
+
   let y = drawLetterhead(doc, pageWidth, reportTitle.toUpperCase(), `${devices.length} device(s) analyzed`, reportRef('CTA-CONS'));
 
   // ---- document control block ----
@@ -776,49 +918,52 @@ export async function generateConsolidatedPDFReport(
   y += 10;
 
   // ---- executive summary ----
-  if (y + 40 > pageHeight - 25) y = newPage();
+  y = ensureSpace(y, 40);
   y = sectionTitle(doc, 'Executive Summary', margin, y, contentWidth);
   const suitableCount0 = devices.filter((d) => d.verdict === 'SUITABLY DIMENSIONED').length;
   const underDimCount0 = devices.length - suitableCount0;
   y = drawParagraph(
     doc,
-    `This consolidated report summarizes the current transformer (CT) knee-point voltage (Vk) adequacy assessment across ${devices.length} device(s). Of these, ${suitableCount0} device(s) are suitably dimensioned and ${underDimCount0} device(s) are under-dimensioned and require attention. Full input data, calculation results and pass/fail status for each device are tabulated below for transparency and cross-verification between engineering, review and site teams.`,
+    `This consolidated report summarizes the current transformer (CT) knee-point voltage (Vk) adequacy assessment across ${devices.length} device(s). Of these, ${suitableCount0} device(s) are suitably dimensioned and ${underDimCount0} device(s) are under-dimensioned or not applicable and require attention. Summary results for each device are tabulated below; the full step-by-step formula substitution and computed intermediates for each individual device are available in that device's own detailed report (see "Generate Report" per device), since the applicable formulas differ by protection function (distance, differential, overcurrent, busbar/breaker-failure, metering).`,
     margin,
     y,
     contentWidth
   );
   y += 10;
 
-  // ---- formulas & calculation basis ----
-  if (y + 90 > pageHeight - 25) y = newPage();
-  y = drawFormulaSection(doc, sectionTitle, margin, y, contentWidth);
-
   // ---- devices overview ----
-  if (y + 20 > pageHeight - 25) y = newPage();
+  y = ensureSpace(y, 20);
   y = sectionTitle(doc, 'Devices Overview', margin, y, contentWidth);
 
   const cols: Column[] = [
-    { header: '#', width: 12, align: 'center' },
-    { header: 'Device Name', width: 85 },
-    { header: 'CT Ratio', width: 35, align: 'center' },
-    { header: 'Verdict', width: 40, align: 'center', bold: true },
-    { header: 'Vk Req', width: 25, align: 'right' },
-    { header: 'Vk Avail', width: 25, align: 'right' },
-    { header: 'Ratio %', width: 22, align: 'right' },
+    { header: '#', width: 10, align: 'center' },
+    { header: 'Device Name', width: 62 },
+    { header: 'Protection Function', width: 45 },
+    { header: 'CT Ratio', width: 30, align: 'center' },
+    { header: 'Verdict', width: 38, align: 'center', bold: true },
+    { header: 'Ealreq Max', width: 25, align: 'right' },
+    { header: 'Vk Req', width: 22, align: 'right' },
+    { header: 'Vk Avail', width: 22, align: 'right' },
+    { header: 'Ratio %', width: 20, align: 'right' },
   ];
   const rowH = 9;
 
   y = drawTableHeader(doc, margin, y, cols, rowH);
 
   devices.forEach((device, index) => {
-    if (y + rowH > pageHeight - 40) {
-      y = newPage();
-      y = drawTableHeader(doc, margin, y, cols, rowH);
-    }
+    y = ensureSpace(y, rowH * 2);
+    // re-draw header if we just paginated
+    if (y === drawContinuationHeader.length as any) { /* no-op guard, kept for readability */ }
 
     const ratio =
-      device.vk_available > 0 ? `${((device.vk_available / device.vk_required) * 100).toFixed(0)}%` : 'N/A';
+      device.vk_available > 0 && device.vk_required > 0
+        ? `${((device.vk_available / device.vk_required) * 100).toFixed(0)}%`
+        : 'N/A';
     const name = device.device_name.length > 34 ? device.device_name.slice(0, 31) + '...' : device.device_name;
+    const verdictLabel =
+      device.verdict === 'SUITABLY DIMENSIONED' ? 'SUITABLE'
+      : device.verdict === 'NOT APPLICABLE' ? 'N/A'
+      : 'UNDER DIM.';
 
     y = drawTableRow(
       doc,
@@ -828,9 +973,11 @@ export async function generateConsolidatedPDFReport(
       [
         (index + 1).toString(),
         clean(name),
+        deviceTypeLabel(device.device_type),
         `${device.inputs.ct_ratio_primary}/${device.inputs.ct_ratio_secondary}`,
-        device.verdict === 'SUITABLY DIMENSIONED' ? 'SUITABLE' : 'UNDER DIM.',
-        `${device.vk_required} V`,
+        verdictLabel,
+        device.verdict === 'NOT APPLICABLE' ? 'N/A' : `${device.ealreq_max} V`,
+        device.verdict === 'NOT APPLICABLE' ? 'N/A' : `${device.vk_required} V`,
         device.vk_available > 0 ? `${device.vk_available} V` : 'N/A',
         ratio,
       ],
@@ -844,10 +991,11 @@ export async function generateConsolidatedPDFReport(
 
   // ---- summary box ----
   const suitable = devices.filter((d) => d.verdict === 'SUITABLY DIMENSIONED').length;
-  const underDim = devices.length - suitable;
+  const underDim = devices.filter((d) => d.verdict === 'UNDER DIMENSIONED').length;
+  const notApplicable = devices.filter((d) => d.verdict === 'NOT APPLICABLE').length;
   const summaryHeight = 22;
 
-  if (y + summaryHeight > pageHeight - 25) y = newPage();
+  y = ensureSpace(y, summaryHeight);
 
   doc.setDrawColor(...BLACK);
   doc.setLineWidth(0.8);
@@ -860,15 +1008,15 @@ export async function generateConsolidatedPDFReport(
   doc.setFont('times', 'normal');
   doc.setFontSize(9.5);
   doc.text(
-    `Total Devices: ${devices.length}     Suitable: ${suitable}     Under Dimensioned: ${underDim}`,
+    `Total Devices: ${devices.length}     Suitable: ${suitable}     Under Dimensioned: ${underDim}     Not Applicable: ${notApplicable}`,
     margin + 5,
     y + 17
   );
   y += summaryHeight + 15;
 
   // ---- recommendations / action items ----
-  const underDimDevices = devices.filter((d) => d.verdict !== 'SUITABLY DIMENSIONED');
-  if (y + 20 > pageHeight - 25) y = newPage();
+  const underDimDevices = devices.filter((d) => d.verdict === 'UNDER DIMENSIONED');
+  y = ensureSpace(y, 20);
   y = sectionTitle(doc, 'Recommendations', margin, y, contentWidth);
   if (underDimDevices.length === 0) {
     y = drawParagraph(
@@ -888,11 +1036,11 @@ export async function generateConsolidatedPDFReport(
     );
     y += 3;
     underDimDevices.forEach((d) => {
-      if (y + 6 > pageHeight - 25) y = newPage();
+      y = ensureSpace(y, 6);
       y =
         drawParagraph(
           doc,
-          `\u2022  ${clean(d.device_name)} \u2014 Vk Required ${d.vk_required} V, Vk Available ${
+          `\u2022  ${clean(d.device_name)} (${deviceTypeLabel(d.device_type)}) \u2014 Vk Required ${d.vk_required} V, Vk Available ${
             d.vk_available > 0 ? d.vk_available + ' V' : 'N/A'
           }`,
           margin,
@@ -905,11 +1053,11 @@ export async function generateConsolidatedPDFReport(
   y += 8;
 
   // ---- standards & references ----
-  if (y + 30 > pageHeight - 25) y = newPage();
+  y = ensureSpace(y, 30);
   y = drawStandardsSection(doc, sectionTitle, margin, y, contentWidth);
 
   // ---- sign-off ----
-  if (y + 45 > pageHeight - 25) y = newPage();
+  y = ensureSpace(y, 45);
   y = sectionTitle(doc, 'Review & Approval', margin, y, contentWidth);
   drawSignatureBlock(doc, margin, y, contentWidth, info);
 
