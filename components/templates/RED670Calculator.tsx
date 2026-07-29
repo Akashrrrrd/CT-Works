@@ -439,7 +439,9 @@ export function RED670Calculator() {
           {/* Breakdown Table */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Voltage Requirements Breakdown ($E_{\text{alreq}}$ & $V_k$)</CardTitle>
+              <CardTitle className="text-base">
+                Voltage Requirements Breakdown (E<sub>alreq</sub> & V<sub>k</sub>)
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
