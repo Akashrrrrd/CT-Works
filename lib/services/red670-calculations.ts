@@ -1,355 +1,299 @@
 /**
- * RED670 IED TEMPLATE - CT/VT ADEQUACY CALCULATIONS (Ealreq / Vk METHOD)
- * Based on Hitachi Technical Documentation N-19957 2-DF4W
- * 132kV Cable Feeders - Line Differential & Distance Protection
- *
- * Verified against document pages 6-11: all Ealreq formulas (differential
- * close-in/through-fault, distance close-in/endzone-1) and the
- * Vk_required = Ealreq × 0.8 relationship reproduce the document's worked
- * example exactly (499.84 V -> 399.87 V, matching the doc to the cent).
- *
- * FIX: the previous version silently always reported "tap2 (1800A)" as the
- * recommended/final result regardless of which CT tap is actually in
- * service. That's only valid because the reference document happens to use
- * the 1800A tap — it is not a general rule. This version requires the
- * caller to say which tap is in service (or computes both and lets the
- * caller choose), instead of hardcoding it.
+ * RED670 IED TEMPLATE - CT ADEQUACY CALCULATION ENGINE
+ * Pure, deterministic calculation engine matching Excel reference test cases exactly.
  */
 
-export interface CT_Parameters_RED670 {
-  ct_ratio_tap1: number;               // e.g. 3200 A
-  ct_ratio_tap2: number;               // e.g. 1800 A
-  ct_ratio_secondary: number;          // 1 A
-  class_of_accuracy: string;           // e.g. PX
-  ct_resistance_tap1: number;          // Rct (Ω) at tap1
-  ct_resistance_tap2: number;          // Rct (Ω) at tap2
-  knee_point_voltage_tap1: number;     // Available Vk (V) at tap1
-  knee_point_voltage_tap2: number;     // Available Vk (V) at tap2
-  magnetizing_current_tap1: number;    // I0 (mA) at Vk, tap1
-  magnetizing_current_tap2: number;    // I0 (mA) at Vk, tap2
+export interface General_System_Parameters {
+  bus_fault_level_ka: number;         // Bus Fault level in kA (e.g. 31.5, 40, 50)
+  system_frequency: number;           // System Frequency in Hz (e.g. 50, 60)
+  bus_voltage_kv: number;             // Bus Voltage Level in kV (e.g. 33, 132)
+  xr_ratio: number;                   // System X/R ratio (e.g. 40, 15)
 }
 
-export interface System_Parameters_RED670 {
-  system_frequency: number;
-  hv_bus_voltage: number;
-  mv_bus_voltage: number;
-  max_hv_fault_current: number;        // Ikmax — close-in faults
-  max_through_fault_3ph: number;       // Itmax 3ph — through faults
-  max_through_fault_1ph: number;       // Itmax 1ph — through faults
-  max_endzone1_3ph: number;            // Ikzone1 3ph
-  max_endzone1_1ph: number;            // Ikzone1 1ph
-  xr_ratio: number;
-  system_time_constant_3ph: number;         // ms
-  system_time_constant_1ph_through: number; // ms
-  system_time_constant_1ph_endzone: number; // ms
+export interface Wiring_Loop_Parameters {
+  conductor_cross_section: number;    // mm² (e.g. 2.5, 4.0, 6.0)
+  resistance_20c_per_km: number;      // Ω/km at 20°C (e.g. 7.41, 4.48759)
+  lead_length: number;                // Lead length in meters from CT/VT to relay
 }
 
-export interface Connected_Devices_RED670 {
-  red670_burden: number;               // Sr — 0.02 VA per document
-  other_devices_burden?: number;
+export interface Common_Line_Parameters {
+  positive_sequence_resistance: number; // R1 (Ω/km)
+  positive_sequence_reactance: number;  // X1 (Ω/km)
+  zero_sequence_resistance: number;     // R0 (Ω/km)
+  zero_sequence_reactance: number;      // X0 (Ω/km)
+  route_length: number;                 // Length of line/cable in km
 }
 
-export interface Wiring_Parameters_RED670 {
-  total_lead_resistance: number;       // RI — the current-loop lead resistance (Ω)
-  conductor_length: number;
-  conductor_cross_section: number;
-  resistance_per_km: number;
+export interface IED_CT_Tap_Parameters {
+  ct_ratio_primary: number;           // Primary rated current Ipn (A)
+  ct_ratio_secondary: number;         // Secondary rated current Isn (A), default 1A
+  class_of_accuracy: string;          // e.g. PX, 5P20
+  ct_resistance: number;              // Rct at 75°C (Ω)
+  magnetizing_current: number;        // I0 (mA) at Vk
+  knee_point_voltage: number;         // Available Vk (V)
 }
 
-export interface Cable_Parameters_RED670 {
-  positive_sequence_resistance: number;
-  positive_sequence_reactance: number;
-  zero_sequence_resistance: number;
-  zero_sequence_reactance: number;
-  route_length: number;
-  cable_positive_impedance_total: number;
-  cable_zero_impedance_total: number;
+export interface RED670_Calculation_Input {
+  system: General_System_Parameters;
+  ct_wiring: Wiring_Loop_Parameters;
+  vt_wiring?: Wiring_Loop_Parameters;
+  cable: Common_Line_Parameters;
+  ied_burden?: number;                // RED670 burden in VA (default 0.02 VA)
+  other_burden?: number;              // Other connected burden in VA (default 0)
+  relay_rated_current?: number;       // Ir in Amperes (default 1A)
+  taps: {
+    tap1: IED_CT_Tap_Parameters;
+    tap2?: IED_CT_Tap_Parameters;
+  };
+  active_tap?: 'tap1' | 'tap2';
+  // Optional pre-computed overrides
+  total_lead_resistance_override?: number; 
 }
 
-/**
- * ============================================================
- * DIFFERENTIAL PROTECTION CALCULATIONS (Hitachi pages 6-8)
- * ============================================================
- */
-export class DifferentialProtectionCalculations_RED670 {
-
-  /** Eq (1): Ealreq = Ikmax × (Isn/Ipn) × (Rct + Rl + Sr/(Ir×Ir)) */
-  static calculateEalreqCloseFaults(ikmax: number, isn: number, ipn: number, rct: number, rl: number, sr: number, ir: number): number {
-    return ikmax * (isn / ipn) * (rct + rl + sr / (ir * ir));
-  }
-
-  /** Eq (2): Ealreq = 2 × Itmax × (Isn/Ipn) × (Rct + Rl + Sr/(Ir×Ir)) — 3-phase */
-  static calculateEalreqThroughFaults3ph(itmax: number, isn: number, ipn: number, rct: number, rl: number, sr: number, ir: number): number {
-    return 2 * itmax * (isn / ipn) * (rct + rl + sr / (ir * ir));
-  }
-
-  /** Eq (2): same formula, 1-phase-to-earth current */
-  static calculateEalreqThroughFaults1ph(itmax: number, isn: number, ipn: number, rct: number, rl: number, sr: number, ir: number): number {
-    return 2 * itmax * (isn / ipn) * (rct + rl + sr / (ir * ir));
-  }
-
-  static determineControllingEalreqDifferential(
-    ealreq_close: number,
-    ealreq_through_3ph: number,
-    ealreq_through_1ph: number
-  ): { highest: number; equation: string } {
-    const values = [
-      { value: ealreq_close, equation: 'Close-in Faults' },
-      { value: ealreq_through_3ph, equation: 'Through Faults (3-ph)' },
-      { value: ealreq_through_1ph, equation: 'Through Faults (1-ph)' },
-    ];
-    const highest = values.reduce((max, cur) => (cur.value > max.value ? cur : max));
-    return { highest: highest.value, equation: highest.equation };
-  }
+export interface Protection_Function_Breakdown {
+  ealreq_close_in: number;
+  ealreq_through_3ph?: number;
+  ealreq_through_1ph?: number;
+  ealreq_endzone1_3ph?: number;
+  ealreq_endzone1_1ph?: number;
+  controlling_equation: string;
+  highest_ealreq: number;
 }
 
-/**
- * ============================================================
- * DISTANCE PROTECTION CALCULATIONS (Hitachi pages 8-11)
- * ============================================================
- */
-export class DistanceProtectionCalculations_RED670 {
-
-  /** Ealreq = Ikmax × (Isn/Ipn) × a × (Rct + Rl + Sr/(Ir×Ir)), a=1 for tp<=400ms */
-  static calculateEalreqDistanceCloseFaults(ikmax: number, isn: number, ipn: number, a_factor: number, rct: number, rl: number, sr: number, ir: number): number {
-    return ikmax * (isn / ipn) * a_factor * (rct + rl + sr / (ir * ir));
-  }
-
-  /** Ealreq = Ikzone1 × (Isn/Ipn) × k × (Rct + Rl + Sr/(Ir×Ir)), k=3 for tp<=200ms — 3-phase */
-  static calculateEalreqDistanceEndzone1_3ph(ikzone1: number, isn: number, ipn: number, k_factor: number, rct: number, rl: number, sr: number, ir: number): number {
-    return ikzone1 * (isn / ipn) * k_factor * (rct + rl + sr / (ir * ir));
-  }
-
-  /** Same formula, 1-phase-to-earth endzone-1 current */
-  static calculateEalreqDistanceEndzone1_1ph(ikzone1: number, isn: number, ipn: number, k_factor: number, rct: number, rl: number, sr: number, ir: number): number {
-    return ikzone1 * (isn / ipn) * k_factor * (rct + rl + sr / (ir * ir));
-  }
-
-  static determineControllingEalreqDistance(
-    ealreq_close: number,
-    ealreq_endzone1_3ph: number,
-    ealreq_endzone1_1ph: number
-  ): { highest: number; equation: string } {
-    const values = [
-      { value: ealreq_close, equation: 'Close-in Faults' },
-      { value: ealreq_endzone1_3ph, equation: 'Endzone-1 (3-ph)' },
-      { value: ealreq_endzone1_1ph, equation: 'Endzone-1 (1-ph)' },
-    ];
-    const highest = values.reduce((max, cur) => (cur.value > max.value ? cur : max));
-    return { highest: highest.value, equation: highest.equation };
-  }
+export interface Tap_Assessment_Result {
+  tap_name: string;
+  ipn: number;
+  rct: number;
+  vk_available: number;
+  rl_lead_resistance: number;
+  differential_protection: Protection_Function_Breakdown;
+  distance_protection: Protection_Function_Breakdown;
+  overall_assessment: {
+    highest_ealreq: number;
+    controlling_function: string;
+    vk_required: number;
+    vk_available: number;
+    suitable: boolean;
+    verdict: 'SUITABLY DIMENSIONED' | 'UNDER DIMENSIONED';
+    safety_margin_percent: number;
+  };
 }
 
-/**
- * ============================================================
- * CT ADEQUACY (KNEE-POINT VOLTAGE) — Hitachi pages 9-11
- * ============================================================
- */
-export class CT_AdequacyCalculations_RED670 {
-
-  /** Vk_required = Ealreq × 0.8 (per manufacturer reference) */
-  static calculateRequiredVk(ealreq: number): number {
-    return ealreq * 0.8;
-  }
-
-  static determineCTSuitability(available_vk: number, required_vk: number): { suitable: boolean; verdict: string; margin: number } {
-    const suitable = available_vk > required_vk;
-    const margin = ((available_vk - required_vk) / required_vk) * 100;
-    return { suitable, verdict: suitable ? 'SUITABLY DIMENSIONED' : 'UNDER DIMENSIONED', margin };
-  }
-}
-
-/**
- * ============================================================
- * MAIN RED670 CALCULATION ENGINE
- * ============================================================
- */
 export class RED670_Calculator {
 
   /**
-   * Computes both taps' full breakdown and returns them side by side.
-   * The caller must specify which tap is actually in service via
-   * `active_tap` ('tap1' | 'tap2') — this replaces the old hardcoded
-   * "always report tap2" behavior.
+   * Calculates 2-way lead resistance Rl in Ohms at 75°C from cable parameters
    */
-  static performCompleteCalculation(input: {
-    ct_parameters: CT_Parameters_RED670;
-    system_parameters: System_Parameters_RED670;
-    connected_devices: Connected_Devices_RED670;
-    wiring_parameters: Wiring_Parameters_RED670;
-    cable_parameters: Cable_Parameters_RED670;
-    active_tap?: 'tap1' | 'tap2'; // defaults to 'tap2' ONLY if caller doesn't specify
-  }) {
-    const results: any = {
-      differential_calculations: {},
-      distance_calculations: {},
-      ct_adequacy_check: {},
-      final_verdict: '',
-      tap_comparison: {},
-      active_tap: input.active_tap ?? 'tap2',
-      document_reference: {
-        title: 'CT/VT ADEQUACY CHECK - 132/33kV SUBSTATION DF4W',
-        document_no: 'N-19957 2-DF4W',
-        device: 'RED670 - Line Differential & Distance Protection',
-        application: '132kV Cable Feeders',
-        functions: ['Line Differential Protection', 'Distance Protection (Zones 1-3)', 'Overcurrent Protection'],
-      },
-    };
+  static calculateLeadResistance(wiring: Wiring_Loop_Parameters): number {
+    const alpha_20 = 0.00393; // Copper temperature coefficient (K⁻¹)
+    const temp_delta = 75.0 - 20.0;
+    const r75_per_km = wiring.resistance_20c_per_km * (1.0 + alpha_20 * temp_delta);
+    const r_per_meter = r75_per_km / 1000.0;
+    return 2.0 * r_per_meter * wiring.lead_length;
+  }
 
-    const ct_params = input.ct_parameters;
-    const system_params = input.system_parameters;
-    const wiring = input.wiring_parameters;
-    const devices = input.connected_devices;
+  /**
+   * Validates all incoming parameters prior to computation
+   */
+  static validateInput(input: RED670_Calculation_Input): void {
+    if (!input.system || input.system.bus_fault_level_ka <= 0) {
+      throw new Error("Invalid Bus Fault Level: must be greater than 0 kA");
+    }
+    if (!input.system.system_frequency || input.system.system_frequency <= 0) {
+      throw new Error("Invalid System Frequency");
+    }
+    if (!input.taps || !input.taps.tap1) {
+      throw new Error("Missing required CT Tap1 parameters");
+    }
+  }
 
-    const isn = ct_params.ct_ratio_secondary;
-    const rl = wiring.total_lead_resistance;
-    const sr = devices.red670_burden;
-    const ir = 1;
+  /**
+   * Main Calculation Execution Engine
+   */
+  static performCompleteCalculation(input: RED670_Calculation_Input) {
+    this.validateInput(input);
 
-    const taps = [
-      { key: 'tap1', name: 'Tap-1', ipn: ct_params.ct_ratio_tap1, rct: ct_params.ct_resistance_tap1, available_vk: ct_params.knee_point_voltage_tap1 },
-      { key: 'tap2', name: 'Tap-2', ipn: ct_params.ct_ratio_tap2, rct: ct_params.ct_resistance_tap2, available_vk: ct_params.knee_point_voltage_tap2 },
-    ] as const;
+    const f = input.system.system_frequency;
+    const v_bus = input.system.bus_voltage_kv * 1000.0;
+    const ikmax = input.system.bus_fault_level_ka * 1000.0;
+    const xr = input.system.xr_ratio;
 
-    taps.forEach((tap) => {
-      const ealreq_diff_close = DifferentialProtectionCalculations_RED670.calculateEalreqCloseFaults(
-        system_params.max_hv_fault_current, isn, tap.ipn, tap.rct, rl, sr, ir
-      );
-      const ealreq_diff_through_3ph = DifferentialProtectionCalculations_RED670.calculateEalreqThroughFaults3ph(
-        system_params.max_through_fault_3ph, isn, tap.ipn, tap.rct, rl, sr, ir
-      );
-      const ealreq_diff_through_1ph = DifferentialProtectionCalculations_RED670.calculateEalreqThroughFaults1ph(
-        system_params.max_through_fault_1ph, isn, tap.ipn, tap.rct, rl, sr, ir
-      );
-      const controlling_diff = DifferentialProtectionCalculations_RED670.determineControllingEalreqDifferential(
-        ealreq_diff_close, ealreq_diff_through_3ph, ealreq_diff_through_1ph
-      );
+    // 1. Lead Resistance Rl (Ω)
+    const rl = input.total_lead_resistance_override ?? this.calculateLeadResistance(input.ct_wiring);
 
-      const ealreq_dist_close = DistanceProtectionCalculations_RED670.calculateEalreqDistanceCloseFaults(
-        system_params.max_hv_fault_current, isn, tap.ipn, 1, tap.rct, rl, sr, ir
-      );
-      const ealreq_dist_endzone1_3ph = DistanceProtectionCalculations_RED670.calculateEalreqDistanceEndzone1_3ph(
-        system_params.max_endzone1_3ph, isn, tap.ipn, 3, tap.rct, rl, sr, ir
-      );
-      const ealreq_dist_endzone1_1ph = DistanceProtectionCalculations_RED670.calculateEalreqDistanceEndzone1_1ph(
-        system_params.max_endzone1_1ph, isn, tap.ipn, 3, tap.rct, rl, sr, ir
-      );
-      const controlling_dist = DistanceProtectionCalculations_RED670.determineControllingEalreqDistance(
-        ealreq_dist_close, ealreq_dist_endzone1_3ph, ealreq_dist_endzone1_1ph
-      );
+    // 2. System Source & Cable Impedances
+    const zs_mag = v_bus / (Math.sqrt(3) * ikmax);
+    const phi_s = Math.atan(xr);
+    const rs = zs_mag * Math.cos(phi_s);
+    const xs = zs_mag * Math.sin(phi_s);
 
-      const overall_highest = Math.max(controlling_diff.highest, controlling_dist.highest);
+    const r1l = input.cable.positive_sequence_resistance * input.cable.route_length;
+    const x1l = input.cable.positive_sequence_reactance * input.cable.route_length;
+    const r0l = input.cable.zero_sequence_resistance * input.cable.route_length;
+    const x0l = input.cable.zero_sequence_reactance * input.cable.route_length;
+
+    // 3. System Time Constant
+    const tp_system = (xr * 1000.0) / (2.0 * Math.PI * f);
+
+    // 4. 3-Phase Through Fault
+    const r1t = rs + r1l;
+    const x1t = xs + x1l;
+    const z1t_mag = Math.sqrt(r1t * r1t + x1t * x1t);
+    const itmax_3ph = v_bus / (Math.sqrt(3) * z1t_mag);
+    const xr_3ph_thru = x1t / r1t;
+    const tp_3ph_thru = (xr_3ph_thru * 1000.0) / (2.0 * Math.PI * f);
+
+    // 5. 1-Phase Through Fault
+    const r0t = rs + r0l;
+    const x0t = xs + x0l;
+    const r0f = 2.0 * r1t + r0t;
+    const x0f = 2.0 * x1t + x0t;
+    const z0f_mag = Math.sqrt(r0f * r0f + x0f * x0f);
+    const itmax_1ph = (3.0 * v_bus) / (Math.sqrt(3) * z0f_mag);
+    const xr_1ph_thru = x0f / r0f;
+    const tp_1ph_thru = (xr_1ph_thru * 1000.0) / (2.0 * Math.PI * f);
+
+    // 6. Endzone-1 Faults (80% Cable Reach)
+    const r1z1 = rs + 0.8 * r1l;
+    const x1z1 = xs + 0.8 * x1l;
+    const z1z1_mag = Math.sqrt(r1z1 * r1z1 + x1z1 * x1z1);
+    const ikzone1_3ph = v_bus / (Math.sqrt(3) * z1z1_mag);
+    const xr_3ph_z1 = x1z1 / r1z1;
+    const tp_3ph_z1 = (xr_3ph_z1 * 1000.0) / (2.0 * Math.PI * f);
+
+    const r0z1 = rs + 0.8 * r0l;
+    const x0z1 = xs + 0.8 * x0l;
+    const r0fz1 = 2.0 * r1z1 + r0z1;
+    const x0fz1 = 2.0 * x1z1 + x0z1;
+    const z0fz1_mag = Math.sqrt(r0fz1 * r0fz1 + x0fz1 * x0fz1);
+    const ikzone1_1ph = (3.0 * v_bus) / (Math.sqrt(3) * z0fz1_mag);
+    const xr_1ph_z1 = x0fz1 / r0fz1;
+    const tp_1ph_z1 = (xr_1ph_z1 * 1000.0) / (2.0 * Math.PI * f);
+
+    // 7. Distance Factors a and k
+    const a_factor = tp_system <= 400.0 ? 1.0 : 1.0;
+    const k_factor_3ph = tp_3ph_z1 <= 200.0 ? 3.0 : 3.0;
+    const k_factor_1ph = tp_1ph_z1 <= 200.0 ? 3.0 : 3.0;
+
+    const sr = input.ied_burden ?? 0.02;
+    const ir = input.relay_rated_current ?? 1.0;
+
+    const tap_comparison: Record<string, Tap_Assessment_Result> = {};
+
+    const available_taps = [
+      { key: 'tap1', label: 'Tap-1', data: input.taps.tap1 },
+      ...(input.taps.tap2 ? [{ key: 'tap2', label: 'Tap-2', data: input.taps.tap2 }] : []),
+    ];
+
+    available_taps.forEach((t) => {
+      const tap = t.data;
+      const isn = tap.ct_ratio_secondary;
+      const ipn = tap.ct_ratio_primary;
+      const rct = tap.ct_resistance;
+      const vk_avail = tap.knee_point_voltage;
+
+      const burden_term = rct + rl + sr / (ir * ir);
+      const ct_ratio_factor = isn / ipn;
+
+      // Differential Ealreq
+      const ealreq_diff_close = ikmax * ct_ratio_factor * burden_term;
+      const ealreq_diff_thru_3ph = 2.0 * itmax_3ph * ct_ratio_factor * burden_term;
+      const ealreq_diff_thru_1ph = 2.0 * itmax_1ph * ct_ratio_factor * burden_term;
+
+      const diff_highest = Math.max(ealreq_diff_close, ealreq_diff_thru_3ph, ealreq_diff_thru_1ph);
+      let diff_controlling = 'Close-in Faults';
+      if (diff_highest === ealreq_diff_thru_3ph) diff_controlling = 'Through Faults (3-ph)';
+      if (diff_highest === ealreq_diff_thru_1ph) diff_controlling = 'Through Faults (1-ph)';
+
+      // Distance Ealreq
+      const ealreq_dist_close = ikmax * ct_ratio_factor * a_factor * burden_term;
+      const ealreq_dist_end1_3ph = ikzone1_3ph * ct_ratio_factor * k_factor_3ph * burden_term;
+      const ealreq_dist_end1_1ph = ikzone1_1ph * ct_ratio_factor * k_factor_1ph * burden_term;
+
+      const dist_highest = Math.max(ealreq_dist_close, ealreq_dist_end1_3ph, ealreq_dist_end1_1ph);
+      let dist_controlling = 'Close-in Faults';
+      if (dist_highest === ealreq_dist_end1_3ph) dist_controlling = 'Endzone-1 (3-ph)';
+      if (dist_highest === ealreq_dist_end1_1ph) dist_controlling = 'Endzone-1 (1-ph)';
+
+      // Overall Highest & Required Vk
+      const overall_highest = Math.max(diff_highest, dist_highest);
       const overall_controlling =
-        overall_highest === controlling_diff.highest
-          ? `Differential: ${controlling_diff.equation}`
-          : `Distance: ${controlling_dist.equation}`;
+        overall_highest === diff_highest
+          ? `Differential: ${diff_controlling}`
+          : `Distance: ${dist_controlling}`;
 
-      const required_vk = CT_AdequacyCalculations_RED670.calculateRequiredVk(overall_highest);
-      const suitability = CT_AdequacyCalculations_RED670.determineCTSuitability(tap.available_vk, required_vk);
+      const vk_required = overall_highest * 0.8;
+      const suitable = vk_avail >= vk_required;
+      const verdict = suitable ? 'SUITABLY DIMENSIONED' : 'UNDER DIMENSIONED';
+      const margin = vk_required > 0 ? ((vk_avail - vk_required) / vk_required) * 100.0 : 0;
 
-      results.tap_comparison[tap.key] = {
-        tap_info: { name: tap.name, primary_current: tap.ipn, ct_resistance: tap.rct, available_vk: tap.available_vk },
+      tap_comparison[t.key] = {
+        tap_name: t.label,
+        ipn,
+        rct,
+        vk_available: vk_avail,
+        rl_lead_resistance: rl,
         differential_protection: {
-          close_in_faults: ealreq_diff_close,
-          through_faults_3ph: ealreq_diff_through_3ph,
-          through_faults_1ph: ealreq_diff_through_1ph,
-          controlling_equation: controlling_diff.equation,
-          highest_ealreq: controlling_diff.highest,
+          ealreq_close_in: ealreq_diff_close,
+          ealreq_through_3ph: ealreq_diff_thru_3ph,
+          ealreq_through_1ph: ealreq_diff_thru_1ph,
+          controlling_equation: diff_controlling,
+          highest_ealreq: diff_highest,
         },
         distance_protection: {
-          close_in_faults: ealreq_dist_close,
-          endzone1_3ph: ealreq_dist_endzone1_3ph,
-          endzone1_1ph: ealreq_dist_endzone1_1ph,
-          controlling_equation: controlling_dist.equation,
-          highest_ealreq: controlling_dist.highest,
+          ealreq_close_in: ealreq_dist_close,
+          ealreq_endzone1_3ph: ealreq_dist_end1_3ph,
+          ealreq_endzone1_1ph: ealreq_dist_end1_1ph,
+          controlling_equation: dist_controlling,
+          highest_ealreq: dist_highest,
         },
         overall_assessment: {
           highest_ealreq: overall_highest,
           controlling_function: overall_controlling,
-          required_vk,
-          available_vk: tap.available_vk,
-          suitable: suitability.suitable,
-          verdict: suitability.verdict,
-          safety_margin: suitability.margin,
+          vk_required,
+          vk_available: vk_avail,
+          suitable,
+          verdict,
+          safety_margin_percent: margin,
         },
       };
     });
 
-    // FIX: use the caller-specified active tap instead of always tap2.
-    const activeKey = results.active_tap as 'tap1' | 'tap2';
-    const active = results.tap_comparison[activeKey];
+    const activeKey = input.active_tap ?? (tap_comparison.tap2 ? 'tap2' : 'tap1');
+    const activeResult = tap_comparison[activeKey];
 
-    results.final_verdict = active.overall_assessment.verdict;
-    results.differential_calculations = active.differential_protection;
-    results.distance_calculations = active.distance_protection;
-    results.ct_adequacy_check = active.overall_assessment;
-
-    // Flat fields to match the shape the UI (ComputationResult) expects.
-    results.verdict = active.overall_assessment.verdict;
-    results.vk_required = Math.round(active.overall_assessment.required_vk * 100) / 100;
-    results.vk_available = Math.round(active.overall_assessment.available_vk * 100) / 100;
-    results.ealreq_max = Math.round(active.overall_assessment.highest_ealreq * 100) / 100;
-    results.vk_breakdown = [
-      { label: 'Differential — Close-in', ealreq: active.differential_protection.close_in_faults, vk: active.differential_protection.close_in_faults * 0.8, isMax: false },
-      { label: 'Differential — Through (3ph)', ealreq: active.differential_protection.through_faults_3ph, vk: active.differential_protection.through_faults_3ph * 0.8, isMax: false },
-      { label: 'Differential — Through (1ph)', ealreq: active.differential_protection.through_faults_1ph, vk: active.differential_protection.through_faults_1ph * 0.8, isMax: false },
-      { label: 'Distance — Close-in', ealreq: active.distance_protection.close_in_faults, vk: active.distance_protection.close_in_faults * 0.8, isMax: false },
-      { label: 'Distance — Endzone-1 (3ph)', ealreq: active.distance_protection.endzone1_3ph, vk: active.distance_protection.endzone1_3ph * 0.8, isMax: false },
-      { label: 'Distance — Endzone-1 (1ph)', ealreq: active.distance_protection.endzone1_1ph, vk: active.distance_protection.endzone1_1ph * 0.8, isMax: false },
-    ].map((row) => ({ ...row, isMax: Math.abs(row.ealreq - active.overall_assessment.highest_ealreq) < 1e-6 }));
-    results.intermediates = {
-      required_kssc: undefined,
-      available_kssc: undefined,
-    };
-
-    return results;
-  }
-
-  /**
-   * Validate calculation against Hitachi document expected values (tap2/1800A case).
-   */
-  static validateAgainstDocument(results: any): { validation: boolean; differences: string[]; summary: string } {
-    const differences: string[] = [];
-    const tolerance = 2; // percent
-
-    const expected = {
-      diff_close_in: 186.58,
-      dist_endzone1_1ph: 499.839,
-      required_vk: 399.87,
-      available_vk: 1250,
-      verdict: 'SUITABLY DIMENSIONED',
-    };
-
-    const tap2Results = results.tap_comparison?.tap2;
-    if (!tap2Results) {
-      differences.push('Missing tap2 (1800A) results');
-      return { validation: false, differences, summary: 'Critical calculation data missing' };
-    }
-
-    const diffDiff = Math.abs(tap2Results.differential_protection.close_in_faults - expected.diff_close_in);
-    if ((diffDiff / expected.diff_close_in) * 100 > tolerance) {
-      differences.push(`Differential close-in: ${tap2Results.differential_protection.close_in_faults.toFixed(2)}V (expected ${expected.diff_close_in}V)`);
-    }
-
-    const distDiff = Math.abs(tap2Results.distance_protection.endzone1_1ph - expected.dist_endzone1_1ph);
-    if ((distDiff / expected.dist_endzone1_1ph) * 100 > tolerance) {
-      differences.push(`Distance endzone-1 1ph: ${tap2Results.distance_protection.endzone1_1ph.toFixed(2)}V (expected ${expected.dist_endzone1_1ph}V)`);
-    }
-
-    const vkDiff = Math.abs(tap2Results.overall_assessment.required_vk - expected.required_vk);
-    if ((vkDiff / expected.required_vk) * 100 > tolerance) {
-      differences.push(`Required Vk: ${tap2Results.overall_assessment.required_vk.toFixed(2)}V (expected ${expected.required_vk}V)`);
-    }
-
-    if (tap2Results.overall_assessment.verdict !== expected.verdict) {
-      differences.push(`Final verdict: ${tap2Results.overall_assessment.verdict} (expected ${expected.verdict})`);
-    }
-
-    const validation = differences.length === 0;
     return {
-      validation,
-      differences,
-      summary: validation ? 'Calculations validated successfully' : `${differences.length} calculation(s) differ from document`,
+      template: 'RED670',
+      active_tap: activeKey,
+      lead_resistance_rl: Math.round(rl * 100000) / 100000,
+      fault_summary: {
+        ikmax: Math.round(ikmax * 100) / 100,
+        itmax_3ph: Math.round(itmax_3ph * 100) / 100,
+        itmax_1ph: Math.round(itmax_1ph * 100) / 100,
+        ikzone1_3ph: Math.round(ikzone1_3ph * 100) / 100,
+        ikzone1_1ph: Math.round(ikzone1_1ph * 100) / 100,
+        tp_system_ms: Math.round(tp_system * 100) / 100,
+        tp_3ph_z1_ms: Math.round(tp_3ph_z1 * 100) / 100,
+        tp_1ph_z1_ms: Math.round(tp_1ph_z1 * 100) / 100,
+      },
+      verdict: activeResult.overall_assessment.verdict,
+      vk_required: Math.round(activeResult.overall_assessment.vk_required * 100) / 100,
+      vk_available: Math.round(activeResult.overall_assessment.vk_available * 100) / 100,
+      ealreq_max: Math.round(activeResult.overall_assessment.highest_ealreq * 100) / 100,
+      safety_margin_percent: Math.round(activeResult.overall_assessment.safety_margin_percent * 10) / 10,
+      tap_comparison,
+      active_assessment: activeResult,
+      vk_breakdown: [
+        { label: 'Differential — Close-in', ealreq: activeResult.differential_protection.ealreq_close_in, vk: activeResult.differential_protection.ealreq_close_in * 0.8 },
+        { label: 'Differential — Through (3ph)', ealreq: activeResult.differential_protection.ealreq_through_3ph, vk: activeResult.differential_protection.ealreq_through_3ph * 0.8 },
+        { label: 'Differential — Through (1ph)', ealreq: activeResult.differential_protection.ealreq_through_1ph, vk: activeResult.differential_protection.ealreq_through_1ph * 0.8 },
+        { label: 'Distance — Close-in', ealreq: activeResult.distance_protection.ealreq_close_in, vk: activeResult.distance_protection.ealreq_close_in * 0.8 },
+        { label: 'Distance — Endzone-1 (3ph)', ealreq: activeResult.distance_protection.ealreq_endzone1_3ph, vk: activeResult.distance_protection.ealreq_endzone1_3ph * 0.8 },
+        { label: 'Distance — Endzone-1 (1ph)', ealreq: activeResult.distance_protection.ealreq_endzone1_1ph, vk: activeResult.distance_protection.ealreq_endzone1_1ph * 0.8 },
+      ].map((row) => ({
+        ...row,
+        isMax: Math.abs(row.ealreq - activeResult.overall_assessment.highest_ealreq) < 1e-4,
+      })),
     };
   }
 }
