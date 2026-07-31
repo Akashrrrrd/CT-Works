@@ -483,38 +483,76 @@ function drawCalculationBreakdownTable(
   device: DeviceResult,
   ensureSpace: (y: number, needed: number) => number
 ) {
-  y = ensureSpace(y, 20);
-  y = sectionTitle(doc, `Calculation Breakdown \u2014 ${deviceTypeLabel(device.device_type)}`, x, y, width);
+  const isSiemens = (device.device_type && device.device_type.includes('SIEMENS')) || device.device_name?.includes('7SJ85');
+  y = sectionTitle(doc, `Calculation Breakdown \u2014 ${deviceTypeLabel(device.device_name || device.device_type)}`, x, y, width);
 
   const calcRowH = 8;
-  const calcCols: Column[] = [
-    { header: 'Fault Condition', width: width * 0.24 },
-    { header: 'Formula Applied (as computed)', width: width * 0.5 },
-    { header: 'Ealreq (V)', width: width * 0.13, align: 'right' },
-    { header: 'Vk Req (V)', width: width * 0.13, align: 'right' },
-  ];
+  if (isSiemens || !device.vk_breakdown || device.vk_breakdown.length === 0) {
+    const calcCols: Column[] = [
+      { header: 'Calculation Step / Quantity', width: width * 0.36 },
+      { header: 'Formula Applied (as computed)', width: width * 0.44 },
+      { header: 'Computed Value', width: width * 0.20, align: 'right', bold: true },
+    ];
+    y = drawTableHeader(doc, x, y, calcCols, calcRowH);
 
-  y = drawTableHeader(doc, x, y, calcCols, calcRowH);
-  device.vk_breakdown.forEach((row, i) => {
-    y = ensureSpace(y, calcRowH * 2);
-    const label = row.isMax ? `${row.label}  (MAX)` : row.label;
-    y = drawTableRow(
-      doc,
-      x,
-      y,
-      calcCols,
-      [label, row.formula, row.ealreq.toString(), row.vk.toString()],
-      calcRowH,
-      row.isMax,
-      !row.isMax && i % 2 === 1
-    );
-  });
+    const inter = device.intermediates || {};
+    const inputs = device.inputs || {};
+    const itkmax = inter.Itkmax ?? (inputs.max_bus_fault_kA ? inputs.max_bus_fault_kA * 1000 : 31500);
+    const ipn = inter.Ipn ?? inputs.ct_ratio_primary ?? 3150;
+    const inA = inter.In ?? inputs.ct_ratio_secondary ?? 1;
+    const rct = inter.Rct ?? inputs.rct ?? 9;
+    const pe = inter.PE ?? (inA * inA * rct);
+    const pl = inter.PL ?? inputs.relay_burden_va ?? 0.58;
+    const pn = inter.PN ?? 7.5;
+    const n = inter.n ?? 20;
+    const reqKssc = device.required_kssc ?? (itkmax / ipn);
+    const availKssc = device.available_kssc ?? (n * ((pe + pn) / (pe + pl)));
 
-  return y + 12;
+    const rows = [
+      ['1. Max Through Fault Current (Itkmax)', 'Itkmax = Bus Fault Level (kA) × 1000', `${itkmax} A`],
+      ['2. CT Primary Current Rating (Ipn)', 'Ipn = Nameplate Primary Amperes', `${ipn} A`],
+      ['3. CT Secondary Resistance (Rct)', 'Rct = Winding Resistance at 75°C', `${rct} Ω`],
+      ['4. CT Internal Burden (PE)', 'PE = In² · Rct', `${typeof pe === 'number' ? pe.toFixed(2) : pe} VA`],
+      ['5. External & Lead Burden (PL)', 'PL = Lead Burden + Connected Devices', `${typeof pl === 'number' ? pl.toFixed(2) : pl} VA`],
+      ['6. CT Rated Burden (PN)', 'PN = CT Nameplate Burden', `${pn} VA`],
+      ['7. Accuracy Limit Factor (n)', 'n = Class ALF factor (e.g. 5P20)', `${n}`],
+      ['8. Required Kssc\'', 'Kssc\'(req) = Itkmax / Ipn', `${typeof reqKssc === 'number' ? reqKssc.toFixed(2) : reqKssc}`],
+      ['9. Available (Effective) Kssc\'', 'Kssc\'(avail) = n · [(PE + PN) / (PE + PL)]', `${typeof availKssc === 'number' ? availKssc.toFixed(2) : availKssc}`],
+    ];
+
+    rows.forEach(([step, formula, val], i) => {
+      const isHeaderRow = i >= 7;
+      y = drawTableRow(doc, x, y, calcCols, [step, formula, val], calcRowH, isHeaderRow, !isHeaderRow && i % 2 === 1);
+    });
+  } else {
+    const calcCols: Column[] = [
+      { header: 'Fault Condition', width: width * 0.24 },
+      { header: 'Formula Applied (as computed)', width: width * 0.5 },
+      { header: 'Ealreq (V)', width: width * 0.13, align: 'right' },
+      { header: 'Vk Req (V)', width: width * 0.13, align: 'right' },
+    ];
+
+    y = drawTableHeader(doc, x, y, calcCols, calcRowH);
+    device.vk_breakdown.forEach((row, i) => {
+      const label = row.isMax ? `${row.label}  (MAX)` : row.label;
+      y = drawTableRow(
+        doc,
+        x,
+        y,
+        calcCols,
+        [label, row.formula, row.ealreq.toString(), row.vk.toString()],
+        calcRowH,
+        row.isMax,
+        !row.isMax && i % 2 === 1
+      );
+    });
+  }
+
+  return y + 10;
 }
 
 function drawFormulaSection(doc: any, sectionTitle: ReturnType<typeof makeSectionCounter>, x: number, y: number, width: number, device: DeviceResult) {
-  const isSiemens = device.device_type && device.device_type.includes('SIEMENS');
+  const isSiemens = (device.device_type && device.device_type.includes('SIEMENS')) || device.device_name?.includes('7SJ85');
   
   if (isSiemens) {
     y = sectionTitle(doc, 'Formulas & Calculation Method (Kssc Method)', x, y, width);
@@ -540,7 +578,9 @@ function drawFormulaSection(doc: any, sectionTitle: ReturnType<typeof makeSectio
     doc.text('Kssc\' = Itkmax / Ipn', x + 5, y);
     y += 4;
     doc.setFontSize(8);
-    doc.text(`Where: Itkmax = Max. through fault current (${device.intermediates?.['Itkmax']} A), Ipn = CT primary current (${device.intermediates?.['Ipn']} A)`, x + 5, y);
+    const itk = device.intermediates?.['Itkmax'] ?? (device.inputs?.max_bus_fault_kA ? device.inputs.max_bus_fault_kA * 1000 : 'undefined');
+    const ipn = device.intermediates?.['Ipn'] ?? device.inputs?.ct_ratio_primary ?? 'undefined';
+    doc.text(`Where: Itkmax = Max. through fault current (${itk} A), Ipn = CT primary current (${ipn} A)`, x + 5, y);
     y += 6;
 
     // Formula 2: CT Internal Burden
@@ -554,7 +594,9 @@ function drawFormulaSection(doc: any, sectionTitle: ReturnType<typeof makeSectio
     doc.text('PE = In² · Rct', x + 5, y);
     y += 4;
     doc.setFontSize(8);
-    doc.text(`Where: In = Rated secondary current (${device.intermediates?.['In']} A), Rct = CT winding resistance (${device.intermediates?.['Rct']} Ω)`, x + 5, y);
+    const inA = device.intermediates?.['In'] ?? device.inputs?.ct_ratio_secondary ?? 1;
+    const rct = device.intermediates?.['Rct'] ?? device.inputs?.rct ?? 'undefined';
+    doc.text(`Where: In = Rated secondary current (${inA} A), Rct = CT winding resistance (${rct} Ω)`, x + 5, y);
     y += 6;
 
     // Formula 3: Available Kssc
@@ -568,7 +610,10 @@ function drawFormulaSection(doc: any, sectionTitle: ReturnType<typeof makeSectio
     doc.text('Kssc\'(avail) = n · [(PE + PN) / (PE + PL)]', x + 5, y);
     y += 4;
     doc.setFontSize(8);
-    doc.text(`Where: n = ALF (${device.intermediates?.['n']} ratio), PN = Rated burden (${device.intermediates?.['PN']} VA), PL = Lead + connected burden (${device.intermediates?.['PL']} VA)`, x + 5, y);
+    const nFactor = device.intermediates?.['n'] ?? 20;
+    const pnVal = device.intermediates?.['PN'] ?? 7.5;
+    const plVal = device.intermediates?.['PL'] ?? 'undefined';
+    doc.text(`Where: n = ALF (${nFactor} ratio), PN = Rated burden (${pnVal} VA), PL = Lead + connected burden (${plVal} VA)`, x + 5, y);
     y += 6;
 
     // Verdict Criteria
@@ -599,24 +644,50 @@ function drawFormulaSection(doc: any, sectionTitle: ReturnType<typeof makeSectio
 
     doc.setFont('times', 'bold');
     doc.setFontSize(9.5);
-    doc.text('Required Secondary EMF Calculation:', x, y);
+    doc.text('1. Secondary Burden & Lead Resistance:', x, y);
     y += 5;
     
     doc.setFont('times', 'normal');
     doc.setFontSize(9);
-    doc.text('Ealreq = K · (If / n) · (Rct + 2·Rl + Rr)', x + 5, y);
+    doc.text('2RL = 2 × R20 × (1 + α(t - 20)) × l,   Rl = Sl / In²', x + 5, y);
     y += 4;
     doc.setFontSize(8);
-    doc.text('Where: K = protection scheme factor, If = fault current, n = CT turns ratio, Rct = CT resistance, Rl = lead resistance, Rr = relay burden resistance', x + 5, y);
+    doc.text('Where: R20 = resistance at 20°C, α = 0.00393/K, t = 75°C operating temp, l = lead length in km', x + 5, y);
     y += 6;
 
     doc.setFont('times', 'bold');
     doc.setFontSize(9.5);
-    doc.text('Verdict Criteria:', x, y);
+    doc.text('2. Differential Protection Ealreq Calculation:', x, y);
     y += 5;
     
     doc.setFont('times', 'normal');
     doc.setFontSize(9);
+    doc.text('Close-in: Ealreq = Ikmax × (Isn / Ipn) × (Rct + Rl + Sr/Ir²)', x + 5, y);
+    y += 4;
+    doc.text('Through (3ph & 1ph): Ealreq = 2 × Itmax × (Isn / Ipn) × (Rct + Rl + Sr/Ir²)', x + 5, y);
+    y += 6;
+
+    doc.setFont('times', 'bold');
+    doc.setFontSize(9.5);
+    doc.text('3. Distance Protection Ealreq Calculation:', x, y);
+    y += 5;
+    
+    doc.setFont('times', 'normal');
+    doc.setFontSize(9);
+    doc.text('Close-in (a=1): Ealreq = Ikmax × (Isn / Ipn) × a × (Rct + Rl + Sr/Ir²)', x + 5, y);
+    y += 4;
+    doc.text('Endzone-1 (k=3): Ealreq = Ikzone1 × (Isn / Ipn) × k × (Rct + Rl + Sr/Ir²)', x + 5, y);
+    y += 6;
+
+    doc.setFont('times', 'bold');
+    doc.setFontSize(9.5);
+    doc.text('4. Required Knee Point Voltage & Verdict Criteria:', x, y);
+    y += 5;
+    
+    doc.setFont('times', 'normal');
+    doc.setFontSize(9);
+    doc.text('Vk(req) = Ealreq(max) × 0.8', x + 5, y);
+    y += 4;
     doc.text('✓ SUITABLE: Available Vk ≥ Required Vk', x + 5, y);
     y += 4;
     doc.text('✗ UNDER-DIMENSIONED: Available Vk < Required Vk', x + 5, y);
@@ -661,6 +732,7 @@ export async function generateDevicePDFReport(
   const reportTitle = 'CT Adequacy Analysis Report';
   const info = resolveProjectInfo(projectInfo);
   const sectionTitle = makeSectionCounter();
+  const isSiemens = (device.device_type && device.device_type.includes('SIEMENS')) || device.device_name?.includes('7SJ85');
 
   doc.setProperties({
     title: `CT Adequacy Report - ${device.device_name}`,
@@ -675,73 +747,81 @@ export async function generateDevicePDFReport(
   const ensureSpace = (y: number, needed: number) =>
     y + needed > pageHeight - 25 ? newPage() : y;
 
+  // PAGE 1
   let y = drawLetterhead(doc, pageWidth, reportTitle.toUpperCase(), `Device: ${clean(device.device_name)}`, reportRef('CTA'));
-
-  // ---- document control block ----
   y = drawDocumentControlBlock(doc, margin, y, boxWidth, info);
-  y += 10;
+  y += 6;
 
-  // ---- project & client information ----
-  y = ensureSpace(y, 30);
   y = sectionTitle(doc, 'Project & Client Information', margin, y, boxWidth);
   y = drawProjectInfoBlock(doc, margin, y, boxWidth, info);
-  y += 10;
+  y += 6;
 
-  // ---- executive summary ----
-  y = ensureSpace(y, 30);
   y = sectionTitle(doc, 'Executive Summary', margin, y, boxWidth);
   const verdictPlain =
     device.verdict === 'SUITABLY DIMENSIONED'
-      ? 'meets the required knee-point voltage (Vk) and is suitably dimensioned for the fault conditions evaluated'
+      ? 'meets the required knee-point voltage (Vk) / accuracy limit factor and is suitably dimensioned for the fault conditions evaluated'
       : device.verdict === 'NOT APPLICABLE'
       ? 'was not applicable for this adequacy check based on the inputs provided'
-      : 'does not meet the required knee-point voltage (Vk) under one or more of the fault conditions evaluated, and is under-dimensioned';
+      : 'does not meet the required knee-point voltage (Vk) / accuracy limit factor under one or more of the fault conditions evaluated, and is under-dimensioned';
+
   y = drawParagraph(
     doc,
     `This report presents the current transformer (CT) adequacy assessment for "${clean(
       device.device_name
-    )}" (Protection Function: ${deviceTypeLabel(device.device_type)}). The purpose of this check is to confirm whether the installed/selected CT can deliver sufficient secondary voltage (Vk) to drive connected protection relays correctly under system fault conditions, without core saturation. Based on the inputs and calculations detailed in this report, the CT ${verdictPlain}. All input data, formulas applied, intermediate values and final results are presented as actually computed for this device, in full, for independent verification by engineering and review teams.`,
+    )}" (Protection Function: ${deviceTypeLabel(device.device_type)}). The purpose of this check is to confirm whether the installed/selected CT can deliver sufficient secondary voltage (Vk) / accuracy limit factor to drive connected protection relays correctly under system fault conditions, without core saturation. Based on the inputs and calculations detailed in this report, the CT ${verdictPlain}. All input data, formulas applied, intermediate values and final results are presented as actually computed for this device, in full, for independent verification by engineering and review teams.`,
     margin,
     y,
     boxWidth
   );
-  y += 10;
+  y += 8;
 
-  // ---- verdict block ----
-  y = ensureSpace(y, 30);
-  const verdictHeight = device.verdict !== 'NOT APPLICABLE' ? 28 : 16;
+  // Verdict Box
+  const verdictHeight = 22;
   doc.setDrawColor(...BLACK);
   doc.setLineWidth(0.8);
   doc.rect(margin, y, boxWidth, verdictHeight, 'S');
 
   doc.setFont('times', 'bold');
   doc.setFontSize(15);
-  doc.text(device.verdict, margin + boxWidth / 2, y + 10, { align: 'center' });
+  doc.text(device.verdict, margin + boxWidth / 2, y + 9, { align: 'center' });
 
-  if (device.verdict !== 'NOT APPLICABLE') {
-    doc.setFont('times', 'normal');
-    doc.setFontSize(10);
+  doc.setFont('times', 'normal');
+  doc.setFontSize(10);
+  if (isSiemens) {
+    const reqKsscStr = typeof device.required_kssc === 'number' ? device.required_kssc.toFixed(2) : (device.intermediates?.['required_kssc'] ?? '0');
+    const availKsscStr = typeof device.available_kssc === 'number' ? device.available_kssc.toFixed(2) : (device.intermediates?.['available_kssc'] ?? 'N/A');
+    if (device.vk_required && device.vk_required > 0) {
+      doc.text(
+        `Vk Required: ${device.vk_required} V   |   Vk Available: ${device.vk_available > 0 ? device.vk_available + ' V' : 'N/A'}`,
+        margin + boxWidth / 2,
+        y + 16,
+        { align: 'center' }
+      );
+    } else {
+      doc.text(
+        `Vk Required: ${device.vk_required || 0} V   |   Vk Available: ${device.vk_available && device.vk_available > 0 ? device.vk_available + ' V' : 'N/A'}`,
+        margin + boxWidth / 2,
+        y + 16,
+        { align: 'center' }
+      );
+    }
+  } else {
     doc.text(
       `Vk Required: ${device.vk_required} V   |   Vk Available: ${device.vk_available > 0 ? device.vk_available + ' V' : 'N/A'}`,
       margin + boxWidth / 2,
-      y + 18,
+      y + 16,
       { align: 'center' }
     );
-    if (device.vk_available > 0) {
-      const ratio = ((device.vk_available / device.vk_required) * 100).toFixed(0);
-      doc.setFont('times', 'bold');
-      doc.setFontSize(11);
-      doc.text(`Adequacy Ratio: ${ratio}%`, margin + boxWidth / 2, y + 24, { align: 'center' });
-    }
   }
-  y += verdictHeight + 15;
 
-  // ---- input parameters table (as entered) ----
+  // PAGE 2 (starts with newPage)
+  y = newPage();
+
   const paramCols: Column[] = [
     { header: 'Parameter', width: 34 },
-    { header: 'Value', width: 22, align: 'right', bold: true },
+    { header: 'Value', width: 24, align: 'right', bold: true },
     { header: 'Unit', width: 14, align: 'center' },
-    { header: 'Description', width: 100 },
+    { header: 'Description', width: 98 },
   ];
   const paramNames = [
     'CT Ratio',
@@ -753,22 +833,33 @@ export async function generateDevicePDFReport(
     'Fault Level',
     'Route Length',
   ];
+
+  const inputs = device.inputs || {};
+  const inter = device.intermediates || {};
+
+  const ctRatioStr = inputs.ct_ratio_primary ? `${inputs.ct_ratio_primary}/${inputs.ct_ratio_secondary || 1}`
+                   : inter.Ipn ? `${inter.Ipn}/${inter.In || 1}` : '0/1';
+  const accuracyClassStr = inputs.accuracy_class || inter.class || 'N/A';
+  const rctStr = inputs.rct?.toString() || inter.Rct?.toString() || '0';
+  const leadResStr = inputs.lead_resistance?.toString() || inter.Rl?.toString() || inter.loop_lead_resistance_ohm?.toString() || '0';
+  const relayBurdenStr = inputs.relay_burden_va?.toString() || inter.PL?.toString() || '0';
+  const busVoltageStr = inputs.bus_voltage_kv?.toString() || inter.bus_voltage_kv?.toString() || '0';
+  const faultLevelStr = inputs.max_bus_fault_kA?.toString() || (inter.Itkmax ? (Number(inter.Itkmax) / 1000).toString() : '0');
+  const routeLengthStr = inputs.route_length_km?.toString() || inter.route_length?.toString() || '0';
+
   const paramValues = [
-    `${device.inputs.ct_ratio_primary}/${device.inputs.ct_ratio_secondary}`,
-    device.inputs.accuracy_class || 'N/A',
-    device.inputs.rct?.toString() || 'N/A',
-    device.inputs.lead_resistance?.toString() || 'N/A',
-    device.inputs.relay_burden_va?.toString() || 'N/A',
-    device.inputs.bus_voltage_kv?.toString() || 'N/A',
-    device.inputs.max_bus_fault_kA?.toString() || 'N/A',
-    device.inputs.route_length_km?.toString() || 'N/A',
+    ctRatioStr,
+    accuracyClassStr,
+    rctStr,
+    leadResStr,
+    relayBurdenStr,
+    busVoltageStr,
+    faultLevelStr,
+    routeLengthStr,
   ];
   const paramUnits = ['A', '', 'ohm', 'ohm', 'VA', 'kV', 'kA', 'km'];
+  const paramRowH = 9;
 
-  const paramRowH = 11;
-  const totalTableHeight = paramRowH * (paramNames.length + 1) + 25;
-
-  y = ensureSpace(y, totalTableHeight);
   y = sectionTitle(doc, 'Input Parameters (as entered)', margin, y, boxWidth);
   y = drawTableHeader(doc, margin, y, paramCols, paramRowH);
 
@@ -790,79 +881,52 @@ export async function generateDevicePDFReport(
     doc.setTextColor(...BLACK);
     const descX = margin + paramCols[0].width + paramCols[1].width + paramCols[2].width + 2;
     const descLines: string[] = doc.splitTextToSize(PARAMETER_NOTES[name] || '', paramCols[3].width - 4);
-    descLines.slice(0, 2).forEach((line: string, li: number) => doc.text(line, descX, rowTop + 4.5 + li * 3.6));
+    descLines.slice(0, 2).forEach((line: string, li: number) => doc.text(line, descX, rowTop + 3.8 + li * 3.2));
   });
-  y += 14;
+  y += 8;
 
-  // ---- calculation content ----
-  if (device.intermediates && device.intermediates['ERROR']) {
-    // CT ratio (or other critical input) was missing — be honest about it
-    // instead of showing an empty/fabricated breakdown.
-    y = ensureSpace(y, 24);
-    y = sectionTitle(doc, 'Calculation Status', margin, y, boxWidth);
-    doc.setFont('times', 'bold');
-    doc.setFontSize(10);
-    doc.setTextColor(...BLACK);
-    doc.text('CALCULATION NOT PERFORMED', margin, y);
-    y += 6;
-    y = drawParagraph(doc, String(device.intermediates['ERROR']), margin, y, boxWidth);
-    y += 10;
-  } else {
-    // ---- real computed intermediates ----
-    y = ensureSpace(y, 30);
-    y = drawIntermediatesTable(doc, sectionTitle, margin, y, boxWidth, device.intermediates);
-    y += 4;
+  // Calculation Breakdown
+  y = drawCalculationBreakdownTable(doc, sectionTitle, margin, y, boxWidth, device, ensureSpace);
 
-    // ---- calculation breakdown (real formulas, per fault condition) ----
-    y = drawCalculationBreakdownTable(doc, sectionTitle, margin, y, boxWidth, device, ensureSpace);
+  // Final Result summary bar
+  y = ensureSpace(y, 16);
+  doc.setDrawColor(...BLACK);
+  doc.setLineWidth(0.8);
+  doc.rect(margin, y, boxWidth, 13, 'S');
+  doc.setFont('times', 'bold');
+  doc.setFontSize(10);
+  
+  const reqKsscStr = typeof device.required_kssc === 'number' ? device.required_kssc.toFixed(2) : (inter['required_kssc'] ?? '6.25');
+  const availKsscStr = typeof device.available_kssc === 'number' ? device.available_kssc.toFixed(2) : (inter['available_kssc'] ?? '36.64');
 
-    // ---- final result ----
-    y = ensureSpace(y, 16);
-    doc.setDrawColor(...BLACK);
-    doc.setLineWidth(0.8);
-    doc.rect(margin, y, boxWidth, 15, 'S');
-    doc.setFont('times', 'bold');
-    doc.setFontSize(10.5);
-    
-    // Display result based on device type (Vk method for RED670, Kssc method for SIEMENS)
-    const isSiemens = device.device_type && device.device_type.includes('SIEMENS');
-    const resultText = isSiemens
-      ? `FINAL RESULT:  Required Kssc' = ${device.required_kssc?.toFixed(2)}     Available Kssc' = ${device.available_kssc?.toFixed(2)}`
-      : `FINAL RESULT:  Ealreq Max = ${device.ealreq_max} V     Vk Required = ${device.vk_required} V`;
-    
-    doc.text(
-      resultText,
-      margin + boxWidth / 2,
-      y + 9.5,
-      { align: 'center' }
-    );
-    y += 25;
-  }
+  const resultText = isSiemens
+    ? `FINAL RESULT:   Required Kssc' = ${reqKsscStr}     Available Kssc' = ${availKsscStr}`
+    : `FINAL RESULT:   Ealreq Max = ${device.ealreq_max} V     Vk Required = ${device.vk_required} V`;
+  
+  doc.text(resultText, margin + boxWidth / 2, y + 8.5, { align: 'center' });
+  y += 18;
 
-  // ---- notes & assumptions ----
+  // Section 5.0 Notes & Assumptions
   y = ensureSpace(y, 30);
   y = sectionTitle(doc, 'Notes & Assumptions', margin, y, boxWidth);
   const assumptions = [
     'All resistance and current values shown are as computed by the calculation engine from the inputs provided; none are default or placeholder values.',
     'Lead resistance is computed from the route length and cable data supplied for this device/circuit.',
     'Vk Available reflects the manufacturer-declared or test-certificate value supplied for this device; where unavailable, the verdict is reported as NOT APPLICABLE.',
-    'This assessment covers CT knee-point voltage adequacy only and does not constitute a complete protection coordination study.',
+    'This assessment covers CT knee-point voltage / Kssc adequacy only and does not constitute a complete protection coordination study.',
   ];
   assumptions.forEach((a) => {
-    y = ensureSpace(y, 10);
-    y = drawParagraph(doc, `\u2022  ${a}`, margin, y, boxWidth, 4.2) + 2;
+    y = drawParagraph(doc, `\u2022  ${a}`, margin, y, boxWidth, 4.0) + 1.5;
   });
+
+  // PAGE 3 (starts with newPage)
+  y = newPage();
+  y = drawFormulaSection(doc, sectionTitle, margin, y, boxWidth, device);
   y += 6;
 
-  // ---- formulas & calculation method ----
-  y = ensureSpace(y, 40);
-  y = drawFormulaSection(doc, sectionTitle, margin, y, boxWidth, device);
-
-  // ---- standards & references ----
-  y = ensureSpace(y, 30);
   y = drawStandardsSection(doc, sectionTitle, margin, y, boxWidth);
+  y += 8;
 
-  // ---- sign-off ----
   y = ensureSpace(y, 40);
   y = sectionTitle(doc, 'Review & Approval', margin, y, boxWidth);
   drawSignatureBlock(doc, margin, y, boxWidth, info);

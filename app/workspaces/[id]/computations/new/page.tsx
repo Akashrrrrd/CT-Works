@@ -46,25 +46,25 @@ interface Result {
 }
 
 const SHEET1_FIELDS: { key: keyof Sheet1; label: string; unit: string; type: string }[] = [
-  { key: 'ct_ratio_primary',   label: 'CT Ratio – Primary',    unit: 'A',      type: 'number' },
-  { key: 'ct_ratio_secondary', label: 'CT Ratio – Secondary',  unit: 'A',      type: 'number' },
-  { key: 'accuracy_class',     label: 'Class of Accuracy',     unit: '',       type: 'text'   },
-  { key: 'rct',                label: 'CT Resistance (Rct)',   unit: 'Ω',      type: 'number' },
-  { key: 'vk_available',       label: 'Knee Point Voltage (Vk)', unit: 'V',    type: 'number' },
-  { key: 'io_at_vk',           label: 'Magnetizing Current (Io at Vk)', unit: 'mA', type: 'number' },
+  { key: 'ct_ratio_primary', label: 'CT Ratio – Primary', unit: 'A', type: 'number' },
+  { key: 'ct_ratio_secondary', label: 'CT Ratio – Secondary', unit: 'A', type: 'number' },
+  { key: 'accuracy_class', label: 'Class of Accuracy', unit: '', type: 'text' },
+  { key: 'rct', label: 'CT Resistance (Rct)', unit: 'Ω', type: 'number' },
+  { key: 'vk_available', label: 'Knee Point Voltage (Vk)', unit: 'V', type: 'number' },
+  { key: 'io_at_vk', label: 'Magnetizing Current (Io at Vk)', unit: 'mA', type: 'number' },
 ];
 
 const SHEET2_FIELDS: { key: keyof Sheet2; label: string; unit: string }[] = [
-  { key: 'frequency',          label: 'System Frequency',      unit: 'Hz'      },
-  { key: 'bus_voltage_kv',     label: 'Bus Voltage Level',     unit: 'kV'      },
-  { key: 'max_bus_fault_mva',  label: 'Max. Bus Fault Level',  unit: 'MVA'     },
-  { key: 'r1',                 label: 'R1 – Positive Seq. Resistance', unit: 'Ω/km' },
-  { key: 'x1',                 label: 'X1 – Positive Seq. Reactance', unit: 'Ω/km' },
-  { key: 'r0',                 label: 'R0 – Zero Seq. Resistance',    unit: 'Ω/km' },
-  { key: 'x0',                 label: 'X0 – Zero Seq. Reactance',     unit: 'Ω/km' },
-  { key: 'route_length_km',    label: 'Cable Route Length',    unit: 'km'      },
-  { key: 'relay_burden_va',    label: 'Relay Burden (Sr)',     unit: 'VA'      },
-  { key: 'lead_resistance',    label: 'Lead Resistance (Rl)',  unit: 'Ω'       },
+  { key: 'frequency', label: 'System Frequency', unit: 'Hz' },
+  { key: 'bus_voltage_kv', label: 'Bus Voltage Level', unit: 'kV' },
+  { key: 'max_bus_fault_mva', label: 'Max. Bus Fault Level', unit: 'MVA' },
+  { key: 'r1', label: 'R1 – Positive Seq. Resistance', unit: 'Ω/km' },
+  { key: 'x1', label: 'X1 – Positive Seq. Reactance', unit: 'Ω/km' },
+  { key: 'r0', label: 'R0 – Zero Seq. Resistance', unit: 'Ω/km' },
+  { key: 'x0', label: 'X0 – Zero Seq. Reactance', unit: 'Ω/km' },
+  { key: 'route_length_km', label: 'Cable Route Length', unit: 'km' },
+  { key: 'relay_burden_va', label: 'Relay Burden (Sr)', unit: 'VA' },
+  { key: 'lead_resistance', label: 'Lead Resistance (Rl)', unit: 'Ω' },
 ];
 
 const EMPTY_SHEET1: Sheet1 = {
@@ -116,7 +116,7 @@ export default function NewComputationPage() {
         }
         console.log('Setting templates:', data.length, 'items');
         setTemplates(data);
-        
+
         // Auto-select first template if no template is selected and not coming from IED/Excel
         if (!selectedTemplate && data.length > 0 && !iedId && !searchParams?.get('imported')) {
           console.log('Auto-selecting first template:', data[0]);
@@ -134,20 +134,20 @@ export default function NewComputationPage() {
   useEffect(() => {
     const importedParam = searchParams?.get('imported');
     const dataParam = searchParams?.get('data');
-    
+
     if (importedParam === 'true' && dataParam && templates.length > 0) {
       // Prevent processing the same data multiple times
       if (processedImportRef.current === dataParam) {
         return;
       }
-      
+
       try {
         const importedData = JSON.parse(decodeURIComponent(dataParam));
         console.log('Imported Excel data:', importedData);
-        
+
         // Mark this data as processed
         processedImportRef.current = dataParam;
-        
+
         // Fill Sheet 1 data - NO DEFAULTS, only use imported data
         setSheet1({
           ct_ratio_primary: String(importedData.ct_ratio_primary || ''),
@@ -157,7 +157,7 @@ export default function NewComputationPage() {
           vk_available: String(importedData.vk_available || ''),
           io_at_vk: String(importedData.io_at_vk || ''),
         });
-        
+
         // Fill Sheet 2 data - NO DEFAULTS, only use imported data
         setSheet2({
           frequency: String(importedData.frequency || ''),
@@ -171,10 +171,10 @@ export default function NewComputationPage() {
           relay_burden_va: String(importedData.relay_burden_va || ''),
           lead_resistance: String(importedData.lead_resistance || ''),
         });
-        
+
         setImportedFromExcel(true);
         setIedName(`${importedData.relay_type || 'Imported'} (from Excel)`);
-        
+
         // Auto-select matching template based on relay type  
         const relayTypeToTemplate: Record<string, string> = {
           'RED670': 'tpl-differential',    // Primary: Differential
@@ -188,7 +188,7 @@ export default function NewComputationPage() {
           'P443': 'tpl-differential',      // Primary: Differential
           'P142': 'tpl-distance',          // Distance
         };
-        
+
         const primaryFunction = relayTypeToTemplate[importedData.relay_type];
         if (primaryFunction) {
           const matchingTemplate = templates.find(t => t.iedType === primaryFunction);
@@ -202,7 +202,7 @@ export default function NewComputationPage() {
           // Unknown relay type: use first template
           setSelectedTemplate(templates[0] ?? null);
         }
-        
+
       } catch (error) {
         console.error('Failed to parse imported data:', error);
         setError('Failed to load imported Excel data');
@@ -232,12 +232,12 @@ export default function NewComputationPage() {
               const [primary, secondary] = (ied.ct.ratio ?? '').split('/');
               setSheet1(prev => ({
                 ...prev,
-                ct_ratio_primary:   primary   ?? prev.ct_ratio_primary,
+                ct_ratio_primary: primary ?? prev.ct_ratio_primary,
                 ct_ratio_secondary: secondary ?? prev.ct_ratio_secondary,
-                accuracy_class:     ied.ct.class ?? prev.accuracy_class,
-                rct:                ied.ct.rct   ? String(ied.ct.rct) : prev.rct,
-                vk_available:       ied.ct.vk    ? String(ied.ct.vk)  : prev.vk_available,
-                io_at_vk:           ied.ct.io    ? String(ied.ct.io)  : prev.io_at_vk,
+                accuracy_class: ied.ct.class ?? prev.accuracy_class,
+                rct: ied.ct.rct ? String(ied.ct.rct) : prev.rct,
+                vk_available: ied.ct.vk ? String(ied.ct.vk) : prev.vk_available,
+                io_at_vk: ied.ct.io ? String(ied.ct.io) : prev.io_at_vk,
               }));
 
               // Auto-select template based on IED model and its protection functions
@@ -255,7 +255,7 @@ export default function NewComputationPage() {
                   'P443': 'tpl-differential',    // Primary: Differential (+ distance)  
                   'P142': 'tpl-distance',        // Distance only
                 };
-                
+
                 const primaryFunction = modelToTemplate[ied.model];
                 if (primaryFunction) {
                   // Find template that matches the primary protection function
@@ -289,24 +289,24 @@ export default function NewComputationPage() {
       const parse = (v: string) => { const n = parseFloat(v); if (isNaN(n)) throw new Error(`Invalid value: "${v}"`); return n; };
 
       const s1 = {
-        ct_ratio_primary:   parse(sheet1.ct_ratio_primary),
+        ct_ratio_primary: parse(sheet1.ct_ratio_primary),
         ct_ratio_secondary: parse(sheet1.ct_ratio_secondary),
-        accuracy_class:     sheet1.accuracy_class,
-        rct:                parse(sheet1.rct),
-        vk_available:       parse(sheet1.vk_available),
-        io_at_vk:           parse(sheet1.io_at_vk),
+        accuracy_class: sheet1.accuracy_class,
+        rct: parse(sheet1.rct),
+        vk_available: parse(sheet1.vk_available),
+        io_at_vk: parse(sheet1.io_at_vk),
       };
       const s2 = {
-        frequency:          parse(sheet2.frequency),
-        bus_voltage_kv:     parse(sheet2.bus_voltage_kv),
-        max_bus_fault_mva:  parse(sheet2.max_bus_fault_mva),
-        r1:                 parse(sheet2.r1),
-        x1:                 parse(sheet2.x1),
-        r0:                 parse(sheet2.r0),
-        x0:                 parse(sheet2.x0),
-        route_length_km:    parse(sheet2.route_length_km),
-        relay_burden_va:    parse(sheet2.relay_burden_va),
-        lead_resistance:    parse(sheet2.lead_resistance),
+        frequency: parse(sheet2.frequency),
+        bus_voltage_kv: parse(sheet2.bus_voltage_kv),
+        max_bus_fault_mva: parse(sheet2.max_bus_fault_mva),
+        r1: parse(sheet2.r1),
+        x1: parse(sheet2.x1),
+        r0: parse(sheet2.r0),
+        x0: parse(sheet2.x0),
+        route_length_km: parse(sheet2.route_length_km),
+        relay_burden_va: parse(sheet2.relay_burden_va),
+        lead_resistance: parse(sheet2.lead_resistance),
       };
 
       const res = await fetch(`/api/workspaces/${workspaceId}/computations`, {
@@ -335,12 +335,12 @@ export default function NewComputationPage() {
 
   const handleDownloadPDF = async () => {
     if (!result || !selectedTemplate) return;
-    
+
     console.log('🚀 Using NEW PROFESSIONAL PDF Generator from computations page');
-    
+
     // Use the new professional PDF generator instead of the old HITACHI one
     const { generateEngineReport } = await import('@/lib/services/engine-pdf-report');
-    
+
     const inputPayload = {
       system: {
         frequency: parseFloat(lastSheet2.frequency),
@@ -361,7 +361,7 @@ export default function NewComputationPage() {
         alpha: 0.00393,
         temperature: 75,
         cable_length_m: parseFloat(lastSheet2.lead_resistance),
-        cores: 2 as 2|1
+        cores: 2 as 2 | 1
       },
       ct: {
         ratio_primary: parseFloat(lastSheet1.ct_ratio_primary),
@@ -416,7 +416,7 @@ export default function NewComputationPage() {
         <div className="flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 px-4 py-2 text-sm">
           <Zap className="h-4 w-4 text-primary shrink-0" />
           <span>
-            {importedFromExcel 
+            {importedFromExcel
               ? `CT data imported from Excel: ${iedName} • Protection function auto-selected based on relay model`
               : `CT data pre-filled from IED: ${iedName} • Protection function determined by IED model`
             }
@@ -438,7 +438,7 @@ export default function NewComputationPage() {
             <CardHeader>
               <CardTitle className="text-base">Protection Function Analysis</CardTitle>
               <CardDescription>
-                {iedName 
+                {iedName
                   ? `Analyzing ${iedName} - protection functions determined by IED model`
                   : 'Protection function template selected automatically'}
               </CardDescription>
@@ -470,8 +470,8 @@ export default function NewComputationPage() {
             <CardContent>
               <div className="space-y-1">
                 <label className="text-sm font-medium">Template</label>
-                <Select 
-                  value={selectedTemplate?.id ?? ''} 
+                <Select
+                  value={selectedTemplate?.id ?? ''}
                   onValueChange={id => {
                     const template = templates.find(t => t.id === id);
                     setSelectedTemplate(template ?? null);
@@ -518,7 +518,7 @@ export default function NewComputationPage() {
                     type={f.type}
                     step="any"
                     value={sheet1[f.key]}
-                    onChange={e => { setSheet1(prev => ({ ...prev, [f.key]: e.target.value })); setResult(null); }}                    disabled={submitting}
+                    onChange={e => { setSheet1(prev => ({ ...prev, [f.key]: e.target.value })); setResult(null); }} disabled={submitting}
                     className="font-mono"
                   />
                   {f.unit && <span className="text-xs text-muted-foreground w-10 shrink-0">{f.unit}</span>}
@@ -546,7 +546,7 @@ export default function NewComputationPage() {
                     type="number"
                     step="any"
                     value={sheet2[f.key]}
-                    onChange={e => { setSheet2(prev => ({ ...prev, [f.key]: e.target.value })); setResult(null); }}                    disabled={submitting}
+                    onChange={e => { setSheet2(prev => ({ ...prev, [f.key]: e.target.value })); setResult(null); }} disabled={submitting}
                     className="font-mono"
                   />
                   <span className="text-xs text-muted-foreground w-10 shrink-0">{f.unit}</span>

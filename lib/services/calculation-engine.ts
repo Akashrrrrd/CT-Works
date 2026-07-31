@@ -131,3 +131,26 @@ export function runFullAnalysis(input: FullAnalysisInput, templateType?: string)
   const result = evaluateBay(system, bay);
   return convertEngineResult(result, input);
 }
+
+export interface RelayFormula {
+  name: string;
+  expression: string;
+  variables: string[];
+  type: 'equation' | 'inequality_gte' | 'inequality_lte';
+  description?: string;
+}
+
+export function evaluateRelayFormula(formula: RelayFormula, values: Record<string, number>): { result: number; pass?: boolean } {
+  try {
+    let expr = formula.expression;
+    for (const [key, val] of Object.entries(values)) {
+      expr = expr.replace(new RegExp(`\\b${key}\\b`, 'g'), String(val));
+    }
+    // Safe evaluation for standard arithmetic expressions
+    const fn = new Function(`return (${expr});`);
+    const res = Number(fn());
+    return { result: isNaN(res) ? 0 : res, pass: true };
+  } catch (e) {
+    return { result: 0, pass: false };
+  }
+}
