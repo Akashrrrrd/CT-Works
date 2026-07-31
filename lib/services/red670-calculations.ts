@@ -1,31 +1,3 @@
-/**
-<<<<<<< HEAD
-<<<<<<< HEAD
- * ============================================================================
- * RED670 CT ADEQUACY CALCULATION ENGINE
- * ----------------------------------------------------------------------------
- * SINGLE SOURCE OF TRUTH: the customer Excel template
- *   Sheets used:  "CT-VT Burdens"            -> lead / burden resistance
- *                 "Parameters & Fault Cal."  -> Zs, fault currents, time consts
- *                 "IFP1-RED670"              -> Ealreq + Vk per CT tap
- *
- * Every formula below is transcribed cell-for-cell from those sheets. The
- * Excel cell reference is quoted next to each step so any result can be
- * traced back to the workbook. NOTHING is hardcoded: every numeric input
- * (fault level, X/R, CT ratio, Rct, Vk, burden, lead length, cable data...)
- * flows in through the input object, so changing any input re-derives the
- * whole chain.
- *
- * NOTE ON PI: the Excel template computes the primary time constant with
- * (22/7) as pi, NOT Math.PI  ->  'Parameters & Fault Cal.'!Q59
- *   Q59 = (X/R * 1000) / (2 * (22/7) * f)
- * Using Math.PI would break Excel parity, so 22/7 is preserved and exposed
- * as a documented constant.
- * ============================================================================
- */
-
-/* ============================== CONSTANTS ================================= */
-
 /** Constants that are literals inside the Excel sheets (documented, overridable). */
 export const RED670_EXCEL_CONSTANTS = {
   /** 'CT-VT Burdens'!S12 - temperature coefficient of copper (K^-1) */
@@ -1702,4 +1674,3 @@ export class RED670_Calculator {
   }
 }
 
->>>>>>> 9871f53179d903edb3facd20f4ace23b24c0e5b8
