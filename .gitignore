@@ -18,4 +18,9 @@ next.user-config.*
 node_modules
 .next/
 .DS_Store
-*.zip
+*.zip
+
+# Test cases & confidential data
+test cases/
+test cases
+**/test cases/
