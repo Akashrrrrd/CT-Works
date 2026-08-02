@@ -12,12 +12,12 @@ In the Siemens 7SJ85 Calculator:
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                   Input Parameters                       │
-│  (CT Wiring, VT Wiring, System, Power Line, etc.)       │
+│ Input Parameters │
+│ (CT Wiring, VT Wiring, System, Power Line, etc.) │
 ├─────────────────────────────────────────────────────────┤
-│                                                           │
-│  [Calculate CT/VT Adequacy] [Download Report]  ← NEW    │
-│                                                           │
+│ │
+│ [Calculate CT/VT Adequacy] [Download Report] ← NEW │
+│ │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -45,12 +45,12 @@ In the Siemens 7SJ85 Calculator:
 
 ## 📄 What's in the Report
 
-✅ **Verdict** (Pass/Fail with color coding)  
-✅ **All Calculations** (CT, Fault, Burden)  
-✅ **Input Parameters** (For reference)  
-✅ **Professional Formatting** (Print-ready)  
-✅ **Timestamp** (Generation date/time)  
-✅ **Document Reference** (Hitachi standard info)
+✅ **Verdict** (Pass/Fail with color coding) 
+✅ **All Calculations** (CT, Fault, Burden) 
+✅ **Input Parameters** (For reference) 
+✅ **Professional Formatting** (Print-ready) 
+✅ **Timestamp** (Generation date/time) 
+✅ **Document Reference** (Standard Engineering standard info)
 
 ---
 

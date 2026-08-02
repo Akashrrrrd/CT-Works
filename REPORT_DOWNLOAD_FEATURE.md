@@ -36,40 +36,40 @@ The downloaded report includes:
 
 ### Header
 - Title: SIEMENS 7SJ85 CT/VT Adequacy Calculator
-- Document reference: N-19957 2-DF4W
+- Document reference: 
 - Generation timestamp
 
 ### Main Sections
 1. **CT Adequacy Check**
-   - Required Kssc
-   - Available Kssc
-   - Pass/Fail status
+ - Required Kssc
+ - Available Kssc
+ - Pass/Fail status
 
 2. **CT Wiring Calculations**
-   - Resistance at 75°C
-   - Lead Resistance (RL)
-   - Loop Resistance (2RL)
-   - VA Consumption (Pl)
+ - Resistance at 75°C
+ - Lead Resistance (RL)
+ - Loop Resistance (2RL)
+ - VA Consumption (Pl)
 
 3. **Fault Current Calculations**
-   - System Time Constant (tp)
-   - Through Fault Current
-   - X/R Ratio
+ - System Time Constant (tp)
+ - Through Fault Current
+ - X/R Ratio
 
 4. **Burden Calculations**
-   - Internal Burden (PE)
-   - Total Load Burden
-   - Total Load Other Burden
+ - Internal Burden (PE)
+ - Total Load Burden
+ - Total Load Other Burden
 
 5. **Input Parameters**
-   - All user inputs used for calculation
-   - CT specifications
-   - System parameters
+ - All user inputs used for calculation
+ - CT specifications
+ - System parameters
 
 6. **Document Reference**
-   - Document number
-   - Substation information
-   - Contractor details
+ - Document number
+ - Substation information
+ - Contractor details
 
 ---
 
@@ -90,14 +90,14 @@ The report is styled with:
 ```typescript
 // Button appears only when results are available
 {result && (
-  <Button 
-    onClick={() => downloadReport()}
-    variant="outline"
-    size="lg"
-  >
-    <Download className="mr-2 h-4 w-4" />
-    Download Report
-  </Button>
+ <Button 
+ onClick={() => downloadReport()}
+ variant="outline"
+ size="lg"
+ >
+ <Download className="mr-2 h-4 w-4" />
+ Download Report
+ </Button>
 )}
 
 // Click triggers downloadReport() function which:
@@ -204,6 +204,6 @@ The feature is ready to use:
 
 ## 🚀 Status
 
-**Feature:** ✅ COMPLETE  
-**Build:** ✅ SUCCESSFUL  
+**Feature:** ✅ COMPLETE 
+**Build:** ✅ SUCCESSFUL 
 **Ready:** ✅ FOR USE

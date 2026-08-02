@@ -17,19 +17,19 @@
 ```
 
 ## The Code Change
-**File:** `/app/api/relay-formulas/siemens-7sj85/route.ts`  
+**File:** `/app/api/relay-formulas/siemens-7sj85/route.ts` 
 **Lines:** 18-43
 
 ```typescript
 // NEW CODE
 const accuracy_limit_factor = input.ct_core?.accuracy_limit_factor;
 if (typeof accuracy_limit_factor !== 'number') {
-  return NextResponse.json({ error: '...' }, { status: 400 });
+ return NextResponse.json({ error: '...' }, { status: 400 });
 }
 
 const calculationInput = {
-  ...input,
-  accuracy_limit_factor  // ← Extracted to top-level
+ ...input,
+ accuracy_limit_factor // ← Extracted to top-level
 };
 
 const results = Siemens7SJ85Calculator.performCompleteCalculation(calculationInput);
@@ -59,6 +59,6 @@ Final Verdict: SUITABLY DIMENSIONED ✅ (was UNDER DIMENSIONED ❌)
 
 ---
 
-**Status:** ✅ FIXED  
-**Risk:** LOW  
+**Status:** ✅ FIXED 
+**Risk:** LOW 
 **Impact:** HIGH (All calculations now correct)

@@ -3,7 +3,7 @@
 
 ---
 
-## TEST CASE #1: Standard 33kV Feeder Protection (From Hitachi Document)
+## TEST CASE #1: Standard 33kV Feeder Protection (From Standard Engineering Document)
 
 ### ✅ INPUT VALUES (What you enter when creating IED):
 
@@ -48,46 +48,46 @@
 
 ### CT WIRING CALCULATIONS:
 ```
-Resistance @ 75°C:         8.99 Ω/km        (7.41 × 1.21615)
-Lead Resistance (RL):      0.45 Ω           (8.99 × 50m)
-Loop Resistance (2RL):     0.90 Ω           (2 × 8.99 × 50m)
-VA Consumption:            0.90 VA          (1² × 8.99 × 50m)
+Resistance @ 75°C: 8.99 Ω/km (7.41 × 1.21615)
+Lead Resistance (RL): 0.45 Ω (8.99 × 50m)
+Loop Resistance (2RL): 0.90 Ω (2 × 8.99 × 50m)
+VA Consumption: 0.90 VA (1² × 8.99 × 50m)
 ```
 
 ### FAULT CURRENT CALCULATIONS:
 ```
-Max HV Busbar Fault Current:  12,500 A       (12.5 kA × 1000)
-HV Rating of Busbar:          33,000 V       (33 kV × 1000)
-Source Impedance Zs:          1.52 Ω         (33000 / (√3 × 12500))
-Time Constant (Tp):           47.75 ms       (15 / (2π × 50))
+Max HV Busbar Fault Current: 12,500 A (12.5 kA × 1000)
+HV Rating of Busbar: 33,000 V (33 kV × 1000)
+Source Impedance Zs: 1.52 Ω (33000 / (√3 × 12500))
+Time Constant (Tp): 47.75 ms (15 / (2π × 50))
 ```
 
 ### BURDEN CALCULATIONS:
 ```
-Internal Burden (PE):         3.50 VA        (1² × 3.5)
-Wiring Burden (PL_wiring):    0.90 VA        (Loop resistance)
-Device Burden (PL_devices):   0.04 VA        (0.02 + 0.02)
-Total Burden (PL_total):      0.94 VA        (0.90 + 0.04)
-Rated Burden (PN):            15.00 VA
+Internal Burden (PE): 3.50 VA (1² × 3.5)
+Wiring Burden (PL_wiring): 0.90 VA (Loop resistance)
+Device Burden (PL_devices): 0.04 VA (0.02 + 0.02)
+Total Burden (PL_total): 0.94 VA (0.90 + 0.04)
+Rated Burden (PN): 15.00 VA
 ```
 
 ### CT ADEQUACY CHECK (CORE FORMULAS):
 ```
-Required Kssc:     20.83                    (12,500 / 600)
-Available Kssc:    99.47                    (20 × ((3.5 + 15) / (3.5 + 0.94)))
-                                            = 20 × ((18.5) / (4.44))
-                                            = 20 × 4.4686
-                                            = 89.37
+Required Kssc: 20.83 (12,500 / 600)
+Available Kssc: 99.47 (20 × ((3.5 + 15) / (3.5 + 0.94)))
+ = 20 × ((18.5) / (4.44))
+ = 20 × 4.4686
+ = 89.37
 
-Suitable?:         YES ✓
-Verdict:           "SUITABLY DIMENSIONED"
+Suitable?: YES ✓
+Verdict: "SUITABLY DIMENSIONED"
 ```
 
 ### VK CALCULATIONS:
 ```
-Vk Available:      400 V          (From CT nameplate)
-Vk Required:       72.91 V        (20.83 × 3.5)
-Ealreq Max:        72.91 V        (Same as Vk Required)
+Vk Available: 400 V (From CT nameplate)
+Vk Required: 72.91 V (20.83 × 3.5)
+Ealreq Max: 72.91 V (Same as Vk Required)
 ```
 
 ---
@@ -97,12 +97,12 @@ Ealreq Max:        72.91 V        (Same as Vk Required)
 When you create the IED with the input values above and click **"Compute"**, the website should show:
 
 ```
-✓ Vk Required:     72.91 V    (±1 decimal place acceptable)
-✓ Vk Available:    400 V
-✓ Ealreq Max:      72.91 V
-✓ Verdict:         "SUITABLY DIMENSIONED"
-✓ Available Kssc:  ~89.37     (Should be > Required Kssc 20.83)
-✓ Required Kssc:   20.83
+✓ Vk Required: 72.91 V (±1 decimal place acceptable)
+✓ Vk Available: 400 V
+✓ Ealreq Max: 72.91 V
+✓ Verdict: "SUITABLY DIMENSIONED"
+✓ Available Kssc: ~89.37 (Should be > Required Kssc 20.83)
+✓ Required Kssc: 20.83
 ```
 
 ---
@@ -165,8 +165,8 @@ Available Kssc = 89.37 ✓
 ### Step 8: Verdict
 ```
 IF Available Kssc > Required Kssc:
-   89.37 > 20.83  → TRUE ✓
-   Verdict = "SUITABLY DIMENSIONED" ✓
+ 89.37 > 20.83 → TRUE ✓
+ Verdict = "SUITABLY DIMENSIONED" ✓
 ```
 
 ### Step 9: Vk Required
@@ -191,10 +191,10 @@ Vk Required = 72.916 V ≈ 72.91 V ✓
 - Compare the exact values shown vs expected
 - Identify which calculation is wrong
 - Examples of potential issues:
-  - If `Vk Required` is very different (like 200V instead of 72.91V)
-  - If `Available Kssc` doesn't match
-  - If `Resistance @ 75°C` is wrong
-  - If connected device burdens not being summed correctly
+ - If `Vk Required` is very different (like 200V instead of 72.91V)
+ - If `Available Kssc` doesn't match
+ - If `Resistance @ 75°C` is wrong
+ - If connected device burdens not being summed correctly
 
 ---
 
@@ -205,9 +205,9 @@ Vk Required = 72.916 V ≈ 72.91 V ✓
 3. **Click "Compute"**
 4. **Compare the website output with EXPECTED OUTPUT**
 5. **Let me know the results:**
-   - Did it match? (screenshot would help)
-   - Which values were different?
-   - By how much?
+ - Did it match? (screenshot would help)
+ - Which values were different?
+ - By how much?
 
 ---
 

@@ -19,7 +19,7 @@ Based on your screenshots, your current application has:
 Project Name: "Test Customer Project"
 Voltage Level: "33kV" (or whatever voltage your customer specified)
 Location: "Customer Site"
-Approved By: "Test Engineer"  
+Approved By: "Test Engineer" 
 Client Name: "Test Client"
 ```
 
@@ -38,7 +38,7 @@ Model: RED670
 
 CT NAMEPLATE DATA (from customer):
 - CT Ratio: 800/1
-- Class: PX  
+- Class: PX 
 - Rct (Ω): 3.5
 - Vk (V): 540
 - Io at Vk (mA): 20
@@ -71,21 +71,21 @@ If Available Vk < Required Vk → UNDER DIMENSIONED
 Please test this in your existing application and tell me:
 
 1. **Does the system ask for any manual calculations?**
-   - It should NOT ask you to calculate burdens manually
-   - It should NOT ask for derived parameters
+ - It should NOT ask you to calculate burdens manually
+ - It should NOT ask for derived parameters
 
 2. **What values does your system calculate automatically?**
-   - CT internal burden?
-   - Lead burden?  
-   - Total burden?
-   - Required Vk?
+ - CT internal burden?
+ - Lead burden? 
+ - Total burden?
+ - Required Vk?
 
 3. **What is the final result?**
-   - SUITABLE or UNDER DIMENSIONED?
-   - What safety margin %?
+ - SUITABLE or UNDER DIMENSIONED?
+ - What safety margin %?
 
 4. **What are the intermediate calculation values?**
-   - Please share the numbers your system shows
+ - Please share the numbers your system shows
 
 ---
 
@@ -93,7 +93,7 @@ Please test this in your existing application and tell me:
 
 I want to verify that your **existing calculation engine** is:
 - ✅ Using correct formulas
-- ✅ Not asking for manual parameters  
+- ✅ Not asking for manual parameters 
 - ✅ Giving accurate results
 - ✅ Matching professional engineering standards
 
@@ -121,7 +121,7 @@ Safety Margin: ____%
 
 Any intermediate calculations your system shows:
 - Max fault current: ___ A
-- Secondary current: ___ A  
+- Secondary current: ___ A 
 - Lead resistance: ___ Ω
 - etc.
 ```

@@ -6,21 +6,21 @@ import { Button } from '@/components/ui/button';
 import { Sun, Moon } from 'lucide-react';
 
 export function ThemeToggle() {
-  const { theme, setTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
+ const { theme, setTheme } = useTheme();
+ const [mounted, setMounted] = useState(false);
 
-  // Avoid hydration mismatch
-  useEffect(() => setMounted(true), []);
-  if (!mounted) return <div className="w-9 h-9" />;
+ // Avoid hydration mismatch
+ useEffect(() => setMounted(true), []);
+ if (!mounted) return <div className="w-9 h-9" />;
 
-  return (
-    <Button
-      variant="ghost"
-      size="icon"
-      onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-      title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-    >
-      {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-    </Button>
-  );
+ return (
+ <Button
+ variant="ghost"
+ size="icon"
+ onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+ title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+ >
+ {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+ </Button>
+ );
 }

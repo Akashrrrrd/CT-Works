@@ -6,65 +6,65 @@
 ```
 Create IED Form
 ├─ CT Data Tab:
-│  ├─ CT Primary: 600
-│  ├─ CT Secondary: 1
-│  ├─ Accuracy Class: 5P20
-│  ├─ Rct: 3.5
-│  ├─ Rated Burden: 15
-│  ├─ ALF: 20
-│  ├─ Vk Available: 400
-│  └─ Io at Vk: 30
+│ ├─ CT Primary: 600
+│ ├─ CT Secondary: 1
+│ ├─ Accuracy Class: 5P20
+│ ├─ Rct: 3.5
+│ ├─ Rated Burden: 15
+│ ├─ ALF: 20
+│ ├─ Vk Available: 400
+│ └─ Io at Vk: 30
 ├─ Wiring Tab:
-│  ├─ Conductor: 2.5 mm²
-│  ├─ R at 20°C: 7.41 Ω/km
-│  ├─ Temp Coeff: 0.00393
-│  ├─ Temperature: 75°C
-│  └─ Cable Length: 50 m
+│ ├─ Conductor: 2.5 mm²
+│ ├─ R at 20°C: 7.41 Ω/km
+│ ├─ Temp Coeff: 0.00393
+│ ├─ Temperature: 75°C
+│ └─ Cable Length: 50 m
 ├─ System Tab:
-│  ├─ Frequency: 50 Hz
-│  ├─ Bus Voltage: 33 kV
-│  ├─ Max Fault: 12.5 kA
-│  └─ X/R Ratio: 15
+│ ├─ Frequency: 50 Hz
+│ ├─ Bus Voltage: 33 kV
+│ ├─ Max Fault: 12.5 kA
+│ └─ X/R Ratio: 15
 └─ Line Tab:
-   ├─ R1: 0.0221 Ω/km
-   ├─ X1: 0.1600 Ω/km
-   ├─ R0: 0.1300 Ω/km
-   ├─ X0: 0.0600 Ω/km
-   └─ Line Length: 1.74 km
+ ├─ R1: 0.0221 Ω/km
+ ├─ X1: 0.1600 Ω/km
+ ├─ R0: 0.1300 Ω/km
+ ├─ X0: 0.0600 Ω/km
+ └─ Line Length: 1.74 km
 ```
 
 ### 2. FRONTEND → BACKEND: JSON Sent When You Click "Compute"
 ```javascript
 POST /api/workspaces/{id}/computations
 {
-  "templateId": "template-siemens-7sj85",
-  "sheet1": {
-    "ct_ratio_primary": 600,
-    "ct_ratio_secondary": 1,
-    "accuracy_class": "5P20",
-    "ct_resistance": 3.5,
-    "rated_burden": 15,
-    "accuracy_limit_factor": 20,
-    "knee_point_voltage": 400,
-    "magnetizing_current": 30,
-    "ied_burden": 0.02,
-    "conductor_cross_section": 2.5,
-    "resistance_20c": 7.41,
-    "temp_coefficient": 0.00393,
-    "operating_temperature": 75,
-    "cable_length": 50
-  },
-  "sheet2": {
-    "system_frequency": 50,
-    "bus_voltage": 33,
-    "max_fault_current": 12.5,
-    "xr_ratio": 15,
-    "positive_seq_resistance": 0.0221,
-    "positive_seq_reactance": 0.1600,
-    "zero_seq_resistance": 0.1300,
-    "zero_seq_reactance": 0.0600,
-    "line_length": 1.74
-  }
+ "templateId": "template-siemens-7sj85",
+ "sheet1": {
+ "ct_ratio_primary": 600,
+ "ct_ratio_secondary": 1,
+ "accuracy_class": "5P20",
+ "ct_resistance": 3.5,
+ "rated_burden": 15,
+ "accuracy_limit_factor": 20,
+ "knee_point_voltage": 400,
+ "magnetizing_current": 30,
+ "ied_burden": 0.02,
+ "conductor_cross_section": 2.5,
+ "resistance_20c": 7.41,
+ "temp_coefficient": 0.00393,
+ "operating_temperature": 75,
+ "cable_length": 50
+ },
+ "sheet2": {
+ "system_frequency": 50,
+ "bus_voltage": 33,
+ "max_fault_current": 12.5,
+ "xr_ratio": 15,
+ "positive_seq_resistance": 0.0221,
+ "positive_seq_reactance": 0.1600,
+ "zero_seq_resistance": 0.1300,
+ "zero_seq_reactance": 0.0600,
+ "line_length": 1.74
+ }
 }
 ```
 
@@ -82,45 +82,45 @@ Steps:
 
 ```typescript
 {
-  ct_wiring: {
-    ct_conductor_cross_section: 2.5,
-    ct_resistance_w_km_20c: 7.41,
-    ct_specific_resistance_20c: 0.00393,
-    ct_conductor_length_m: 50,
-    relay_rated_current: 1
-  },
-  system: {
-    system_frequency: 50,
-    bus_voltage_level: 33,
-    max_bus_fault_level: 12.5,
-    xr_ratio: 15,
-    max_hv_busbar_fault_current: 12500,  // 12.5 × 1000
-    hv_rating_of_busbar: 33000            // 33 × 1000
-  },
-  power_line: {
-    positive_seq_resistance_r1: 0.0221,
-    positive_seq_reactance_x1: 0.1600,
-    zero_seq_resistance_r0: 0.1300,
-    zero_seq_reactance_x0: 0.0600,
-    route_length: 1.74,
-    // ... other impedance values calculated
-  },
-  ct_core: {
-    ct_ratio_primary: 600,
-    ct_ratio_secondary: 1,
-    class_of_accuracy: "5P20",
-    ct_resistance: 3.5,
-    rated_burden: 15,
-    CT_Accuracy_Limit_Factor: 20
-  },
-  connected_devices: [
-    { device_name: "SIEMENS 7SJ85", burden_va: 0.02 }
-  ],
-  accuracy_limit_factor: 20
+ ct_wiring: {
+ ct_conductor_cross_section: 2.5,
+ ct_resistance_w_km_20c: 7.41,
+ ct_specific_resistance_20c: 0.00393,
+ ct_conductor_length_m: 50,
+ relay_rated_current: 1
+ },
+ system: {
+ system_frequency: 50,
+ bus_voltage_level: 33,
+ max_bus_fault_level: 12.5,
+ xr_ratio: 15,
+ max_hv_busbar_fault_current: 12500, // 12.5 × 1000
+ hv_rating_of_busbar: 33000 // 33 × 1000
+ },
+ power_line: {
+ positive_seq_resistance_r1: 0.0221,
+ positive_seq_reactance_x1: 0.1600,
+ zero_seq_resistance_r0: 0.1300,
+ zero_seq_reactance_x0: 0.0600,
+ route_length: 1.74,
+ // ... other impedance values calculated
+ },
+ ct_core: {
+ ct_ratio_primary: 600,
+ ct_ratio_secondary: 1,
+ class_of_accuracy: "5P20",
+ ct_resistance: 3.5,
+ rated_burden: 15,
+ CT_Accuracy_Limit_Factor: 20
+ },
+ connected_devices: [
+ { device_name: "SIEMENS 7SJ85", burden_va: 0.02 }
+ ],
+ accuracy_limit_factor: 20
 }
 ```
 
-### 5. CALCULATOR: Exact Hitachi Formula Calculations
+### 5. CALCULATOR: Exact Standard Engineering Formula Calculations
 
 **Step 1: Resistance @ 75°C**
 ```
@@ -167,36 +167,36 @@ Vk Required = 20.83 × 3.5 = 72.91 V
 **Step 8: CT Suitability**
 ```
 IF Available Kssc (83.72) > Required Kssc (20.83) THEN
-  → "SUITABLY DIMENSIONED" ✓
+ → "SUITABLY DIMENSIONED" ✓
 ELSE
-  → "UNDER DIMENSIONED" ✗
+ → "UNDER DIMENSIONED" ✗
 ```
 
 ### 6. BACKEND → FRONTEND: Results Returned
 
 ```json
 {
-  "verdict": "SUITABLY DIMENSIONED",
-  "vk_required": 72.91,
-  "vk_available": 400,
-  "ealreq_max": 72.91,
-  "vk_breakdown": [
-    {
-      "label": "Through Fault (Primary)",
-      "ealreq": 72.91,
-      "vk": 72.91,
-      "isMax": true
-    }
-  ],
-  "intermediates": {
-    "template_type": "SIEMENS_7SJ85",
-    "calculation_method": "Siemens 7SJ85 Direct Calculation",
-    "hitachi_reference": "N-19957 2-DF4W",
-    "required_kssc": 20.83,
-    "available_kssc": 83.72,
-    "ct_calculations": { ... },
-    "burden_calculations": { ... }
-  }
+ "verdict": "SUITABLY DIMENSIONED",
+ "vk_required": 72.91,
+ "vk_available": 400,
+ "ealreq_max": 72.91,
+ "vk_breakdown": [
+ {
+ "label": "Through Fault (Primary)",
+ "ealreq": 72.91,
+ "vk": 72.91,
+ "isMax": true
+ }
+ ],
+ "intermediates": {
+ "template_type": "SIEMENS_7SJ85",
+ "calculation_method": "Siemens 7SJ85 Direct Calculation",
+ "standard_engineering_reference": "",
+ "required_kssc": 20.83,
+ "available_kssc": 83.72,
+ "ct_calculations": { ... },
+ "burden_calculations": { ... }
+ }
 }
 ```
 
@@ -205,14 +205,14 @@ ELSE
 You see in the dialog:
 ```
 ┌─────────────────────────────────────┐
-│  ✓ SUITABLY DIMENSIONED             │
+│ ✓ SUITABLY DIMENSIONED │
 ├─────────────────────────────────────┤
-│ Vk Required    │ Vk Available │ Eal  │
-│    72.91 V     │    400 V     │72.91V│
+│ Vk Required │ Vk Available │ Eal │
+│ 72.91 V │ 400 V │72.91V│
 ├─────────────────────────────────────┤
-│ Fault Condition  │ Ealreq (V)│ Vk   │
-│ Through Fault    │   72.91   │72.91 │
-│ (MAX)            │           │      │
+│ Fault Condition │ Ealreq (V)│ Vk │
+│ Through Fault │ 72.91 │72.91 │
+│ (MAX) │ │ │
 └─────────────────────────────────────┘
 ```
 
@@ -223,31 +223,31 @@ You see in the dialog:
 ### BEFORE (Wrong):
 ```
 Form Input 
-  ↓
+ ↓
 Incomplete/Wrong Conversion
-  ↓
+ ↓
 Legacy Format
-  ↓ Lost Data Here!
-  ↓
+ ↓ Lost Data Here!
+ ↓
 Calculator Gets Wrong Inputs
-  ↓
+ ↓
 Wrong Calculations
-  ↓
+ ↓
 Excel says 72.91V, Website says 200V ❌
 ```
 
 ### AFTER (Correct):
 ```
 Form Input (All fields captured)
-  ↓
+ ↓
 Complete sheet1 & sheet2
-  ↓
+ ↓
 Direct Calculator Call
-  ↓
-Exact Hitachi Formulas
-  ↓
+ ↓
+Exact Standard Engineering Formulas
+ ↓
 Correct Calculations
-  ↓
+ ↓
 Excel says 72.91V, Website says 72.91V ✅
 ```
 
@@ -256,24 +256,24 @@ Excel says 72.91V, Website says 72.91V ✅
 ## Key Improvement Points
 
 1. **All Form Fields Are Captured**
-   - Before: Only 4-5 fields were captured
-   - After: 20+ fields now properly captured into state
+ - Before: Only 4-5 fields were captured
+ - After: 20+ fields now properly captured into state
 
 2. **Direct Calculator Route**
-   - Before: Multiple conversion layers = data loss
-   - After: Straight from frontend to Siemens7SJ85Calculator
+ - Before: Multiple conversion layers = data loss
+ - After: Straight from frontend to Siemens7SJ85Calculator
 
 3. **Field Mapping Is Exact**
-   - Before: Some fields had wrong names
-   - After: All fields match calculator interface exactly
+ - Before: Some fields had wrong names
+ - After: All fields match calculator interface exactly
 
 4. **Temperature Coefficient Applied Correctly**
-   - Before: Might not have been applied
-   - After: R(75°C) = R20 × 1.21615 always applied
+ - Before: Might not have been applied
+ - After: R(75°C) = R20 × 1.21615 always applied
 
 5. **Connected Devices Handled Properly**
-   - Before: Might not be summed
-   - After: All device burdens added to total PL
+ - Before: Might not be summed
+ - After: All device burdens added to total PL
 
 ---
 

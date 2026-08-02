@@ -9,12 +9,12 @@ The mismatch in output results occurs because the **accuracy_limit_factor** (ALF
 **Data Flow Chain:**
 ```
 Component (Siemens7SJ85Calculator.tsx)
-  → Stores: accuracy_limit_factor inside ct_core object
-  → Sends to API: { ct_core: { accuracy_limit_factor: 20 } }
-  → API Endpoint receives and passes directly to calculation service
-  → Calculation Service EXPECTS: input.accuracy_limit_factor (top-level)
-  → MISMATCH: Service gets undefined instead of 20
-  → Result: NaN in all Kssc calculations
+ → Stores: accuracy_limit_factor inside ct_core object
+ → Sends to API: { ct_core: { accuracy_limit_factor: 20 } }
+ → API Endpoint receives and passes directly to calculation service
+ → Calculation Service EXPECTS: input.accuracy_limit_factor (top-level)
+ → MISMATCH: Service gets undefined instead of 20
+ → Result: NaN in all Kssc calculations
 ```
 
 ### Why It Matters
@@ -38,54 +38,54 @@ If `accuracy_factor` is `undefined`, the result is `NaN`, which then causes:
 **Before (Lines 18-36):**
 ```typescript
 try {
-  const input = await req.json();
-  
-  // Validate required input structure
-  const requiredSections = ['ct_wiring', 'system', 'power_line', 'ct_core', 'connected_devices'];
-  for (const section of requiredSections) {
-    if (!input[section]) {
-      return NextResponse.json({ 
-        error: `Missing required section: ${section}` 
-      }, { status: 400 });
-    }
-  }
+ const input = await req.json();
+ 
+ // Validate required input structure
+ const requiredSections = ['ct_wiring', 'system', 'power_line', 'ct_core', 'connected_devices'];
+ for (const section of requiredSections) {
+ if (!input[section]) {
+ return NextResponse.json({ 
+ error: `Missing required section: ${section}` 
+ }, { status: 400 });
+ }
+ }
 
-  // Perform complete 7SJ85 calculation
-  const results = Siemens7SJ85Calculator.performCompleteCalculation(input);
+ // Perform complete 7SJ85 calculation
+ const results = Siemens7SJ85Calculator.performCompleteCalculation(input);
 ```
 
 **After (Lines 18-43):**
 ```typescript
 try {
-  const input = await req.json();
-  
-  // Validate required input structure
-  const requiredSections = ['ct_wiring', 'system', 'power_line', 'ct_core', 'connected_devices'];
-  for (const section of requiredSections) {
-    if (!input[section]) {
-      return NextResponse.json({ 
-        error: `Missing required section: ${section}` 
-      }, { status: 400 });
-    }
-  }
+ const input = await req.json();
+ 
+ // Validate required input structure
+ const requiredSections = ['ct_wiring', 'system', 'power_line', 'ct_core', 'connected_devices'];
+ for (const section of requiredSections) {
+ if (!input[section]) {
+ return NextResponse.json({ 
+ error: `Missing required section: ${section}` 
+ }, { status: 400 });
+ }
+ }
 
-  // Extract accuracy_limit_factor from ct_core and elevate it to top-level
-  // The calculation service expects it at the top level, not nested in ct_core
-  const accuracy_limit_factor = input.ct_core?.accuracy_limit_factor;
-  if (typeof accuracy_limit_factor !== 'number') {
-    return NextResponse.json({ 
-      error: 'accuracy_limit_factor must be a number in ct_core' 
-    }, { status: 400 });
-  }
+ // Extract accuracy_limit_factor from ct_core and elevate it to top-level
+ // The calculation service expects it at the top level, not nested in ct_core
+ const accuracy_limit_factor = input.ct_core?.accuracy_limit_factor;
+ if (typeof accuracy_limit_factor !== 'number') {
+ return NextResponse.json({ 
+ error: 'accuracy_limit_factor must be a number in ct_core' 
+ }, { status: 400 });
+ }
 
-  // Prepare calculation input with accuracy_limit_factor at top level
-  const calculationInput = {
-    ...input,
-    accuracy_limit_factor  // Add as top-level parameter for the calculation service
-  };
+ // Prepare calculation input with accuracy_limit_factor at top level
+ const calculationInput = {
+ ...input,
+ accuracy_limit_factor // Add as top-level parameter for the calculation service
+ };
 
-  // Perform complete 7SJ85 calculation
-  const results = Siemens7SJ85Calculator.performCompleteCalculation(calculationInput);
+ // Perform complete 7SJ85 calculation
+ const results = Siemens7SJ85Calculator.performCompleteCalculation(calculationInput);
 ```
 
 **Key Changes:**
@@ -101,24 +101,24 @@ try {
 ### Before Fix (Broken)
 ```json
 {
-  "required_kssc": 15.87,
-  "available_kssc": NaN,
-  "final_verdict": "UNDER DIMENSIONED",  // Wrong!
-  "ct_calculations": {
-    "va_consumption": NaN
-  }
+ "required_kssc": 15.87,
+ "available_kssc": NaN,
+ "final_verdict": "UNDER DIMENSIONED", // Wrong!
+ "ct_calculations": {
+ "va_consumption": NaN
+ }
 }
 ```
 
 ### After Fix (Correct)
 ```json
 {
-  "required_kssc": 15.87,
-  "available_kssc": 31.81,
-  "final_verdict": "SUITABLY DIMENSIONED",
-  "ct_calculations": {
-    "va_consumption": 1.08
-  }
+ "required_kssc": 15.87,
+ "available_kssc": 31.81,
+ "final_verdict": "SUITABLY DIMENSIONED",
+ "ct_calculations": {
+ "va_consumption": 1.08
+ }
 }
 ```
 
@@ -129,23 +129,23 @@ try {
 With accuracy_limit_factor properly passed:
 
 1. **CT Calculations** ✅ (Uses ct_core parameters)
-   - Lead resistance: RL = R × l = 0.54 Ω
-   - Loop resistance: 2RL = 1.08 Ω
-   - VA consumption: In² × RL = 1.08 VA
+ - Lead resistance: RL = R × l = 0.54 Ω
+ - Loop resistance: 2RL = 1.08 Ω
+ - VA consumption: In² × RL = 1.08 VA
 
 2. **Fault Current Calculations** ✅ (Uses system parameters)
-   - Max HV busbar fault: 1000 × 50 kA = 50,000 A
-   - System tp: XR / (2π × f) = 15 / (2π × 50) ≈ 47.75 ms
+ - Max HV busbar fault: 1000 × 50 kA = 50,000 A
+ - System tp: XR / (2π × f) = 15 / (2π × 50) ≈ 47.75 ms
 
 3. **Burden Calculations** ✅ (Uses CT parameters)
-   - Internal burden: In² × Rct = 1² × 9 = 9 VA
-   - Total load burden: 2RL = 1.08 VA
-   - Total load other burden: 0.02 VA (device_7sj85 burden)
+ - Internal burden: In² × Rct = 1² × 9 = 9 VA
+ - Total load burden: 2RL = 1.08 VA
+ - Total load other burden: 0.02 VA (device_7sj85 burden)
 
 4. **Adequacy Check** ✅ (NOW WORKS WITH accuracy_limit_factor = 20)
-   - Required Kssc: 50,000 / 3,150 = 15.87
-   - Available Kssc: 20 × ((9 + 7.5) / (9 + 0.02)) = 20 × (16.5 / 9.02) = 36.59
-   - Verdict: 36.59 > 15.87 → **SUITABLY DIMENSIONED** ✅
+ - Required Kssc: 50,000 / 3,150 = 15.87
+ - Available Kssc: 20 × ((9 + 7.5) / (9 + 0.02)) = 20 × (16.5 / 9.02) = 36.59
+ - Verdict: 36.59 > 15.87 → **SUITABLY DIMENSIONED** ✅
 
 ---
 
@@ -164,12 +164,12 @@ While fixing the main issue, this change also provides:
 The component's input structure remains unchanged:
 ```typescript
 ct_core: {
-  ct_ratio_primary: 3150,
-  ct_ratio_secondary: 1,
-  class_of_accuracy: '5P 20',
-  ct_resistance: 9,
-  rated_burden: 7.5,
-  accuracy_limit_factor: 20  // ← Stays here, API extracts it
+ ct_ratio_primary: 3150,
+ ct_ratio_secondary: 1,
+ class_of_accuracy: '5P 20',
+ ct_resistance: 9,
+ rated_burden: 7.5,
+ accuracy_limit_factor: 20 // ← Stays here, API extracts it
 }
 ```
 
@@ -207,6 +207,6 @@ After applying this fix, verify:
 
 1. Apply the fix to `/app/api/relay-formulas/siemens-7sj85/route.ts`
 2. Rebuild the application
-3. Test with the example inputs from the Hitachi document
+3. Test with the example inputs from the Standard Engineering document
 4. Verify output matches the expected results table
 5. Test with various CT ratios and burden values

@@ -18,13 +18,13 @@ The download button is now **fully functional** on the Full Analysis page.
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                   Analysis Results                          │
+│ Analysis Results │
 ├─────────────────────────────────────────────────────────────┤
-│                                                              │
-│  [Your Results Displayed Here]                              │
-│                                                              │
-│  [Download Report] [New Analysis]  ← THE BUTTON             │
-│                                                              │
+│ │
+│ [Your Results Displayed Here] │
+│ │
+│ [Download Report] [New Analysis] ← THE BUTTON │
+│ │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -54,12 +54,12 @@ The download button is now **fully functional** on the Full Analysis page.
 
 ## What's In The Report
 
-✅ Overall summary (suitable IEDs count)  
-✅ Individual IED results with color-coded verdicts  
-✅ Complete burden calculations  
-✅ Safety margins  
-✅ Required vs Available Vk values  
-✅ Professional styling  
+✅ Overall summary (suitable IEDs count) 
+✅ Individual IED results with color-coded verdicts 
+✅ Complete burden calculations 
+✅ Safety margins 
+✅ Required vs Available Vk values 
+✅ Professional styling 
 
 ---
 

@@ -11,29 +11,29 @@ Based on comprehensive code analysis, the user's accuracy_limit_factor input is 
 
 ```tsx
 <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-  <div className="flex items-start gap-3">
-    <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-      <span className="text-white text-sm font-bold">!</span>
-    </div>
-    <div className="flex-1">
-      <Label htmlFor={`accuracy-limit-${index}`} className="text-blue-800 font-medium">
-        Accuracy Limit Factor (ALF)
-      </Label>
-      <Input 
-        id={`accuracy-limit-${index}`}
-        type="number"
-        step="1"
-        placeholder="20"
-        value={ied.accuracy_limit_factor}
-        onChange={(e) => updateIED(index, 'accuracy_limit_factor', parseFloat(e.target.value) || 0)}
-        className="mt-2 bg-white border-blue-300 focus:border-blue-500 focus:ring-blue-500"
-      />
-      <p className="text-sm text-blue-700 mt-2 leading-relaxed">
-        📋 <strong>Find this value on:</strong> CT Test Certificate, Nameplate, or Manufacturer Datasheet<br/>
-        💡 <strong>Common values:</strong> Protection CTs (10-30), Metering CTs (5-10)
-      </p>
-    </div>
-  </div>
+ <div className="flex items-start gap-3">
+ <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+ <span className="text-white text-sm font-bold">!</span>
+ </div>
+ <div className="flex-1">
+ <Label htmlFor={`accuracy-limit-${index}`} className="text-blue-800 font-medium">
+ Accuracy Limit Factor (ALF)
+ </Label>
+ <Input 
+ id={`accuracy-limit-${index}`}
+ type="number"
+ step="1"
+ placeholder="20"
+ value={ied.accuracy_limit_factor}
+ onChange={(e) => updateIED(index, 'accuracy_limit_factor', parseFloat(e.target.value) || 0)}
+ className="mt-2 bg-white border-blue-300 focus:border-blue-500 focus:ring-blue-500"
+ />
+ <p className="text-sm text-blue-700 mt-2 leading-relaxed">
+ 📋 <strong>Find this value on:</strong> CT Test Certificate, Nameplate, or Manufacturer Datasheet<br/>
+ 💡 <strong>Common values:</strong> Protection CTs (10-30), Metering CTs (5-10)
+ </p>
+ </div>
+ </div>
 </div>
 ```
 
@@ -49,13 +49,13 @@ Based on comprehensive code analysis, the user's accuracy_limit_factor input is 
 
 ```typescript
 export interface IEDParameters {
-  ied_name: string;
-  ct_ratio: string;
-  accuracy_class: string;
-  ct_resistance: number;
-  magnetizing_current: number;
-  knee_point_voltage: number;
-  accuracy_limit_factor: number; // ← User input field
+ ied_name: string;
+ ct_ratio: string;
+ accuracy_class: string;
+ ct_resistance: number;
+ magnetizing_current: number;
+ knee_point_voltage: number;
+ accuracy_limit_factor: number; // ← User input field
 }
 ```
 
@@ -68,15 +68,15 @@ export interface IEDParameters {
 
 ```typescript
 const [ieds, setIEDs] = useState<IEDParameters[]>([
-  {
-    ied_name: "SIEMENS 7SJ85",
-    ct_ratio: "3200/1A",
-    accuracy_class: "5P20",
-    ct_resistance: 2.5,
-    magnetizing_current: 10,
-    knee_point_voltage: 2000,
-    accuracy_limit_factor: 20  // ← Default value, user can override
-  }
+ {
+ ied_name: "SIEMENS 7SJ85",
+ ct_ratio: "3200/1A",
+ accuracy_class: "5P20",
+ ct_resistance: 2.5,
+ magnetizing_current: 10,
+ knee_point_voltage: 2000,
+ accuracy_limit_factor: 20 // ← Default value, user can override
+ }
 ]);
 ```
 
@@ -90,50 +90,50 @@ const [ieds, setIEDs] = useState<IEDParameters[]>([
 
 ```typescript
 static calculateSiemens7SJ85Adequacy(
-  ied: IEDParameters,
-  system_calc: CalculatedSystemParameters,
-  wiring_calc: CalculatedWiringParameters
+ ied: IEDParameters,
+ system_calc: CalculatedSystemParameters,
+ wiring_calc: CalculatedWiringParameters
 ): IEDAdequacyResult {
-  
-  // Map input data including user's accuracy_limit_factor
-  const siemens_input = {
-    // ... other parameters ...
-    
-    // Pass the user-provided accuracy_limit_factor - THIS IS KEY!
-    accuracy_limit_factor: ied.accuracy_limit_factor
-  };
-  
-  // Call specialized Siemens calculator with user's value
-  const siemens_results = Siemens7SJ85Calculator.performCompleteCalculation(siemens_input);
-  
-  // Return detailed results showing user's ALF is used
-  const adequacy_result: IEDAdequacyResult = {
-    // ... other fields ...
-    
-    calculation_steps: [
-      {
-        step_name: "User Accuracy Limit Factor",
-        formula: "ALF = User Input",
-        inputs: { "User Input": ied.accuracy_limit_factor },
-        result: ied.accuracy_limit_factor,
-        unit: "",
-        description: "User-provided Accuracy Limit Factor from CT test certificate"
-      },
-      {
-        step_name: "Available Kssc (with User ALF)",
-        formula: "Kssc_avail = ALF × (PE + PN) / (PE + PL)",
-        inputs: { 
-          ALF: ied.accuracy_limit_factor, // ← User's value used here
-          // ... other inputs
-        },
-        result: siemens_results.available_kssc || 0,
-        unit: "",
-        description: "Calculated using YOUR provided Accuracy Limit Factor"
-      }
-    ]
-  };
-  
-  return adequacy_result;
+ 
+ // Map input data including user's accuracy_limit_factor
+ const siemens_input = {
+ // ... other parameters ...
+ 
+ // Pass the user-provided accuracy_limit_factor - THIS IS KEY!
+ accuracy_limit_factor: ied.accuracy_limit_factor
+ };
+ 
+ // Call specialized Siemens calculator with user's value
+ const siemens_results = Siemens7SJ85Calculator.performCompleteCalculation(siemens_input);
+ 
+ // Return detailed results showing user's ALF is used
+ const adequacy_result: IEDAdequacyResult = {
+ // ... other fields ...
+ 
+ calculation_steps: [
+ {
+ step_name: "User Accuracy Limit Factor",
+ formula: "ALF = User Input",
+ inputs: { "User Input": ied.accuracy_limit_factor },
+ result: ied.accuracy_limit_factor,
+ unit: "",
+ description: "User-provided Accuracy Limit Factor from CT test certificate"
+ },
+ {
+ step_name: "Available Kssc (with User ALF)",
+ formula: "Kssc_avail = ALF × (PE + PN) / (PE + PL)",
+ inputs: { 
+ ALF: ied.accuracy_limit_factor, // ← User's value used here
+ // ... other inputs
+ },
+ result: siemens_results.available_kssc || 0,
+ unit: "",
+ description: "Calculated using YOUR provided Accuracy Limit Factor"
+ }
+ ]
+ };
+ 
+ return adequacy_result;
 }
 ```
 
@@ -148,25 +148,25 @@ static calculateSiemens7SJ85Adequacy(
 
 ```typescript
 static performCompleteCalculation(input: {
-  // ... other parameters ...
-  accuracy_limit_factor?: number; // Optional override from IED parameters
+ // ... other parameters ...
+ accuracy_limit_factor?: number; // Optional override from IED parameters
 }) {
-  // ... calculations ...
-  
-  // Use user-provided ALF or fall back to CT core parameter
-  const accuracy_factor = input.accuracy_limit_factor || input.ct_core.CT_Accuracy_Limit_Factor;
-  
-  // Calculate Available Kssc using user's accuracy_factor
-  const available_kssc = BurdenCalculations.calculateAvailableKssc(
-    accuracy_factor, // ← User's value used in actual calculation
-    internal_burden,
-    rated_burden,
-    burden_values.total_load_other_burden
-  );
-  
-  return {
-    // ... results including available_kssc calculated with user's ALF
-  };
+ // ... calculations ...
+ 
+ // Use user-provided ALF or fall back to CT core parameter
+ const accuracy_factor = input.accuracy_limit_factor || input.ct_core.CT_Accuracy_Limit_Factor;
+ 
+ // Calculate Available Kssc using user's accuracy_factor
+ const available_kssc = BurdenCalculations.calculateAvailableKssc(
+ accuracy_factor, // ← User's value used in actual calculation
+ internal_burden,
+ rated_burden,
+ burden_values.total_load_other_burden
+ );
+ 
+ return {
+ // ... results including available_kssc calculated with user's ALF
+ };
 }
 ```
 
@@ -180,17 +180,17 @@ static performCompleteCalculation(input: {
 
 ```typescript
 static calculateIEDAdequacy(
-  ied: IEDParameters,
-  system_calc: CalculatedSystemParameters,
-  wiring_calc: CalculatedWiringParameters
+ ied: IEDParameters,
+ system_calc: CalculatedSystemParameters,
+ wiring_calc: CalculatedWiringParameters
 ): IEDAdequacyResult {
-  
-  // Special handling for SIEMENS 7SJ85 - use dedicated calculator
-  if (ied.ied_name === 'SIEMENS 7SJ85' || ied.ied_name.includes('7SJ85')) {
-    return this.calculateSiemens7SJ85Adequacy(ied, system_calc, wiring_calc);
-  }
-  
-  // ... other IED types
+ 
+ // Special handling for SIEMENS 7SJ85 - use dedicated calculator
+ if (ied.ied_name === 'SIEMENS 7SJ85' || ied.ied_name.includes('7SJ85')) {
+ return this.calculateSiemens7SJ85Adequacy(ied, system_calc, wiring_calc);
+ }
+ 
+ // ... other IED types
 }
 ```
 
@@ -202,30 +202,30 @@ static calculateIEDAdequacy(
 
 ```
 USER INPUT (Frontend)
-    ↓
+ ↓
 🖥️ AdequacyWizard.tsx
-   - User enters accuracy_limit_factor in blue highlighted field
-   - Value stored in ied.accuracy_limit_factor
-    ↓
+ - User enters accuracy_limit_factor in blue highlighted field
+ - Value stored in ied.accuracy_limit_factor
+ ↓
 📡 AutomatedCalculationEngine.performCompleteAnalysis()
-   - IED data passed to calculateIEDAdequacy()
-    ↓
+ - IED data passed to calculateIEDAdequacy()
+ ↓
 🔀 Routing Logic
-   - SIEMENS 7SJ85 detected
-   - Routed to calculateSiemens7SJ85Adequacy()
-    ↓
+ - SIEMENS 7SJ85 detected
+ - Routed to calculateSiemens7SJ85Adequacy()
+ ↓
 🔧 Siemens Calculator Integration
-   - ied.accuracy_limit_factor passed as override
-   - Siemens7SJ85Calculator.performCompleteCalculation() called
-    ↓
+ - ied.accuracy_limit_factor passed as override
+ - Siemens7SJ85Calculator.performCompleteCalculation() called
+ ↓
 ⚡ Siemens 7SJ85 Calculations
-   - accuracy_factor = user's accuracy_limit_factor
-   - Available Kssc calculated using user's value
-    ↓
+ - accuracy_factor = user's accuracy_limit_factor
+ - Available Kssc calculated using user's value
+ ↓
 📊 Results
-   - Calculation steps show user's ALF being used
-   - Available Kssc reflects user's input
-   - Adequacy verdict based on user's ALF
+ - Calculation steps show user's ALF being used
+ - Available Kssc reflects user's input
+ - Adequacy verdict based on user's ALF
 ```
 
 ## 🔍 Where to Verify in the Application

@@ -9,14 +9,14 @@ Added Accuracy Limit Factor as user input field in the CT/VT Adequacy Check fron
 **File**: `lib/types/ct-vt-adequacy-types.ts`
 ```typescript
 export interface IEDParameters {
-  ied_name: string;              // e.g., "SIEMENS 7SJ85", "ABB RET670"
-  ct_ratio: string;              // e.g., "3200/1A", "1600/5A"
-  accuracy_class: string;        // e.g., "5P20", "PX", "0.5"
-  ct_resistance: number;         // Ω (measured or from datasheet)
-  magnetizing_current: number;   // mA at Vk
-  knee_point_voltage: number;    // V (Vk from CT test certificate)
-  accuracy_limit_factor: number; // CT Accuracy Limit Factor (user input) ✅ ADDED
-  // Note: burden will be calculated from known IED specifications
+ ied_name: string; // e.g., "SIEMENS 7SJ85", "ABB RET670"
+ ct_ratio: string; // e.g., "3200/1A", "1600/5A"
+ accuracy_class: string; // e.g., "5P20", "PX", "0.5"
+ ct_resistance: number; // Ω (measured or from datasheet)
+ magnetizing_current: number; // mA at Vk
+ knee_point_voltage: number; // V (Vk from CT test certificate)
+ accuracy_limit_factor: number; // CT Accuracy Limit Factor (user input) ✅ ADDED
+ // Note: burden will be calculated from known IED specifications
 }
 ```
 
@@ -26,48 +26,48 @@ export interface IEDParameters {
 #### State Initialization:
 ```typescript
 const [ieds, setIEDs] = useState<IEDParameters[]>([
-  {
-    ied_name: "SIEMENS 7SJ85",
-    ct_ratio: "3200/1A",
-    accuracy_class: "5P20",
-    ct_resistance: 2.5,
-    magnetizing_current: 10,
-    knee_point_voltage: 2000,
-    accuracy_limit_factor: 20  // ✅ ADDED with default value
-  }
+ {
+ ied_name: "SIEMENS 7SJ85",
+ ct_ratio: "3200/1A",
+ accuracy_class: "5P20",
+ ct_resistance: 2.5,
+ magnetizing_current: 10,
+ knee_point_voltage: 2000,
+ accuracy_limit_factor: 20 // ✅ ADDED with default value
+ }
 ]);
 ```
 
 #### Form Input Field Added:
 ```jsx
 <div>
-  <Label htmlFor={`accuracy-limit-${index}`}>Accuracy Limit Factor</Label>
-  <Input 
-    id={`accuracy-limit-${index}`}
-    type="number"
-    step="1"
-    placeholder="20"
-    value={ied.accuracy_limit_factor}
-    onChange={(e) => updateIED(index, 'accuracy_limit_factor', parseFloat(e.target.value) || 0)}
-  />
-  <p className="text-sm text-muted-foreground">
-    CT Accuracy Limiting Factor (from CT test certificate)
-  </p>
+ <Label htmlFor={`accuracy-limit-${index}`}>Accuracy Limit Factor</Label>
+ <Input 
+ id={`accuracy-limit-${index}`}
+ type="number"
+ step="1"
+ placeholder="20"
+ value={ied.accuracy_limit_factor}
+ onChange={(e) => updateIED(index, 'accuracy_limit_factor', parseFloat(e.target.value) || 0)}
+ />
+ <p className="text-sm text-muted-foreground">
+ CT Accuracy Limiting Factor (from CT test certificate)
+ </p>
 </div>
 ```
 
 #### addIED Function Updated:
 ```typescript
 const addIED = () => {
-  setIEDs([...ieds, {
-    ied_name: "",
-    ct_ratio: "1600/1A",
-    accuracy_class: "5P20", 
-    ct_resistance: 1.5,
-    magnetizing_current: 10,
-    knee_point_voltage: 1000,
-    accuracy_limit_factor: 20  // ✅ ADDED to new IED template
-  }]);
+ setIEDs([...ieds, {
+ ied_name: "",
+ ct_ratio: "1600/1A",
+ accuracy_class: "5P20", 
+ ct_resistance: 1.5,
+ magnetizing_current: 10,
+ knee_point_voltage: 1000,
+ accuracy_limit_factor: 20 // ✅ ADDED to new IED template
+ }]);
 };
 ```
 
@@ -77,13 +77,13 @@ const addIED = () => {
 #### Input Interface Updated:
 ```typescript
 static performCompleteCalculation(input: {
-  ct_wiring: CT_WiringParameters;
-  vt_wiring?: VT_WiringParameters;
-  system: SystemParams_7SJ85;
-  power_line: PowerLineParams_7SJ85;
-  ct_core: CT_CoreParameters;
-  connected_devices: ConnectedDevices_7SJ85;
-  accuracy_limit_factor?: number; // ✅ ADDED - Optional override from IED parameters
+ ct_wiring: CT_WiringParameters;
+ vt_wiring?: VT_WiringParameters;
+ system: SystemParams_7SJ85;
+ power_line: PowerLineParams_7SJ85;
+ ct_core: CT_CoreParameters;
+ connected_devices: ConnectedDevices_7SJ85;
+ accuracy_limit_factor?: number; // ✅ ADDED - Optional override from IED parameters
 })
 ```
 
@@ -94,16 +94,16 @@ const accuracy_factor = input.accuracy_limit_factor || input.ct_core.CT_Accuracy
 const rated_burden = input.ct_core.rated_burden;
 ```
 
-### 4. Project Calculations Updated  
+### 4. Project Calculations Updated 
 **File**: `lib/services/project-calculations.ts`
 ```typescript
 case 'SIEMENS_7SJ85':
-  detailed_results = Siemens7SJ85Calculator.performCompleteCalculation({
-    ...request.input_data,
-    accuracy_limit_factor: request.input_data.ieds?.[0]?.accuracy_limit_factor  // ✅ ADDED
-  });
-  validation = validateSiemens7SJ85Results(detailed_results);
-  break;
+ detailed_results = Siemens7SJ85Calculator.performCompleteCalculation({
+ ...request.input_data,
+ accuracy_limit_factor: request.input_data.ieds?.[0]?.accuracy_limit_factor // ✅ ADDED
+ });
+ validation = validateSiemens7SJ85Results(detailed_results);
+ break;
 ```
 
 ## 📋 USER INTERFACE DETAILS
@@ -150,12 +150,12 @@ available_kssc = CT_Accuracy_Limit_Factor × ((internal_burden + rated_burden) /
 ### Field Appearance:
 ```
 ┌─────────────────────────────────────────┐
-│ Accuracy Limit Factor                   │
+│ Accuracy Limit Factor │
 ├─────────────────────────────────────────┤
-│ [      20      ] ←── Input field        │
+│ [ 20 ] ←── Input field │
 ├─────────────────────────────────────────┤
-│ CT Accuracy Limiting Factor (from CT    │
-│ test certificate)                       │
+│ CT Accuracy Limiting Factor (from CT │
+│ test certificate) │
 └─────────────────────────────────────────┘
 ```
 
@@ -208,7 +208,7 @@ The Accuracy Limit Factor is now fully implemented as user input. Users can:
 
 ### Key Benefits:
 - ✅ **Accurate Calculations** - Uses actual CT test data instead of assumptions
-- ✅ **User Control** - Engineers can input precise values from their CT certificates  
+- ✅ **User Control** - Engineers can input precise values from their CT certificates 
 - ✅ **Flexible Design** - Supports different CT specifications per IED
 - ✅ **Clear Documentation** - Users know exactly what to enter and where to find it
 

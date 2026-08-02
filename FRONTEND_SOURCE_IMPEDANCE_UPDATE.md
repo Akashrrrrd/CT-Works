@@ -9,12 +9,12 @@ Added Source Impedance (Zs) input field to the CT/VT Adequacy Check frontend wiz
 **File**: `lib/types/ct-vt-adequacy-types.ts`
 ```typescript
 export interface TransmissionLineParameters {
-  positive_sequence_resistance: number;  // R1 (Ω/km)
-  positive_sequence_reactance: number;   // X1 (Ω/km)  
-  zero_sequence_resistance: number;      // R0 (Ω/km)
-  zero_sequence_reactance: number;       // X0 (Ω/km)
-  route_length: number;                  // km (total route length)
-  source_impedance_zs: number;           // pu (per unit) - Source Impedance ✅ ADDED
+ positive_sequence_resistance: number; // R1 (Ω/km)
+ positive_sequence_reactance: number; // X1 (Ω/km) 
+ zero_sequence_resistance: number; // R0 (Ω/km)
+ zero_sequence_reactance: number; // X0 (Ω/km)
+ route_length: number; // km (total route length)
+ source_impedance_zs: number; // pu (per unit) - Source Impedance ✅ ADDED
 }
 ```
 
@@ -24,49 +24,49 @@ export interface TransmissionLineParameters {
 #### State Initialization:
 ```typescript
 const [lineParams, setLineParams] = useState<TransmissionLineParameters>({
-  positive_sequence_resistance: 0.0271,
-  positive_sequence_reactance: 0.1600,
-  zero_sequence_resistance: 0.1300,
-  zero_sequence_reactance: 0.0600,
-  route_length: 1.74,
-  source_impedance_zs: 1.0  // ✅ ADDED with default value
+ positive_sequence_resistance: 0.0271,
+ positive_sequence_reactance: 0.1600,
+ zero_sequence_resistance: 0.1300,
+ zero_sequence_reactance: 0.0600,
+ route_length: 1.74,
+ source_impedance_zs: 1.0 // ✅ ADDED with default value
 });
 ```
 
 #### Form Input Field Added:
 ```jsx
 <div className="md:col-span-2">
-  <Label htmlFor="source-impedance">Source Impedance (Zs) - pu</Label>
-  <Input 
-    id="source-impedance"
-    type="number"
-    step="0.01"
-    placeholder="1.0"
-    value={lineParams.source_impedance_zs}
-    onChange={(e) => setLineParams({...lineParams, source_impedance_zs: parseFloat(e.target.value) || 0})}
-  />
-  <p className="text-sm text-muted-foreground mt-1">
-    Per unit source impedance considering voltage level
-  </p>
+ <Label htmlFor="source-impedance">Source Impedance (Zs) - pu</Label>
+ <Input 
+ id="source-impedance"
+ type="number"
+ step="0.01"
+ placeholder="1.0"
+ value={lineParams.source_impedance_zs}
+ onChange={(e) => setLineParams({...lineParams, source_impedance_zs: parseFloat(e.target.value) || 0})}
+ />
+ <p className="text-sm text-muted-foreground mt-1">
+ Per unit source impedance considering voltage level
+ </p>
 </div>
 ```
 
 #### Quick Templates Updated:
 - All 3 template buttons now set `source_impedance_zs: 1.0` as default
 - 132kV Transmission template ✅
-- 33kV Sub-transmission template ✅  
+- 33kV Sub-transmission template ✅ 
 - 11kV Distribution template ✅
 
 ### 3. Project Manager Updated
 **File**: `lib/services/project-manager.ts`
 ```typescript
 transmission_line: {
-  positive_sequence_resistance: project.data.line_parameters.positive_sequence_resistance,
-  positive_sequence_reactance: project.data.line_parameters.positive_sequence_reactance,
-  zero_sequence_resistance: project.data.line_parameters.zero_sequence_resistance,
-  zero_sequence_reactance: project.data.line_parameters.zero_sequence_reactance,
-  route_length: project.data.line_parameters.route_length,
-  source_impedance_zs: project.data.line_parameters.source_impedance_zs || 1.0  // ✅ ADDED with fallback
+ positive_sequence_resistance: project.data.line_parameters.positive_sequence_resistance,
+ positive_sequence_reactance: project.data.line_parameters.positive_sequence_reactance,
+ zero_sequence_resistance: project.data.line_parameters.zero_sequence_resistance,
+ zero_sequence_reactance: project.data.line_parameters.zero_sequence_reactance,
+ route_length: project.data.line_parameters.route_length,
+ source_impedance_zs: project.data.line_parameters.source_impedance_zs || 1.0 // ✅ ADDED with fallback
 },
 ```
 
@@ -107,12 +107,12 @@ transmission_line: {
 ### Field Appearance:
 ```
 ┌─────────────────────────────────────────┐
-│ Source Impedance (Zs) - pu             │
+│ Source Impedance (Zs) - pu │
 ├─────────────────────────────────────────┤
-│ [     1.0      ] ←── Input field        │
+│ [ 1.0 ] ←── Input field │
 ├─────────────────────────────────────────┤
-│ Per unit source impedance considering   │
-│ voltage level                           │
+│ Per unit source impedance considering │
+│ voltage level │
 └─────────────────────────────────────────┘
 ```
 

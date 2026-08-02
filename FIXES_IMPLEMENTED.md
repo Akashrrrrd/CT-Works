@@ -1,7 +1,7 @@
 # All Fixes Implemented - Complete Change Log
 
 ## Summary
-Fixed the complete data pipeline for Siemens 7SJ85 CT adequacy calculations. The system was losing data and precision through multiple conversion layers. Now it takes your inputs directly to the exact Hitachi formula calculator.
+Fixed the complete data pipeline for Siemens 7SJ85 CT adequacy calculations. The system was losing data and precision through multiple conversion layers. Now it takes your inputs directly to the exact Standard Engineering formula calculator.
 
 ---
 
@@ -14,15 +14,15 @@ Fixed the complete data pipeline for Siemens 7SJ85 CT adequacy calculations. The
 ```typescript
 // BEFORE:
 const [iedForm, setIedForm] = useState({
-  name: '', model: 'SIEMENS 7SJ85', functions: [],
-  ctRatio: '', ctClass: 'PX', rct: '', vk: '', io: ''
+ name: '', model: 'SIEMENS 7SJ85', functions: [],
+ ctRatio: '', ctClass: 'PX', rct: '', vk: '', io: ''
 });
 
 // AFTER:
 const [iedForm, setIedForm] = useState({
-  name: '', model: 'SIEMENS 7SJ85', functions: [],
-  ctRatio: '', ctSecondary: '1', ctClass: 'PX', 
-  rct: '', ratedBurden: '', alf: '', vk: '', io: ''
+ name: '', model: 'SIEMENS 7SJ85', functions: [],
+ ctRatio: '', ctSecondary: '1', ctClass: 'PX', 
+ rct: '', ratedBurden: '', alf: '', vk: '', io: ''
 });
 ```
 **Why:** Added ctSecondary, ratedBurden, and alf fields to capture all CT parameters
@@ -31,22 +31,22 @@ const [iedForm, setIedForm] = useState({
 ```typescript
 // BEFORE:
 const [systemParams, setSystemParams] = useState({
-  frequency: '50', bus_voltage_kv: '33', max_bus_fault_mva: '1000',
-  r1: '0.1', x1: '0.4', r0: '0.3', x0: '1.2', 
-  route_length_km: '1.0', relay_burden_va: '5.0', lead_resistance: '0.05'
+ frequency: '50', bus_voltage_kv: '33', max_bus_fault_mva: '1000',
+ r1: '0.1', x1: '0.4', r0: '0.3', x0: '1.2', 
+ route_length_km: '1.0', relay_burden_va: '5.0', lead_resistance: '0.05'
 });
 
 // AFTER:
 const [systemParams, setSystemParams] = useState({
-  // Wiring parameters
-  conductor_mm2: '2.5', resistance_20c: '7.41', 
-  temp_coefficient: '0.00393', temperature: '75', cable_length_m: '50',
-  // System parameters
-  system_frequency: '50', bus_voltage_kv: '33', 
-  max_fault_current_ka: '12.5', xr_ratio: '15',
-  // Line parameters
-  r1: '0.0221', x1: '0.1600', r0: '0.1300', x0: '0.0600', 
-  line_length_km: '1.74'
+ // Wiring parameters
+ conductor_mm2: '2.5', resistance_20c: '7.41', 
+ temp_coefficient: '0.00393', temperature: '75', cable_length_m: '50',
+ // System parameters
+ system_frequency: '50', bus_voltage_kv: '33', 
+ max_fault_current_ka: '12.5', xr_ratio: '15',
+ // Line parameters
+ r1: '0.0221', x1: '0.1600', r0: '0.1300', x0: '0.0600', 
+ line_length_km: '1.74'
 });
 ```
 **Why:** Reorganized to match actual form sections and use correct field names
@@ -58,11 +58,11 @@ const [systemParams, setSystemParams] = useState({
 
 // AFTER: All inputs now update state
 <Input 
-  type="number" step="any" 
-  value={systemParams.conductor_mm2} 
-  onChange={e => setSystemParams(p => ({...p, conductor_mm2: e.target.value}))}
-  placeholder="2.5" 
-  className="h-10 font-mono" 
+ type="number" step="any" 
+ value={systemParams.conductor_mm2} 
+ onChange={e => setSystemParams(p => ({...p, conductor_mm2: e.target.value}))}
+ placeholder="2.5" 
+ className="h-10 font-mono" 
 />
 ```
 **Why:** Form inputs weren't being captured, so data was always using defaults
@@ -85,11 +85,11 @@ All 5 line parameter inputs now update state:
 
 // AFTER:
 <Input 
-  type="number" step="any" 
-  value={iedForm.ratedBurden}
-  onChange={e => setIedForm(p => ({...p, ratedBurden: e.target.value}))}
-  placeholder="15" 
-  className="h-10 font-mono" 
+ type="number" step="any" 
+ value={iedForm.ratedBurden}
+ onChange={e => setIedForm(p => ({...p, ratedBurden: e.target.value}))}
+ placeholder="15" 
+ className="h-10 font-mono" 
 />
 ```
 **Why:** Rated Burden and ALF fields weren't being captured at all
@@ -99,42 +99,42 @@ All 5 line parameter inputs now update state:
 // BEFORE:
 const [primary, secondary] = iedForm.ctRatio.split('/');
 const sheet1 = {
-  ct_ratio_primary: parseFloat(primary || iedForm.ctRatio),
-  ct_ratio_secondary: parseFloat(secondary || '1'),
-  // Missing 8 fields!
+ ct_ratio_primary: parseFloat(primary || iedForm.ctRatio),
+ ct_ratio_secondary: parseFloat(secondary || '1'),
+ // Missing 8 fields!
 };
 const res = await fetch(..., { body: JSON.stringify({ 
-  templateId: selectedTemplate?.id, sheet1, sheet2: systemParams 
+ templateId: selectedTemplate?.id, sheet1, sheet2: systemParams 
 }) });
 
 // AFTER:
 const sheet1 = {
-  ct_ratio_primary: parseFloat(iedForm.ctRatio || '1'),
-  ct_ratio_secondary: parseFloat(iedForm.ctSecondary || '1'),
-  accuracy_class: iedForm.ctClass || '5P20',
-  ct_resistance: parseFloat(iedForm.rct || '0'),
-  rated_burden: parseFloat(iedForm.ratedBurden || '15'),
-  accuracy_limit_factor: parseFloat(iedForm.alf || '20'),
-  knee_point_voltage: parseFloat(iedForm.vk || '400'),
-  magnetizing_current: parseFloat(iedForm.io || '30'),
-  ied_burden: 0.02,
-  conductor_cross_section: parseFloat(systemParams.conductor_mm2 || '2.5'),
-  resistance_20c: parseFloat(systemParams.resistance_20c || '7.41'),
-  temp_coefficient: parseFloat(systemParams.temp_coefficient || '0.00393'),
-  operating_temperature: parseFloat(systemParams.temperature || '75'),
-  cable_length: parseFloat(systemParams.cable_length_m || '50')
+ ct_ratio_primary: parseFloat(iedForm.ctRatio || '1'),
+ ct_ratio_secondary: parseFloat(iedForm.ctSecondary || '1'),
+ accuracy_class: iedForm.ctClass || '5P20',
+ ct_resistance: parseFloat(iedForm.rct || '0'),
+ rated_burden: parseFloat(iedForm.ratedBurden || '15'),
+ accuracy_limit_factor: parseFloat(iedForm.alf || '20'),
+ knee_point_voltage: parseFloat(iedForm.vk || '400'),
+ magnetizing_current: parseFloat(iedForm.io || '30'),
+ ied_burden: 0.02,
+ conductor_cross_section: parseFloat(systemParams.conductor_mm2 || '2.5'),
+ resistance_20c: parseFloat(systemParams.resistance_20c || '7.41'),
+ temp_coefficient: parseFloat(systemParams.temp_coefficient || '0.00393'),
+ operating_temperature: parseFloat(systemParams.temperature || '75'),
+ cable_length: parseFloat(systemParams.cable_length_m || '50')
 };
 
 const sheet2 = {
-  system_frequency: parseFloat(systemParams.system_frequency || '50'),
-  bus_voltage: parseFloat(systemParams.bus_voltage_kv || '33'),
-  max_fault_current: parseFloat(systemParams.max_fault_current_ka || '12.5'),
-  xr_ratio: parseFloat(systemParams.xr_ratio || '15'),
-  positive_seq_resistance: parseFloat(systemParams.r1 || '0.0221'),
-  positive_seq_reactance: parseFloat(systemParams.x1 || '0.1600'),
-  zero_seq_resistance: parseFloat(systemParams.r0 || '0.1300'),
-  zero_seq_reactance: parseFloat(systemParams.x0 || '0.0600'),
-  line_length: parseFloat(systemParams.line_length_km || '1.74')
+ system_frequency: parseFloat(systemParams.system_frequency || '50'),
+ bus_voltage: parseFloat(systemParams.bus_voltage_kv || '33'),
+ max_fault_current: parseFloat(systemParams.max_fault_current_ka || '12.5'),
+ xr_ratio: parseFloat(systemParams.xr_ratio || '15'),
+ positive_seq_resistance: parseFloat(systemParams.r1 || '0.0221'),
+ positive_seq_reactance: parseFloat(systemParams.x1 || '0.1600'),
+ zero_seq_resistance: parseFloat(systemParams.r0 || '0.1300'),
+ zero_seq_reactance: parseFloat(systemParams.x0 || '0.0600'),
+ line_length: parseFloat(systemParams.line_length_km || '1.74')
 };
 ```
 **Why:** Now building complete objects with all 23 fields instead of just 6
@@ -143,9 +143,9 @@ const sheet2 = {
 ```typescript
 // AFTER:
 if (!selectedTemplate) {
-  setError('No template selected. Please select a template first.');
-  setSaving(false);
-  return;
+ setError('No template selected. Please select a template first.');
+ setSaving(false);
+ return;
 }
 ```
 **Why:** Added explicit error if no template selected
@@ -171,80 +171,80 @@ className="gap-1.5 border border-gray-300 hover:bg-gray-50"
 ```typescript
 // NEW CODE BLOCK:
 if (iedTemplateType === 'SIEMENS_7SJ85') {
-  // Use Siemens 7SJ85 calculation directly with proper data mapping
-  try {
-    const { Siemens7SJ85Calculator } = await import('@/lib/services/siemens-7sj85-calculations');
-    
-    // Build the calculator input from sheet1 and sheet2
-    const calculatorInput = {
-      ct_wiring: {
-        ct_conductor_cross_section: sheet2.conductor_cross_section || 2.5,
-        ct_resistance_w_km_20c: sheet2.resistance_20c || 7.41,
-        ct_specific_resistance_20c: sheet2.temp_coefficient || 0.00393,
-        ct_conductor_length_m: sheet2.cable_length || 50,
-        relay_rated_current: sheet1.ct_ratio_secondary || 1
-      },
-      system: {
-        system_frequency: sheet2.system_frequency || 50,
-        bus_voltage_level: sheet2.bus_voltage || 33,
-        max_bus_fault_level: sheet2.max_fault_current || 12.5,
-        xr_ratio: sheet2.xr_ratio || 15,
-        max_hv_busbar_fault_current: (sheet2.max_fault_current || 12.5) * 1000,
-        hv_rating_of_busbar: (sheet2.bus_voltage || 33) * 1000
-      },
-      power_line: {
-        positive_seq_resistance_r1: sheet2.positive_seq_resistance || 0.0221,
-        positive_seq_reactance_x1: sheet2.positive_seq_reactance || 0.1600,
-        zero_seq_resistance_r0: sheet2.zero_seq_resistance || 0.1300,
-        zero_seq_reactance_x0: sheet2.zero_seq_reactance || 0.0600,
-        route_length: sheet2.line_length || 1.74,
-        // Calculated impedances
-        cable_positive_seq_impedance: Math.sqrt(...),
-        cable_zero_seq_impedance: Math.sqrt(...),
-        total_cable_positive_seq_impedance: Math.sqrt(...),
-        total_cable_zero_seq_impedance: Math.sqrt(...),
-        source_impedance_zs: 0,
-        impedance_angle_in_radians: Math.atan(sheet2.xr_ratio || 15)
-      },
-      ct_core: {
-        ct_ratio_primary: sheet1.ct_ratio_primary || 600,
-        ct_ratio_secondary: sheet1.ct_ratio_secondary || 1,
-        class_of_accuracy: sheet1.accuracy_class || '5P20',
-        ct_resistance: sheet1.ct_resistance || 3.5,
-        rated_burden: sheet1.rated_burden || 15,
-        CT_Accuracy_Limit_Factor: sheet1.accuracy_limit_factor || 20
-      },
-      connected_devices: [
-        { device_name: template.name || 'IED_1', burden_va: sheet1.ied_burden || 0.02 }
-      ],
-      accuracy_limit_factor: sheet1.accuracy_limit_factor || 20
-    };
+ // Use Siemens 7SJ85 calculation directly with proper data mapping
+ try {
+ const { Siemens7SJ85Calculator } = await import('@/lib/services/siemens-7sj85-calculations');
+ 
+ // Build the calculator input from sheet1 and sheet2
+ const calculatorInput = {
+ ct_wiring: {
+ ct_conductor_cross_section: sheet2.conductor_cross_section || 2.5,
+ ct_resistance_w_km_20c: sheet2.resistance_20c || 7.41,
+ ct_specific_resistance_20c: sheet2.temp_coefficient || 0.00393,
+ ct_conductor_length_m: sheet2.cable_length || 50,
+ relay_rated_current: sheet1.ct_ratio_secondary || 1
+ },
+ system: {
+ system_frequency: sheet2.system_frequency || 50,
+ bus_voltage_level: sheet2.bus_voltage || 33,
+ max_bus_fault_level: sheet2.max_fault_current || 12.5,
+ xr_ratio: sheet2.xr_ratio || 15,
+ max_hv_busbar_fault_current: (sheet2.max_fault_current || 12.5) * 1000,
+ hv_rating_of_busbar: (sheet2.bus_voltage || 33) * 1000
+ },
+ power_line: {
+ positive_seq_resistance_r1: sheet2.positive_seq_resistance || 0.0221,
+ positive_seq_reactance_x1: sheet2.positive_seq_reactance || 0.1600,
+ zero_seq_resistance_r0: sheet2.zero_seq_resistance || 0.1300,
+ zero_seq_reactance_x0: sheet2.zero_seq_reactance || 0.0600,
+ route_length: sheet2.line_length || 1.74,
+ // Calculated impedances
+ cable_positive_seq_impedance: Math.sqrt(...),
+ cable_zero_seq_impedance: Math.sqrt(...),
+ total_cable_positive_seq_impedance: Math.sqrt(...),
+ total_cable_zero_seq_impedance: Math.sqrt(...),
+ source_impedance_zs: 0,
+ impedance_angle_in_radians: Math.atan(sheet2.xr_ratio || 15)
+ },
+ ct_core: {
+ ct_ratio_primary: sheet1.ct_ratio_primary || 600,
+ ct_ratio_secondary: sheet1.ct_ratio_secondary || 1,
+ class_of_accuracy: sheet1.accuracy_class || '5P20',
+ ct_resistance: sheet1.ct_resistance || 3.5,
+ rated_burden: sheet1.rated_burden || 15,
+ CT_Accuracy_Limit_Factor: sheet1.accuracy_limit_factor || 20
+ },
+ connected_devices: [
+ { device_name: template.name || 'IED_1', burden_va: sheet1.ied_burden || 0.02 }
+ ],
+ accuracy_limit_factor: sheet1.accuracy_limit_factor || 20
+ };
 
-    // Call Siemens7SJ85Calculator directly
-    const calcResult = Siemens7SJ85Calculator.performCompleteCalculation(calculatorInput);
+ // Call Siemens7SJ85Calculator directly
+ const calcResult = Siemens7SJ85Calculator.performCompleteCalculation(calculatorInput);
 
-    result = {
-      verdict: calcResult.verdict === 'SUITABLY DIMENSIONED' ? 'SUITABLY DIMENSIONED' : 'UNDER DIMENSIONED',
-      ealreq_max: calcResult.ealreq_max || 0,
-      vk_required: calcResult.vk_required || 0,
-      vk_available: calcResult.vk_available || 0,
-      vk_breakdown: calcResult.vk_breakdown || [],
-      intermediates: {
-        template_type: 'SIEMENS_7SJ85',
-        calculation_method: 'Siemens 7SJ85 Direct Calculation',
-        hitachi_reference: 'N-19957 2-DF4W',
-        required_kssc: calcResult.required_kssc || 0,
-        available_kssc: calcResult.available_kssc || 0,
-        ct_calculations: calcResult.ct_calculations,
-        burden_calculations: calcResult.burden_calculations,
-        fault_calculations: calcResult.fault_calculations,
-        adequacy_check: calcResult.adequacy_check
-      }
-    };
-  } catch (error) {
-    console.error('Siemens 7SJ85 calculation failed:', error);
-    throw error;
-  }
+ result = {
+ verdict: calcResult.verdict === 'SUITABLY DIMENSIONED' ? 'SUITABLY DIMENSIONED' : 'UNDER DIMENSIONED',
+ ealreq_max: calcResult.ealreq_max || 0,
+ vk_required: calcResult.vk_required || 0,
+ vk_available: calcResult.vk_available || 0,
+ vk_breakdown: calcResult.vk_breakdown || [],
+ intermediates: {
+ template_type: 'SIEMENS_7SJ85',
+ calculation_method: 'Siemens 7SJ85 Direct Calculation',
+ standard_engineering_reference: '',
+ required_kssc: calcResult.required_kssc || 0,
+ available_kssc: calcResult.available_kssc || 0,
+ ct_calculations: calcResult.ct_calculations,
+ burden_calculations: calcResult.burden_calculations,
+ fault_calculations: calcResult.fault_calculations,
+ adequacy_check: calcResult.adequacy_check
+ }
+ };
+ } catch (error) {
+ console.error('Siemens 7SJ85 calculation failed:', error);
+ throw error;
+ }
 }
 ```
 

@@ -7,7 +7,7 @@ Your calculation output shows mismatches because **accuracy_limit_factor** is no
 - ❌ `available_kssc` becomes `NaN` instead of the correct value
 - ❌ Final verdict becomes unpredictable
 - ❌ Intermediate calculations appear incorrect
-- ❌ Engineering results don't match Hitachi standards
+- ❌ Engineering results don't match Standard Engineering standards
 
 ---
 
@@ -17,20 +17,20 @@ Your calculation output shows mismatches because **accuracy_limit_factor** is no
 
 ```
 USER INPUT (Component)
-  ct_core: { accuracy_limit_factor: 20 }
-    ↓
+ ct_core: { accuracy_limit_factor: 20 }
+ ↓
 JSON sent to API
-    ↓
+ ↓
 API receives: input.ct_core.accuracy_limit_factor = 20
-    ↓
+ ↓
 API passes input directly to calculation service
-    ↓
+ ↓
 Service expects: input.accuracy_limit_factor (TOP-LEVEL)
-    ↓
+ ↓
 Service gets: input.accuracy_limit_factor = undefined ❌
-    ↓
+ ↓
 calculateAvailableKssc(accuracy_factor=undefined, ...)
-    ↓
+ ↓
 Result: NaN ❌
 ```
 
@@ -39,23 +39,23 @@ Result: NaN ❌
 **Component sends:**
 ```json
 {
-  "ct_wiring": {...},
-  "system": {...},
-  "ct_core": {
-    "accuracy_limit_factor": 20,  // ← Nested here
-    ...
-  }
+ "ct_wiring": {...},
+ "system": {...},
+ "ct_core": {
+ "accuracy_limit_factor": 20, // ← Nested here
+ ...
+ }
 }
 ```
 
 **Service expects:**
 ```typescript
 performCompleteCalculation({
-  ct_wiring: {...},
-  system: {...},
-  ct_core: {...},
-  accuracy_limit_factor: 20,  // ← Top-level here!
-  ...
+ ct_wiring: {...},
+ system: {...},
+ ct_core: {...},
+ accuracy_limit_factor: 20, // ← Top-level here!
+ ...
 })
 ```
 
@@ -77,16 +77,16 @@ available_kssc = accuracy_limit_factor × ((internal_burden + rated_burden) / (i
 **With undefined accuracy_limit_factor:**
 ```
 available_kssc = undefined × ((9 + 7.5) / (9 + 0.02))
-              = undefined × 1.826
-              = NaN  ❌
+ = undefined × 1.826
+ = NaN ❌
 ```
 
 **With correct accuracy_limit_factor = 20:**
 ```
 available_kssc = 20 × ((9 + 7.5) / (9 + 0.02))
-              = 20 × (16.5 / 9.02)
-              = 20 × 1.8293
-              = 36.59  ✅
+ = 20 × (16.5 / 9.02)
+ = 20 × 1.8293
+ = 36.59 ✅
 ```
 
 ### What Gets Broken
@@ -106,50 +106,50 @@ available_kssc = 20 × ((9 + 7.5) / (9 + 0.02))
 ```typescript
 // BEFORE (BROKEN)
 try {
-  const input = await req.json();
-  
-  // Validate required input structure
-  const requiredSections = ['ct_wiring', 'system', 'power_line', 'ct_core', 'connected_devices'];
-  for (const section of requiredSections) {
-    if (!input[section]) {
-      return NextResponse.json({ error: `Missing required section: ${section}` }, { status: 400 });
-    }
-  }
-  
-  // This passes the raw input - accuracy_limit_factor is nested, not top-level!
-  const results = Siemens7SJ85Calculator.performCompleteCalculation(input);
+ const input = await req.json();
+ 
+ // Validate required input structure
+ const requiredSections = ['ct_wiring', 'system', 'power_line', 'ct_core', 'connected_devices'];
+ for (const section of requiredSections) {
+ if (!input[section]) {
+ return NextResponse.json({ error: `Missing required section: ${section}` }, { status: 400 });
+ }
+ }
+ 
+ // This passes the raw input - accuracy_limit_factor is nested, not top-level!
+ const results = Siemens7SJ85Calculator.performCompleteCalculation(input);
 ```
 
 ```typescript
 // AFTER (FIXED)
 try {
-  const input = await req.json();
-  
-  // Validate required input structure
-  const requiredSections = ['ct_wiring', 'system', 'power_line', 'ct_core', 'connected_devices'];
-  for (const section of requiredSections) {
-    if (!input[section]) {
-      return NextResponse.json({ error: `Missing required section: ${section}` }, { status: 400 });
-    }
-  }
+ const input = await req.json();
+ 
+ // Validate required input structure
+ const requiredSections = ['ct_wiring', 'system', 'power_line', 'ct_core', 'connected_devices'];
+ for (const section of requiredSections) {
+ if (!input[section]) {
+ return NextResponse.json({ error: `Missing required section: ${section}` }, { status: 400 });
+ }
+ }
 
-  // Extract accuracy_limit_factor from ct_core and elevate it to top-level
-  // The calculation service expects it at the top level, not nested in ct_core
-  const accuracy_limit_factor = input.ct_core?.accuracy_limit_factor;
-  if (typeof accuracy_limit_factor !== 'number') {
-    return NextResponse.json({ 
-      error: 'accuracy_limit_factor must be a number in ct_core' 
-    }, { status: 400 });
-  }
+ // Extract accuracy_limit_factor from ct_core and elevate it to top-level
+ // The calculation service expects it at the top level, not nested in ct_core
+ const accuracy_limit_factor = input.ct_core?.accuracy_limit_factor;
+ if (typeof accuracy_limit_factor !== 'number') {
+ return NextResponse.json({ 
+ error: 'accuracy_limit_factor must be a number in ct_core' 
+ }, { status: 400 });
+ }
 
-  // Prepare calculation input with accuracy_limit_factor at top level
-  const calculationInput = {
-    ...input,
-    accuracy_limit_factor  // Now it's at the top-level!
-  };
+ // Prepare calculation input with accuracy_limit_factor at top level
+ const calculationInput = {
+ ...input,
+ accuracy_limit_factor // Now it's at the top-level!
+ };
 
-  // Pass the properly structured input
-  const results = Siemens7SJ85Calculator.performCompleteCalculation(calculationInput);
+ // Pass the properly structured input
+ const results = Siemens7SJ85Calculator.performCompleteCalculation(calculationInput);
 ```
 
 ### Key Changes
@@ -167,10 +167,10 @@ try {
 ```
 Input: accuracy_limit_factor in ct_core → Passed as nested
 Output:
-  required_kssc: 15.87
-  available_kssc: NaN  ❌
-  final_verdict: "UNDER DIMENSIONED" ❌
-  
+ required_kssc: 15.87
+ available_kssc: NaN ❌
+ final_verdict: "UNDER DIMENSIONED" ❌
+ 
 Analysis: CT appears inadequate (wrong!)
 ```
 
@@ -178,10 +178,10 @@ Analysis: CT appears inadequate (wrong!)
 ```
 Input: accuracy_limit_factor in ct_core → Extracted to top-level
 Output:
-  required_kssc: 15.87
-  available_kssc: 36.59  ✅
-  final_verdict: "SUITABLY DIMENSIONED" ✅
-  
+ required_kssc: 15.87
+ available_kssc: 36.59 ✅
+ final_verdict: "SUITABLY DIMENSIONED" ✅
+ 
 Analysis: CT is suitably dimensioned (correct!)
 ```
 
@@ -189,7 +189,7 @@ Analysis: CT is suitably dimensioned (correct!)
 
 ## 📊 Calculation Examples
 
-### Example 1: Standard CT (Hitachi Document)
+### Example 1: Standard CT (Standard Engineering Document)
 **Inputs:**
 - CT Ratio: 3150/1 A
 - Accuracy Limit Factor: 20 (from test certificate)
@@ -231,7 +231,7 @@ Analysis: CT is suitably dimensioned (correct!)
 
 ## 🔍 Why Formulas Work Correctly (When ALF is Passed)
 
-The calculation service has **correct formulas** based on Hitachi document N-19957 2-DF4W:
+The calculation service has **correct formulas** based on Standard Engineering document :
 
 | Formula | Status | Notes |
 |---------|--------|-------|
@@ -288,35 +288,35 @@ After applying the fix, verify:
 - [ ] Final verdict is "UNDER DIMENSIONED" for inadequate CTs
 - [ ] Error message appears if `accuracy_limit_factor` is missing
 - [ ] All intermediate calculations produce valid numbers
-- [ ] Calculation results match Hitachi document examples
+- [ ] Calculation results match Standard Engineering document examples
 
 ---
 
 ## 🚀 Implementation Steps
 
 1. **Edit `/app/api/relay-formulas/siemens-7sj85/route.ts`**
-   - Replace the try block (lines 18-36) with the fixed version
-   - Add extraction and validation of `accuracy_limit_factor`
+ - Replace the try block (lines 18-36) with the fixed version
+ - Add extraction and validation of `accuracy_limit_factor`
 
 2. **Rebuild the application**
-   ```bash
-   npm run build
-   ```
+ ```bash
+ npm run build
+ ```
 
 3. **Test with example data**
-   - Use the test case from Hitachi document
-   - Verify results match expected values
+ - Use the test case from Standard Engineering document
+ - Verify results match expected values
 
 4. **Deploy the fix**
-   - No database changes needed
-   - No component changes needed
-   - Pure backend fix
+ - No database changes needed
+ - No component changes needed
+ - Pure backend fix
 
 ---
 
 ## 📚 Reference
 
-- **Document**: Hitachi N-19957 2-DF4W
+- **Document**: Standard Engineering 
 - **Subject**: CT/VT Adequacy Check for 132/33kV Substation
 - **Key Formula**: Available Kssc = n × ((PE + PN) / (PE + PL))
 - **Critical Parameter**: n (Accuracy Limit Factor from CT test certificate)
@@ -328,7 +328,7 @@ After applying the fix, verify:
 If calculations still don't match after applying this fix:
 
 1. Check that `accuracy_limit_factor` is a valid number
-2. Verify the formula values match the Hitachi document
+2. Verify the formula values match the Standard Engineering document
 3. Ensure all input parameters are within expected ranges
 4. Review the test file `test-calculation-fix.ts` for expected values
 

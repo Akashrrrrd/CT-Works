@@ -2,20 +2,20 @@
 
 ## Current State → Target State
 
-Your system has correct **functionality** but needs **professional styling** for a Hitachi MNC project.
+Your system has correct **functionality** but needs **professional styling** for a Standard Engineering MNC project.
 
 ---
 
 ## 🎯 Design Philosophy for Enterprise Application
 
-For a ₹1 lakh Hitachi project, the UI should reflect:
+For a ₹1 lakh Standard Engineering project, the UI should reflect:
 
-✅ **Clarity** - Every element has clear purpose  
-✅ **Consistency** - Same styling throughout  
-✅ **Professionalism** - Clean, modern, trustworthy  
-✅ **Accessibility** - Works for all users  
-✅ **Performance** - Responsive and fast  
-✅ **Hierarchy** - Important things stand out  
+✅ **Clarity** - Every element has clear purpose 
+✅ **Consistency** - Same styling throughout 
+✅ **Professionalism** - Clean, modern, trustworthy 
+✅ **Accessibility** - Works for all users 
+✅ **Performance** - Responsive and fast 
+✅ **Hierarchy** - Important things stand out 
 
 ---
 
@@ -87,25 +87,25 @@ Clean whitespace
 
 ### Primary Colors
 ```
-Professional Blue:    #0066CC (primary actions)
-Corporate Dark Blue:  #003D99 (headers)
-Light Blue:          #E6F2FF (backgrounds)
+Professional Blue: #0066CC (primary actions)
+Corporate Dark Blue: #003D99 (headers)
+Light Blue: #E6F2FF (backgrounds)
 
-Success Green:       #00AA00 (pass verdict)
-Error Red:           #CC0000 (fail verdict)
-Warning Orange:      #FF8800 (warnings)
+Success Green: #00AA00 (pass verdict)
+Error Red: #CC0000 (fail verdict)
+Warning Orange: #FF8800 (warnings)
 
-Neutral Gray:        #666666 (text)
-Light Gray:          #F5F5F5 (backgrounds)
-Border Gray:         #CCCCCC (borders)
+Neutral Gray: #666666 (text)
+Light Gray: #F5F5F5 (backgrounds)
+Border Gray: #CCCCCC (borders)
 ```
 
 ### Dark Mode
 ```
-Dark Background:     #1A1A1A
-Card Background:     #2D2D2D
-Text Primary:        #FFFFFF
-Text Secondary:      #B0B0B0
+Dark Background: #1A1A1A
+Card Background: #2D2D2D
+Text Primary: #FFFFFF
+Text Secondary: #B0B0B0
 ```
 
 ---
@@ -117,19 +117,19 @@ Text Secondary:      #B0B0B0
 **BEFORE (Awkward):**
 ```jsx
 <DialogHeader>
-  <DialogTitle className="text-2xl font-bold">
-    Create New IED - Complete CT Adequacy Analysis
-  </DialogTitle>
+ <DialogTitle className="text-2xl font-bold">
+ Create New IED - Complete CT Adequacy Analysis
+ </DialogTitle>
 </DialogHeader>
 ```
 
 **AFTER (Professional):**
 ```jsx
 <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-8 py-6 border-b">
-  <h1 className="text-xl font-bold text-white">CT Adequacy Analysis</h1>
-  <p className="text-blue-100 text-sm mt-1">
-    Configure protection device parameters
-  </p>
+ <h1 className="text-xl font-bold text-white">CT Adequacy Analysis</h1>
+ <p className="text-blue-100 text-sm mt-1">
+ Configure protection device parameters
+ </p>
 </div>
 ```
 
@@ -147,20 +147,20 @@ VERDICT: Green text
 **AFTER (Professional):**
 ```
 ╔════════════════════════════════════════╗
-║  ✓ SUITABLY DIMENSIONED              ║
-║  CT is adequately specified            ║
+║ ✓ SUITABLY DIMENSIONED ║
+║ CT is adequately specified ║
 ╠════════════════════════════════════════╣
-║                                        ║
-║  Vk Required      Vk Available  Margin║
-║  52.08 V          400 V         668%  ║
-║  
-║  [████████████────────] 87% Safe    ║
-║                                        ║
+║ ║
+║ Vk Required Vk Available Margin║
+║ 52.08 V 400 V 668% ║
+║ 
+║ [████████████────────] 87% Safe ║
+║ ║
 ╠════════════════════════════════════════╣
-║  Calculation Breakdown:                ║
-║  ├─ Required Kssc: 20.83               ║
-║  ├─ Available Kssc: 102.30             ║
-║  └─ Margin: 391%                       ║
+║ Calculation Breakdown: ║
+║ ├─ Required Kssc: 20.83 ║
+║ ├─ Available Kssc: 102.30 ║
+║ └─ Margin: 391% ║
 ╚════════════════════════════════════════╝
 ```
 
@@ -178,19 +178,19 @@ CT Secondary (In)
 **AFTER (Professional):**
 ```
 ┌─ CT DATA PARAMETERS ─────────────────┐
-│                                      │
+│ │
 │ 📋 These values are from CT nameplate│
-│ and test certificate (provided by    │
-│ manufacturer)                         │
-│                                      │
-│ CT Primary (Ipn)                    │
-│ [Input: 600]              600A      │
-│ The primary winding rating          │
-│                                      │
-│ CT Secondary (In)                   │
-│ [Input: 1]                1A        │
-│ The secondary winding rating         │
-│                                      │
+│ and test certificate (provided by │
+│ manufacturer) │
+│ │
+│ CT Primary (Ipn) │
+│ [Input: 600] 600A │
+│ The primary winding rating │
+│ │
+│ CT Secondary (In) │
+│ [Input: 1] 1A │
+│ The secondary winding rating │
+│ │
 └──────────────────────────────────────┘
 ```
 
@@ -207,11 +207,11 @@ Description: xs
 
 **AFTER (Professional scale):**
 ```
-Main Title:        text-xl  font-bold      (24px)
-Section Headers:   text-lg  font-semibold  (20px)
-Field Labels:      text-sm  font-medium    (14px)
-Values:           text-2xl font-bold      (28px)
-Help Text:        text-xs  font-normal    (12px)
+Main Title: text-xl font-bold (24px)
+Section Headers: text-lg font-semibold (20px)
+Field Labels: text-sm font-medium (14px)
+Values: text-2xl font-bold (28px)
+Help Text: text-xs font-normal (12px)
 ```
 
 ---
@@ -223,22 +223,22 @@ Help Text:        text-xs  font-normal    (12px)
 ```jsx
 // PROFESSIONAL CARD
 <Card className="border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow">
-  <CardHeader className="border-b bg-gray-50 px-6 py-4">
-    <div className="flex items-center gap-3">
-      <Icon className="w-5 h-5 text-blue-600" />
-      <div>
-        <CardTitle className="text-base font-semibold text-gray-900">
-          Section Title
-        </CardTitle>
-        <CardDescription className="text-xs text-gray-600">
-          Helpful subtitle
-        </CardDescription>
-      </div>
-    </div>
-  </CardHeader>
-  <CardContent className="px-6 py-4 space-y-4">
-    {/* Content */}
-  </CardContent>
+ <CardHeader className="border-b bg-gray-50 px-6 py-4">
+ <div className="flex items-center gap-3">
+ <Icon className="w-5 h-5 text-blue-600" />
+ <div>
+ <CardTitle className="text-base font-semibold text-gray-900">
+ Section Title
+ </CardTitle>
+ <CardDescription className="text-xs text-gray-600">
+ Helpful subtitle
+ </CardDescription>
+ </div>
+ </div>
+ </CardHeader>
+ <CardContent className="px-6 py-4 space-y-4">
+ {/* Content */}
+ </CardContent>
 </Card>
 ```
 
@@ -247,17 +247,17 @@ Help Text:        text-xs  font-normal    (12px)
 ```jsx
 // PRIMARY ACTION (Blue)
 <Button className="bg-blue-600 hover:bg-blue-700 text-white font-medium">
-  Compute Analysis
+ Compute Analysis
 </Button>
 
 // SECONDARY ACTION (Gray)
 <Button variant="outline" className="border-gray-300">
-  Cancel
+ Cancel
 </Button>
 
 // DESTRUCTIVE ACTION (Red)
 <Button variant="destructive" className="bg-red-600 hover:bg-red-700">
-  Delete
+ Delete
 </Button>
 ```
 
@@ -265,15 +265,15 @@ Help Text:        text-xs  font-normal    (12px)
 
 ```jsx
 <div className="space-y-2">
-  <label className="text-sm font-medium text-gray-700">
-    Field Label *
-    <Tooltip text="Help text explaining what this means" />
-  </label>
-  <Input 
-    placeholder="e.g. 600"
-    className="h-10 border border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-  />
-  <p className="text-xs text-gray-500 mt-1">Unit: Amperes (A)</p>
+ <label className="text-sm font-medium text-gray-700">
+ Field Label *
+ <Tooltip text="Help text explaining what this means" />
+ </label>
+ <Input 
+ placeholder="e.g. 600"
+ className="h-10 border border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+ />
+ <p className="text-xs text-gray-500 mt-1">Unit: Amperes (A)</p>
 </div>
 ```
 
@@ -284,43 +284,43 @@ Help Text:        text-xs  font-normal    (12px)
 ```jsx
 // PROFESSIONAL RESULT DISPLAY
 <div className="border-l-4 border-emerald-600 bg-gradient-to-r from-emerald-50 to-transparent p-6 rounded-r-lg">
-  <div className="flex items-start gap-4">
-    {/* Icon */}
-    <div className="flex-shrink-0">
-      <div className="flex items-center justify-center h-12 w-12 rounded-full bg-emerald-600">
-        <CheckCircle className="h-6 w-6 text-white" />
-      </div>
-    </div>
-    
-    {/* Content */}
-    <div className="flex-1 min-w-0">
-      <h3 className="text-lg font-bold text-emerald-900">
-        SUITABLY DIMENSIONED
-      </h3>
-      <p className="text-sm text-emerald-800 mt-1">
-        CT is adequately specified for the system requirements. All parameters are within acceptable limits.
-      </p>
-      
-      {/* Key Metrics */}
-      <div className="grid grid-cols-3 gap-4 mt-4">
-        <div className="bg-white rounded p-3 border border-emerald-200">
-          <p className="text-xs font-semibold text-gray-600 uppercase">Vk Required</p>
-          <p className="text-2xl font-bold text-gray-900 mt-1">52.08</p>
-          <p className="text-xs text-gray-500">V</p>
-        </div>
-        <div className="bg-white rounded p-3 border border-emerald-200">
-          <p className="text-xs font-semibold text-gray-600 uppercase">Vk Available</p>
-          <p className="text-2xl font-bold text-gray-900 mt-1">400.00</p>
-          <p className="text-xs text-gray-500">V</p>
-        </div>
-        <div className="bg-white rounded p-3 border border-emerald-200">
-          <p className="text-xs font-semibold text-gray-600 uppercase">Safety Margin</p>
-          <p className="text-2xl font-bold text-emerald-600 mt-1">668%</p>
-          <p className="text-xs text-gray-500">Excess</p>
-        </div>
-      </div>
-    </div>
-  </div>
+ <div className="flex items-start gap-4">
+ {/* Icon */}
+ <div className="flex-shrink-0">
+ <div className="flex items-center justify-center h-12 w-12 rounded-full bg-emerald-600">
+ <CheckCircle className="h-6 w-6 text-white" />
+ </div>
+ </div>
+ 
+ {/* Content */}
+ <div className="flex-1 min-w-0">
+ <h3 className="text-lg font-bold text-emerald-900">
+ SUITABLY DIMENSIONED
+ </h3>
+ <p className="text-sm text-emerald-800 mt-1">
+ CT is adequately specified for the system requirements. All parameters are within acceptable limits.
+ </p>
+ 
+ {/* Key Metrics */}
+ <div className="grid grid-cols-3 gap-4 mt-4">
+ <div className="bg-white rounded p-3 border border-emerald-200">
+ <p className="text-xs font-semibold text-gray-600 uppercase">Vk Required</p>
+ <p className="text-2xl font-bold text-gray-900 mt-1">52.08</p>
+ <p className="text-xs text-gray-500">V</p>
+ </div>
+ <div className="bg-white rounded p-3 border border-emerald-200">
+ <p className="text-xs font-semibold text-gray-600 uppercase">Vk Available</p>
+ <p className="text-2xl font-bold text-gray-900 mt-1">400.00</p>
+ <p className="text-xs text-gray-500">V</p>
+ </div>
+ <div className="bg-white rounded p-3 border border-emerald-200">
+ <p className="text-xs font-semibold text-gray-600 uppercase">Safety Margin</p>
+ <p className="text-2xl font-bold text-emerald-600 mt-1">668%</p>
+ <p className="text-xs text-gray-500">Excess</p>
+ </div>
+ </div>
+ </div>
+ </div>
 </div>
 ```
 
@@ -331,12 +331,12 @@ Help Text:        text-xs  font-normal    (12px)
 ### Spacing System (8px grid)
 ```
 p-0 = 0px
-p-1 = 4px  
-p-2 = 8px    ← Use for small gaps
-p-3 = 12px   
-p-4 = 16px   ← Use for card padding
-p-6 = 24px   ← Use for section padding
-p-8 = 32px   ← Use for dialog padding
+p-1 = 4px 
+p-2 = 8px ← Use for small gaps
+p-3 = 12px 
+p-4 = 16px ← Use for card padding
+p-6 = 24px ← Use for section padding
+p-8 = 32px ← Use for dialog padding
 ```
 
 ### Typography System
@@ -381,7 +381,7 @@ Gaps: 24px (gap-6)
 ### Card Grid
 ```
 1 column: Mobile
-2 columns: Tablet  
+2 columns: Tablet 
 3 columns: Desktop
 4 columns: Widescreen
 
@@ -402,14 +402,14 @@ Section margin: 24px (mb-6)
 Use **Lucide Icons** consistently:
 
 ```
-✓ CheckCircle  - Success
-⚠ AlertTriangle - Warning  
-✗ AlertCircle  - Error
-ℹ HelpCircle   - Info
-⚡ Zap         - Compute/Action
-📊 Cpu         - Analytics
-📥 Download    - Export
-🔄 RefreshCw   - Refresh
+✓ CheckCircle - Success
+⚠ AlertTriangle - Warning 
+✗ AlertCircle - Error
+ℹ HelpCircle - Info
+⚡ Zap - Compute/Action
+📊 Cpu - Analytics
+📥 Download - Export
+🔄 RefreshCw - Refresh
 ```
 
 **Size Convention:**
@@ -490,13 +490,13 @@ Is this even finished?"
 4. **Fix spacing** - Use consistent 16/24/32px margins
 5. **Typography** - Make important numbers bigger and bolder
 6. **Icons** - Add helpful icons to sections
-7. **Test on client's devices** - Make sure it works for Hitachi team
+7. **Test on client's devices** - Make sure it works for Standard Engineering team
 
 ---
 
 ## 📞 Why This Matters
 
-For a **₹1 lakh Hitachi project**:
+For a **₹1 lakh Standard Engineering project**:
 - Budget = High expectations
 - Client = Fortune 500 MNC
 - Usage = Critical engineering work

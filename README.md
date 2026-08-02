@@ -21,14 +21,14 @@ A comprehensive web-based platform for performing Current Transformer (CT) and V
 ## 🎯 Overview
 
 This system enables electrical engineers and protection specialists to:
-- Perform accurate CT/VT adequacy calculations following Hitachi standards (N-19957 2-DF4W)
+- Perform accurate CT/VT adequacy calculations following Standard Engineering standards ()
 - Manage multiple workspaces and substations
 - Store and track computation results
 - Generate detailed analysis reports
 - Compare IED configurations
 
 ### Key Standards Implemented
-- **Hitachi Standard**: N-19957 2-DF4W (CT Adequacy Calculations)
+- **Standard Engineering Standard**: (CT Adequacy Calculations)
 - **IEC Standards**: IEC 61869 (PX Class Transformer Accuracy)
 - **Protocols**: RS-232, Ethernet for device communication
 
@@ -50,30 +50,30 @@ This system enables electrical engineers and protection specialists to:
 
 ### 3. **IED Management**
 - Support for 2 protection relay templates:
-  - **SIEMENS 7SJ85**: Multi-function Protection Relay
-  - **ABB RED670**: Transformer Differential Protection Relay
+ - **SIEMENS 7SJ85**: Multi-function Protection Relay
+ - **ABB RED670**: Transformer Differential Protection Relay
 - Add, edit, and delete IEDs per bay
 - Track CT/VT specifications for each IED
 - Store protection function assignments
 
 ### 4. **CT Adequacy Analysis**
 - **Input Parameters Collected**:
-  - **CT Data Tab**: Primary/secondary ratios, accuracy class, Rct, rated burden, ALF, knee point voltage (Vk), magnetizing current (Io)
-  - **Wiring Tab**: Conductor specifications, cable resistance, temperature effects, cable length
-  - **System Tab**: Frequency, bus voltage, max fault current, X/R ratio
-  - **Line Tab**: Sequence impedances (R1, X1, R0, X0), line length
-  - **IEDs Tab**: Connected devices and their burden values
+ - **CT Data Tab**: Primary/secondary ratios, accuracy class, Rct, rated burden, ALF, knee point voltage (Vk), magnetizing current (Io)
+ - **Wiring Tab**: Conductor specifications, cable resistance, temperature effects, cable length
+ - **System Tab**: Frequency, bus voltage, max fault current, X/R ratio
+ - **Line Tab**: Sequence impedances (R1, X1, R0, X0), line length
+ - **IEDs Tab**: Connected devices and their burden values
 
 - **Output Results**:
-  - Verdict: "SUITABLY DIMENSIONED" or "UNDER DIMENSIONED"
-  - Vk Required (V): Required knee point voltage
-  - Vk Available (V): Available knee point voltage from CT nameplate
-  - Ealreq Max (V): Maximum earth fault requirement
-  - Detailed calculation breakdown showing all intermediate values
+ - Verdict: "SUITABLY DIMENSIONED" or "UNDER DIMENSIONED"
+ - Vk Required (V): Required knee point voltage
+ - Vk Available (V): Available knee point voltage from CT nameplate
+ - Ealreq Max (V): Maximum earth fault requirement
+ - Detailed calculation breakdown showing all intermediate values
 
 ### 5. **Computation Engine**
 - Real-time calculation using specialized algorithms
-- **SIEMENS 7SJ85 Calculator**: Direct implementation of Hitachi N-19957 2-DF4W standards
+- **SIEMENS 7SJ85 Calculator**: Direct implementation of Standard Engineering standards
 - **ABB RED670 Calculator**: IEC 61869 compliant calculations
 - Automatic formula application based on relay model
 - Error detection and validation
@@ -119,15 +119,15 @@ This system enables electrical engineers and protection specialists to:
 Workspaces
 ├── Users (multiple per workspace)
 ├── Substations
-│   ├── Bays
-│   │   ├── IEDs
-│   │   │   └── Computation Results
-│   │   │       ├── Approval Status
-│   │   │       └── Audit Logs
-│   └── Activity Logs
+│ ├── Bays
+│ │ ├── IEDs
+│ │ │ └── Computation Results
+│ │ │ ├── Approval Status
+│ │ │ └── Audit Logs
+│ └── Activity Logs
 └── Templates
-    ├── SIEMENS 7SJ85
-    └── RED670
+ ├── SIEMENS 7SJ85
+ └── RED670
 
 ```
 
@@ -191,7 +191,7 @@ No additional seeding required for new installations.
 ### 🚀 **Option 1: Quick Start (5 minutes)**
 👉 **Read:** `INPUT_CHEAT_SHEET.md`
 - Standard values table for common cable sizes
-- Quick "where to find" checklist  
+- Quick "where to find" checklist 
 - Common mistakes to avoid
 - Fastest way to get started
 
@@ -206,31 +206,31 @@ No additional seeding required for new installations.
 👉 **Read:** `INPUT_GUIDE.md`
 - Detailed explanation of EVERY field
 - WHERE to find each value (source document)
-- WHAT each value means (engineering definition)  
+- WHAT each value means (engineering definition) 
 - Real-world examples and scenarios
 - Complete verification checklist
 
 ### 🎯 How to Use These Guides:
 
 1. **First time creating an IED?**
-   - Start with `INPUT_CHEAT_SHEET.md` (5 min)
-   - Then read `INPUT_VISUAL_GUIDE.md` (10 min)
-   - Now you understand the big picture
+ - Start with `INPUT_CHEAT_SHEET.md` (5 min)
+ - Then read `INPUT_VISUAL_GUIDE.md` (10 min)
+ - Now you understand the big picture
 
 2. **Creating your first computation?**
-   - Use the cheat sheet as your reference
-   - When unsure about a field, search `INPUT_GUIDE.md`
-   - Takes 15-20 min for first one, 2 min for repeats
+ - Use the cheat sheet as your reference
+ - When unsure about a field, search `INPUT_GUIDE.md`
+ - Takes 15-20 min for first one, 2 min for repeats
 
 3. **Don't know a specific field value?**
-   - Search `INPUT_GUIDE.md` for that field
-   - Follow the "Where to find" instructions
-   - Look at the example values
+ - Search `INPUT_GUIDE.md` for that field
+ - Follow the "Where to find" instructions
+ - Look at the example values
 
 4. **Got all values? Ready to submit?**
-   - Use the verification checklist
-   - Make sure all values have correct units
-   - Click "Compute"
+ - Use the verification checklist
+ - Make sure all values have correct units
+ - Click "Compute"
 
 ---
 
@@ -239,61 +239,61 @@ No additional seeding required for new installations.
 ### Creating a Computation
 
 1. **Navigate to Bay**
-   - Click on workspace → substation → bay
-   - View all IEDs in the bay
+ - Click on workspace → substation → bay
+ - View all IEDs in the bay
 
 2. **Create New IED (First Time)**
-   - Click "New IED" card
-   - Enter IED name (e.g., "Bay1-Relay1")
-   - Select relay model:
-     - SIEMENS 7SJ85
-     - RED670
-   - Template auto-selects based on relay model
+ - Click "New IED" card
+ - Enter IED name (e.g., "Bay1-Relay1")
+ - Select relay model:
+ - SIEMENS 7SJ85
+ - RED670
+ - Template auto-selects based on relay model
 
 3. **Fill CT Data**
-   - CT Primary (Ipn): Primary current rating in Amperes
-   - CT Secondary (In): Secondary current rating (usually 1A)
-   - Accuracy Class: PX, 5P20, etc.
-   - Rct: CT winding resistance in Ohms
-   - Rated Burden: Rated burden in VA
-   - ALF: Accuracy Limit Factor
-   - Vk Available: Knee point voltage in Volts
-   - Io at Vk: Magnetizing current in mA
+ - CT Primary (Ipn): Primary current rating in Amperes
+ - CT Secondary (In): Secondary current rating (usually 1A)
+ - Accuracy Class: PX, 5P20, etc.
+ - Rct: CT winding resistance in Ohms
+ - Rated Burden: Rated burden in VA
+ - ALF: Accuracy Limit Factor
+ - Vk Available: Knee point voltage in Volts
+ - Io at Vk: Magnetizing current in mA
 
 4. **Fill Wiring Parameters**
-   - Conductor (mm²): Cable cross-section
-   - R at 20°C (Ω/km): Resistance at 20°C
-   - Temp. Coefficient: Temperature coefficient
-   - Temperature (°C): Operating temperature
-   - Cable Length (m): Length from CT to relay panel
+ - Conductor (mm²): Cable cross-section
+ - R at 20°C (Ω/km): Resistance at 20°C
+ - Temp. Coefficient: Temperature coefficient
+ - Temperature (°C): Operating temperature
+ - Cable Length (m): Length from CT to relay panel
 
 5. **Fill System Parameters**
-   - Frequency (Hz): System frequency (50 or 60)
-   - Bus Voltage (kV): Nominal bus voltage
-   - Max Fault (kA): Maximum fault current
-   - X/R Ratio: Reactance to resistance ratio
+ - Frequency (Hz): System frequency (50 or 60)
+ - Bus Voltage (kV): Nominal bus voltage
+ - Max Fault (kA): Maximum fault current
+ - X/R Ratio: Reactance to resistance ratio
 
 6. **Fill Line Parameters**
-   - R1, X1: Positive sequence impedances
-   - R0, X0: Zero sequence impedances
-   - Line Length (km): Length of protected line
+ - R1, X1: Positive sequence impedances
+ - R0, X0: Zero sequence impedances
+ - Line Length (km): Length of protected line
 
 7. **Compute**
-   - Click "Compute" button
-   - System validates all inputs
-   - Calculation runs automatically
-   - Results display immediately
+ - Click "Compute" button
+ - System validates all inputs
+ - Calculation runs automatically
+ - Results display immediately
 
 8. **View Results**
-   - **Verdict**: Overall adequacy status
-   - **Vk Required**: Required knee point voltage
-   - **Vk Available**: Available knee point voltage
-   - **Calculation Breakdown**: Detailed fault condition analysis
+ - **Verdict**: Overall adequacy status
+ - **Vk Required**: Required knee point voltage
+ - **Vk Available**: Available knee point voltage
+ - **Calculation Breakdown**: Detailed fault condition analysis
 
 9. **Modify**
-   - Click "Modify" to edit inputs
-   - Input form reappears
-   - Results disappear until new computation
+ - Click "Modify" to edit inputs
+ - Input form reappears
+ - Results disappear until new computation
 
 ### Comparing IEDs
 
@@ -305,22 +305,22 @@ No additional seeding required for new installations.
 ### Managing Workspaces
 
 1. **Create Workspace**
-   - Navigate to Workspaces
-   - Click "New Workspace"
-   - Add members and set roles
+ - Navigate to Workspaces
+ - Click "New Workspace"
+ - Add members and set roles
 
 2. **Add Substations**
-   - Inside workspace, click "Add Substation"
-   - Define substation location and voltage levels
+ - Inside workspace, click "Add Substation"
+ - Define substation location and voltage levels
 
 3. **Create Bays**
-   - Inside substation, click "Add Bay"
-   - Define bay name and connected equipment
+ - Inside substation, click "Add Bay"
+ - Define bay name and connected equipment
 
 4. **Track Activity**
-   - View activity logs for workspace
-   - See all computations and approvals
-   - Audit user actions
+ - View activity logs for workspace
+ - See all computations and approvals
+ - Audit user actions
 
 ---
 
@@ -335,7 +335,7 @@ No additional seeding required for new installations.
 - Distance protection (21)
 - Breaker failure protection (50BF)
 
-**Standards**: Hitachi N-19957 2-DF4W
+**Standards**: Standard Engineering 
 
 **Typical Applications**:
 - 33kV feeder protection
@@ -377,32 +377,32 @@ No additional seeding required for new installations.
 ### Calculation Methodology
 
 #### SIEMENS 7SJ85 Algorithm
-Implements exact Hitachi N-19957 2-DF4W formulas:
+Implements exact Standard Engineering formulas:
 
 1. **CT Wiring Calculations**
-   - R₇₅°C = R₂₀°C × 1.21615
-   - Rₗ = R₇₅°C × (Length / 1000)
-   - Loop Resistance = 2 × Rₗ
-   - Pₗ = (In)² × Rₗ
+ - R₇₅°C = R₂₀°C × 1.21615
+ - Rₗ = R₇₅°C × (Length / 1000)
+ - Loop Resistance = 2 × Rₗ
+ - Pₗ = (In)² × Rₗ
 
 2. **Fault Current Calculations**
-   - Itkmax = Max Fault Current × 1000
-   - Vbusbar = Bus Voltage × 1000
-   - Zs = (Vbusbar) / (√3 × Itkmax)
+ - Itkmax = Max Fault Current × 1000
+ - Vbusbar = Bus Voltage × 1000
+ - Zs = (Vbusbar) / (√3 × Itkmax)
 
 3. **Burden Calculations**
-   - PE = (In)² × Rct
-   - PL = Loop Resistance + Device Burden
-   - PN = Rated Burden
+ - PE = (In)² × Rct
+ - PL = Loop Resistance + Device Burden
+ - PN = Rated Burden
 
 4. **CT Adequacy Check**
-   - Required Kssc = Itkmax / Ipn
-   - Available Kssc = n × ((PE + PN) / (PE + PL))
-   - Verdict = Available Kssc > Required Kssc
+ - Required Kssc = Itkmax / Ipn
+ - Available Kssc = n × ((PE + PN) / (PE + PL))
+ - Verdict = Available Kssc > Required Kssc
 
 5. **Vk Calculation**
-   - Vk Required = Required Kssc × Rct
-   - Vk Available = From CT nameplate
+ - Vk Required = Required Kssc × Rct
+ - Vk Available = From CT nameplate
 
 #### ABB RED670 Algorithm
 Implements IEC 61869 compliant calculations with transformer-specific considerations.
@@ -434,91 +434,91 @@ Authorization: Bearer <token>
 
 #### Workspaces
 ```
-GET    /api/workspaces              - List all workspaces
-POST   /api/workspaces              - Create workspace
-GET    /api/workspaces/[id]         - Get workspace details
-PUT    /api/workspaces/[id]         - Update workspace
-DELETE /api/workspaces/[id]         - Delete workspace
+GET /api/workspaces - List all workspaces
+POST /api/workspaces - Create workspace
+GET /api/workspaces/[id] - Get workspace details
+PUT /api/workspaces/[id] - Update workspace
+DELETE /api/workspaces/[id] - Delete workspace
 ```
 
 #### Substations
 ```
-GET    /api/workspaces/[id]/substations           - List substations
-POST   /api/workspaces/[id]/substations           - Create substation
-GET    /api/workspaces/[id]/hierarchy             - Get complete hierarchy
+GET /api/workspaces/[id]/substations - List substations
+POST /api/workspaces/[id]/substations - Create substation
+GET /api/workspaces/[id]/hierarchy - Get complete hierarchy
 ```
 
 #### Computations
 ```
-POST   /api/workspaces/[id]/computations          - Run computation
-GET    /api/workspaces/[id]/computations          - List all computations
-GET    /api/workspaces/[id]/computations/[compId] - Get computation details
+POST /api/workspaces/[id]/computations - Run computation
+GET /api/workspaces/[id]/computations - List all computations
+GET /api/workspaces/[id]/computations/[compId] - Get computation details
 ```
 
 #### Templates
 ```
-GET    /api/workspaces/[id]/templates             - List available templates
-GET    /api/workspaces/[id]/relay-templates       - List relay options
+GET /api/workspaces/[id]/templates - List available templates
+GET /api/workspaces/[id]/relay-templates - List relay options
 ```
 
 ### Computation Request Example
 ```json
 {
-  "templateId": "tpl-siemens-7sj85",
-  "sheet1": {
-    "ct_ratio_primary": 600,
-    "ct_ratio_secondary": 1,
-    "accuracy_class": "5P20",
-    "ct_resistance": 2.5,
-    "rated_burden": 15,
-    "accuracy_limit_factor": 20,
-    "knee_point_voltage": 400,
-    "magnetizing_current": 30,
-    "conductor_cross_section": 2.5,
-    "resistance_20c": 7.41,
-    "temp_coefficient": 0.00393,
-    "operating_temperature": 75,
-    "cable_length": 50
-  },
-  "sheet2": {
-    "system_frequency": 50,
-    "bus_voltage": 33,
-    "max_fault_current": 12.5,
-    "xr_ratio": 15,
-    "positive_seq_resistance": 0.0221,
-    "positive_seq_reactance": 0.1600,
-    "zero_seq_resistance": 0.1300,
-    "zero_seq_reactance": 0.0600,
-    "line_length": 1.74
-  }
+ "templateId": "tpl-siemens-7sj85",
+ "sheet1": {
+ "ct_ratio_primary": 600,
+ "ct_ratio_secondary": 1,
+ "accuracy_class": "5P20",
+ "ct_resistance": 2.5,
+ "rated_burden": 15,
+ "accuracy_limit_factor": 20,
+ "knee_point_voltage": 400,
+ "magnetizing_current": 30,
+ "conductor_cross_section": 2.5,
+ "resistance_20c": 7.41,
+ "temp_coefficient": 0.00393,
+ "operating_temperature": 75,
+ "cable_length": 50
+ },
+ "sheet2": {
+ "system_frequency": 50,
+ "bus_voltage": 33,
+ "max_fault_current": 12.5,
+ "xr_ratio": 15,
+ "positive_seq_resistance": 0.0221,
+ "positive_seq_reactance": 0.1600,
+ "zero_seq_resistance": 0.1300,
+ "zero_seq_reactance": 0.0600,
+ "line_length": 1.74
+ }
 }
 ```
 
 ### Computation Response Example
 ```json
 {
-  "id": "comp_12345",
-  "templateName": "SIEMENS 7SJ85 – Multi-function Protection Relay",
-  "verdict": "SUITABLY DIMENSIONED",
-  "vk_required": 15.75,
-  "vk_available": 400,
-  "ealreq_max": 15.75,
-  "vk_breakdown": [
-    {
-      "label": "Close-in fault (k=1)",
-      "ealreq": 15.75,
-      "vk": 15.75,
-      "isMax": true
-    },
-    {
-      "label": "Through fault (k=2)",
-      "ealreq": 10.50,
-      "vk": 10.50,
-      "isMax": false
-    }
-  ],
-  "approvalStatus": "PENDING",
-  "createdAt": "2026-01-15T10:30:00Z"
+ "id": "comp_12345",
+ "templateName": "SIEMENS 7SJ85 – Multi-function Protection Relay",
+ "verdict": "SUITABLY DIMENSIONED",
+ "vk_required": 15.75,
+ "vk_available": 400,
+ "ealreq_max": 15.75,
+ "vk_breakdown": [
+ {
+ "label": "Close-in fault (k=1)",
+ "ealreq": 15.75,
+ "vk": 15.75,
+ "isMax": true
+ },
+ {
+ "label": "Through fault (k=2)",
+ "ealreq": 10.50,
+ "vk": 10.50,
+ "isMax": false
+ }
+ ],
+ "approvalStatus": "PENDING",
+ "createdAt": "2026-01-15T10:30:00Z"
 }
 ```
 
@@ -623,7 +623,7 @@ For technical issues:
 
 ## 📄 License & Standards
 
-- **Standards Implemented**: Hitachi N-19957 2-DF4W, IEC 61869
+- **Standards Implemented**: Standard Engineering , IEC 61869
 - **Development Year**: 2026
 - **Last Updated**: January 2026
 
@@ -642,6 +642,6 @@ Before deploying to production:
 
 ---
 
-**Version**: 1.0.0  
-**Last Updated**: January 2026  
+**Version**: 1.0.0 
+**Last Updated**: January 2026 
 **System**: CT/VT Adequacy Analysis Platform

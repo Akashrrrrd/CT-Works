@@ -9,16 +9,16 @@ Added a professional "Download Report" button to the IED adequacy check modal in
 
 #### Changes Made:
 1. **Added Download icon import** (Line 19)
-   ```typescript
-   Download  // added to lucide-react imports
-   ```
+ ```typescript
+ Download // added to lucide-react imports
+ ```
 
 2. **Updated ResultPanel component** (Lines 1224-1310)
-   - Added `handleDownloadReport()` async function
-   - Imports `generateDevicePDFReport` from `@/lib/services/pdf-report`
-   - Converts computation result to `DeviceResult` format
-   - Calls the professional PDF report generator
-   - Added Download Report button to UI
+ - Added `handleDownloadReport()` async function
+ - Imports `generateDevicePDFReport` from `@/lib/services/pdf-report`
+ - Converts computation result to `DeviceResult` format
+ - Calls the professional PDF report generator
+ - Added Download Report button to UI
 
 #### Button Location:
 - **Where:** ResultPanel component (shown after running adequacy check)
@@ -29,35 +29,35 @@ Added a professional "Download Report" button to the IED adequacy check modal in
 #### Code Structure:
 ```typescript
 const handleDownloadReport = async () => {
-  const { generateDevicePDFReport } = await import('@/lib/services/pdf-report');
-  
-  // Convert result to DeviceResult format
-  const deviceResult = {
-    device_name: model,
-    verdict: result.verdict,
-    vk_required: result.vk_required ?? 0,
-    vk_available: result.vk_available ?? 0,
-    ealreq_max: result.ealreq_max ?? 0,
-    required_kssc: result.required_kssc ?? 0,
-    available_kssc: result.available_kssc ?? 0,
-    vk_breakdown: result.vk_breakdown ?? [],
-    inputs: { /* CT parameters */ }
-  };
+ const { generateDevicePDFReport } = await import('@/lib/services/pdf-report');
+ 
+ // Convert result to DeviceResult format
+ const deviceResult = {
+ device_name: model,
+ verdict: result.verdict,
+ vk_required: result.vk_required ?? 0,
+ vk_available: result.vk_available ?? 0,
+ ealreq_max: result.ealreq_max ?? 0,
+ required_kssc: result.required_kssc ?? 0,
+ available_kssc: result.available_kssc ?? 0,
+ vk_breakdown: result.vk_breakdown ?? [],
+ inputs: { /* CT parameters */ }
+ };
 
-  const systemParams = {
-    bus_voltage_kv: 0,
-    system_frequency: 50,
-    max_fault_current_ka: 0,
-  };
+ const systemParams = {
+ bus_voltage_kv: 0,
+ system_frequency: 50,
+ max_fault_current_ka: 0,
+ };
 
-  await generateDevicePDFReport(deviceResult, systemParams);
+ await generateDevicePDFReport(deviceResult, systemParams);
 };
 ```
 
 ## Report Features (via pdf-report.ts)
 
 The PDF report includes:
-- ✅ Professional corporate design (HITACHI branding)
+- ✅ Professional corporate design (STANDARD branding)
 - ✅ Classification banner and company header on every page
 - ✅ Full confidentiality notice and document control
 - ✅ Project information and client details
@@ -122,13 +122,13 @@ The PDF report includes:
 ## Related Files
 
 - **PDF Report Service:** `/lib/services/pdf-report.ts`
-  - Contains `generateDevicePDFReport()` function
-  - Professional corporate PDF formatting
-  - Multi-page support with footers and page numbers
+ - Contains `generateDevicePDFReport()` function
+ - Professional corporate PDF formatting
+ - Multi-page support with footers and page numbers
 
 - **Computation Results Page:** `/app/workspaces/[id]/substations/[subId]/bays/[bayId]/page.tsx`
-  - ResultPanel component with download button
-  - Adequacy check modal
+ - ResultPanel component with download button
+ - Adequacy check modal
 
 ## Future Enhancements
 

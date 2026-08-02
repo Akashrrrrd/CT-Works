@@ -78,19 +78,19 @@ When you click **Download Report**:
 CT/VT Adequacy Analysis Report
 |
 ├─ Overall Summary
-│  ├─ Suitable IEDs: X/Y
-│  └─ Success Rate: Z%
+│ ├─ Suitable IEDs: X/Y
+│ └─ Success Rate: Z%
 |
 ├─ Individual IED Results
-│  ├─ IED 1
-│  │  ├─ CT Ratio
-│  │  ├─ Verdict (SUITABLE/UNSUITABLE)
-│  │  ├─ Burdens (CT, Lead, Device, Total)
-│  │  ├─ Required Vk
-│  │  ├─ Available Vk
-│  │  └─ Safety Margin
-│  ├─ IED 2
-│  └─ ...
+│ ├─ IED 1
+│ │ ├─ CT Ratio
+│ │ ├─ Verdict (SUITABLE/UNSUITABLE)
+│ │ ├─ Burdens (CT, Lead, Device, Total)
+│ │ ├─ Required Vk
+│ │ ├─ Available Vk
+│ │ └─ Safety Margin
+│ ├─ IED 2
+│ └─ ...
 |
 └─ Generated: [Timestamp]
 ```
@@ -186,10 +186,10 @@ To verify the feature works:
 
 ## 🚀 Status
 
-**Feature:** ✅ COMPLETE  
-**Build:** ✅ SUCCESSFUL  
-**Testing:** ✅ READY  
-**Deployment:** ✅ READY  
+**Feature:** ✅ COMPLETE 
+**Build:** ✅ SUCCESSFUL 
+**Testing:** ✅ READY 
+**Deployment:** ✅ READY 
 
 ---
 

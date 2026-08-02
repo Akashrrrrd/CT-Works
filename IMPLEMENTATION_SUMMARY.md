@@ -4,9 +4,9 @@
 
 ### Foundation & Database
 - **Prisma Schema** (`/prisma/schema.prisma`): Complete database schema with all 3 phases
-  - Phase 1: Users, Organizations, Workspaces, Members
-  - Phase 2: Templates, Computations, History tracking
-  - Phase 3: Approval Workflows, Audit Logs, Compliance Reports
+ - Phase 1: Users, Organizations, Workspaces, Members
+ - Phase 2: Templates, Computations, History tracking
+ - Phase 3: Approval Workflows, Audit Logs, Compliance Reports
 - **Database Client** (`/lib/db.ts`): Prisma client setup
 - **Authentication** (`/lib/auth.ts`): JWT token creation, verification, and cookie handling
 
@@ -130,14 +130,14 @@ Complete per-device CT adequacy analysis system that processes standardized Exce
 - **Detects device section** by finding "PROTECTION PURPOSE / DEVICES" header
 - **Collects device names** from up to 4 header rows (handles merged cells)
 - **Extracts 7 parameters per device** from their respective columns:
-  - Core
-  - CT Core Used For
-  - CT Ratio
-  - Accuracy Class
-  - CT Resistance
-  - Vk - Knee Point Voltage
-  - Burden
-  - Magnetizing Current
+ - Core
+ - CT Core Used For
+ - CT Ratio
+ - Accuracy Class
+ - CT Resistance
+ - Vk - Knee Point Voltage
+ - Burden
+ - Magnetizing Current
 
 **Key Features:**
 - Fixed parsing bugs: `"31.5kA/3sec"` → `31.5` (not `31.53`)
@@ -169,10 +169,10 @@ Unified Excel processing interface:
 - **"Extracted Devices Summary"** section (blue box) shows exactly what was extracted
 - **"Compute CT Data for All N Devices"** button
 - Per-device result cards with:
-  - Verdict banner with Vk ratio percentage
-  - CT input parameters used from Excel
-  - Calculation breakdown table with formulas
-  - Individual PDF download button
+ - Verdict banner with Vk ratio percentage
+ - CT input parameters used from Excel
+ - Calculation breakdown table with formulas
+ - Individual PDF download button
 - Consolidated report download for all devices
 
 #### 4. PDF Report Generation (`lib/services/pdf-report.ts`)
@@ -184,46 +184,46 @@ Unified Excel processing interface:
 Processes uploaded Excel files and returns:
 ```json
 {
-  "success": true,
-  "data": {
-    "standard_parameters": { /* 17 params */ },
-    "devices": [ /* N device objects */ ],
-    "total_devices": 4,
-    "device_types": ["RED670", "BCPU", ...]
-  },
-  "summary": {
-    "standard_parameters_found": 15,
-    "devices_found": 4,
-    "device_types": [...],
-    "warnings": [...]
-  }
+ "success": true,
+ "data": {
+ "standard_parameters": { /* 17 params */ },
+ "devices": [ /* N device objects */ ],
+ "total_devices": 4,
+ "device_types": ["RED670", "BCPU", ...]
+ },
+ "summary": {
+ "standard_parameters_found": 15,
+ "devices_found": 4,
+ "device_types": [...],
+ "warnings": [...]
+ }
 }
 ```
 
 ### **Excel File Structure Expected**
 
 ```
-Row 1-20:    STANDARD PARAMETERS SECTION
-             ├─ Bus Fault Level
-             ├─ System Frequency
-             ├─ Bus Voltage Level
-             ├─ X/R Ratio
-             ├─ CT Wiring Parameters (2 sets)
-             ├─ Route Length
-             └─ Sequence Parameters (R1, X1, R0, X0)
+Row 1-20: STANDARD PARAMETERS SECTION
+ ├─ Bus Fault Level
+ ├─ System Frequency
+ ├─ Bus Voltage Level
+ ├─ X/R Ratio
+ ├─ CT Wiring Parameters (2 sets)
+ ├─ Route Length
+ └─ Sequence Parameters (R1, X1, R0, X0)
 
-Row 25-35:   DEVICE TABLE SECTION
-Row 25:      [PROTECTION PURPOSE / DEVICES]  ← Section header
-Row 26:      [label]  [Device 1]  [Device 2]  [Device 3]  [Device 4]
-Row 27:      (optional merged row continuation)
-Row 28:      Core           Core 1    Core 2    T1         T1
-Row 29:      CT Core Used   Core 1    Core 2    Core 1     Core 2
-Row 30:      CT Ratio       800/1A    2500/1A   2500/1A    800/1A
-Row 31:      Accuracy       PX        PX        0.5        PX
-Row 32:      Resistance     3.5       6         2.5        15
-Row 33:      Vk             540       400       N/A        400
-Row 34:      Burden         10        20        15         10
-Row 35:      Magnetizing    20        60        N/A        20
+Row 25-35: DEVICE TABLE SECTION
+Row 25: [PROTECTION PURPOSE / DEVICES] ← Section header
+Row 26: [label] [Device 1] [Device 2] [Device 3] [Device 4]
+Row 27: (optional merged row continuation)
+Row 28: Core Core 1 Core 2 T1 T1
+Row 29: CT Core Used Core 1 Core 2 Core 1 Core 2
+Row 30: CT Ratio 800/1A 2500/1A 2500/1A 800/1A
+Row 31: Accuracy PX PX 0.5 PX
+Row 32: Resistance 3.5 6 2.5 15
+Row 33: Vk 540 400 N/A 400
+Row 34: Burden 10 20 15 10
+Row 35: Magnetizing 20 60 N/A 20
 ```
 
 ### **Debugging Features**
@@ -244,15 +244,15 @@ Comprehensive extraction logs show:
 
 **Pass 2: Device Name Row Identification**
 ```
-   Row 26: Found 4 device-like cells [col2="RED670", col3="BCPU", ...]
+ Row 26: Found 4 device-like cells [col2="RED670", col3="BCPU", ...]
 ✅ Selected row 26 as device name row
 ```
 
 **Pass 3: Device Name Collection**
 ```
-   📝 Row 26: Processing for device name fragments...
-      col2: Added fragment "DISTANCE + DIFFERENTIAL PROTECTION"
-   ⛔ Row 28: STOP - parameter row detected: "core"
+ 📝 Row 26: Processing for device name fragments...
+ col2: Added fragment "DISTANCE + DIFFERENTIAL PROTECTION"
+ ⛔ Row 28: STOP - parameter row detected: "core"
 ```
 
 **Pass 4: Device Objects Built**
@@ -263,20 +263,20 @@ Comprehensive extraction logs show:
 **Pass 5: Parameter Extraction**
 ```
 📋 Row 30: Parameter "ct ratio" → ct_ratio
-      ✓ Device "RED670" (col2): ct_ratio = "800/1A"
-      ✓ Device "BCPU" (col3): ct_ratio = "2500/1A"
+ ✓ Device "RED670" (col2): ct_ratio = "800/1A"
+ ✓ Device "BCPU" (col3): ct_ratio = "2500/1A"
 ```
 
 **Pass 6: Final Summary**
 ```
 📦 Device [1]: DISTANCE + DIFFERENTIAL PROTECTION
-   ├─ Core: Core 1
-   ├─ CT Ratio: 800/1A
-   ├─ Accuracy Class: PX
-   ├─ CT Resistance: 3.5Ω
-   ├─ Vk (Knee Point): 540V
-   ├─ Burden: 10VA
-   └─ Magnetizing Current: 20mA
+ ├─ Core: Core 1
+ ├─ CT Ratio: 800/1A
+ ├─ Accuracy Class: PX
+ ├─ CT Resistance: 3.5Ω
+ ├─ Vk (Knee Point): 540V
+ ├─ Burden: 10VA
+ └─ Magnetizing Current: 20mA
 ```
 
 ### **Debugging Guide**

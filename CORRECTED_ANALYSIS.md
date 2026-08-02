@@ -73,18 +73,18 @@ Your system might be using:
 To properly verify your system, I need to know:
 
 1. **What formula is your system using for Ealreq calculation?**
-   - Is it considering asymmetrical fault current?
-   - Is there a safety factor applied?
-   - Is it using RMS or peak values?
+ - Is it considering asymmetrical fault current?
+ - Is there a safety factor applied?
+ - Is it using RMS or peak values?
 
 2. **What does "Ealreq (max)" represent exactly?**
-   - Maximum secondary EMF?
-   - EMF with safety factor?
-   - Transient EMF consideration?
+ - Maximum secondary EMF?
+ - EMF with safety factor?
+ - Transient EMF consideration?
 
 3. **Is your system using standard CT adequacy formulas like:**
-   - `Ealreq = If × (Rct + Rl + Rb)` 
-   - Or something more complex?
+ - `Ealreq = If × (Rct + Rl + Rb)` 
+ - Or something more complex?
 
 ---
 

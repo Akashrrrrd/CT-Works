@@ -1,19 +1,19 @@
 # SIEMENS 7SJ85 IED Template Implementation
 
 ## Overview
-This implementation adds the **SIEMENS 7SJ85 Multi-function Protection Relay** template to the CT/VT adequacy analysis platform, following the exact calculations and formulas from **Hitachi Technical Documentation N-19957 2-DF4W**.
+This implementation adds the **SIEMENS 7SJ85 Multi-function Protection Relay** template to the CT/VT adequacy analysis platform, following the exact calculations and formulas from **Standard Engineering Technical Documentation **.
 
 ## 📋 Document Reference
-- **Document:** N-19957 2-DF4W  
-- **Title:** CT/VT ADEQUACY CHECK - 132/33kV SUBSTATION DF4W AT AL DHAFRA AREA
+- **Document:** 
+- **Title:** CT/VT ADEQUACY CHECK - 132/33kV SUBSTATION AT AL DHAFRA AREA
 - **Date:** 4/22/2026
-- **Contractor:** HITACHI
+- **Contractor:** STANDARD
 - **Revision:** A
 
 ## 🔧 Implementation Files
 
 ### Core Calculation Engine
-- **`lib/services/siemens-7sj85-calculations.ts`** - Complete calculation engine implementing all Hitachi formulas
+- **`lib/services/siemens-7sj85-calculations.ts`** - Complete calculation engine implementing all Standard Engineering formulas
 - **`lib/formulas/siemens-7sj85-formulas.ts`** - Mathematical formulas for database storage
 - **`lib/templates/siemens-7sj85-template.ts`** - Template configuration with input/output schemas
 
@@ -91,10 +91,10 @@ This implementation adds the **SIEMENS 7SJ85 Multi-function Protection Relay** t
 ### 7. Connected Device Burdens (Page 5)
 | Device | Burden (VA) |
 |--------|-------------|
-| 7SJ85  | 0.02        |
-| SEL751 | 0.02        |
-| FMS    | 0.06        |
-| AVR    | 0.20        |
+| 7SJ85 | 0.02 |
+| SEL751 | 0.02 |
+| FMS | 0.06 |
+| AVR | 0.20 |
 | **Total** | **1.08** |
 
 ### 8. CT Adequacy Check (Pages 5-6)
@@ -105,7 +105,7 @@ This implementation adds the **SIEMENS 7SJ85 Multi-function Protection Relay** t
 #### Required Kssc
 - **Formula:** `Kssc' = Itkmax / Ipn = 31,500 / 3,150 = 10.00`
 
-#### Available Kssc  
+#### Available Kssc 
 - **Formula:** `Kssc = n × ((PE + PN)/(PE + PL)) = 20 × ((9.00 + 7.5)/(9.00 + 1.38)) = 31.81`
 
 #### Final Verdict
@@ -120,7 +120,7 @@ Navigate to: `/workspaces/[id]/templates/siemens-7sj85`
 ### 2. Input Parameters
 Fill in all sections:
 - CT Wiring Parameters
-- VT Wiring Parameters  
+- VT Wiring Parameters 
 - System Parameters
 - Power Line Parameters
 - CT Core Parameters
@@ -139,21 +139,21 @@ POST /api/relay-formulas/siemens-7sj85
 Content-Type: application/json
 
 {
-  "ct_wiring": { ... },
-  "vt_wiring": { ... },
-  "system": { ... },
-  "power_line": { ... },
-  "ct_core": { ... },
-  "connected_devices": { ... }
+ "ct_wiring": { ... },
+ "vt_wiring": { ... },
+ "system": { ... },
+ "power_line": { ... },
+ "ct_core": { ... },
+ "connected_devices": { ... }
 }
 ```
 
 ## ✅ Verification Results
 
-The implementation has been verified against the original Hitachi calculations:
+The implementation has been verified against the original Standard Engineering calculations:
 
 - ✅ **CT Wiring:** Resistance at 75°C = 4.48759 Ω/km (matches document)
-- ✅ **Lead Resistance:** RL = 0.54 Ω (matches document)  
+- ✅ **Lead Resistance:** RL = 0.54 Ω (matches document) 
 - ✅ **Loop Resistance:** 2RL = 1.08 Ω (matches document)
 - ✅ **VA Consumption:** Pl = 1.08 VA (matches document)
 - ✅ **Fault Currents:** Through = 43,475A, Endzone-1 = 43,585A (matches document)
@@ -171,13 +171,13 @@ The implementation has been verified against the original Hitachi calculations:
 ## 📁 Project Structure
 ```
 ⚡/
-├── lib/services/siemens-7sj85-calculations.ts    # Core calculations
-├── lib/formulas/siemens-7sj85-formulas.ts        # Formula definitions  
-├── lib/templates/siemens-7sj85-template.ts       # Template config
+├── lib/services/siemens-7sj85-calculations.ts # Core calculations
+├── lib/formulas/siemens-7sj85-formulas.ts # Formula definitions 
+├── lib/templates/siemens-7sj85-template.ts # Template config
 ├── components/templates/Siemens7SJ85Calculator.tsx # React component
 ├── app/api/relay-formulas/siemens-7sj85/route.ts # API endpoint
 ├── app/workspaces/[id]/templates/siemens-7sj85/page.tsx # Calculator page
-└── scripts/add-7sj85-formulas.ts                 # Database setup script
+└── scripts/add-7sj85-formulas.ts # Database setup script
 ```
 
-This implementation provides a complete, production-ready CT/VT adequacy calculation system for the SIEMENS 7SJ85 protection relay, following exact Hitachi engineering standards and maintaining full compatibility with the existing platform architecture.
+This implementation provides a complete, production-ready CT/VT adequacy calculation system for the SIEMENS 7SJ85 protection relay, following exact Standard Engineering engineering standards and maintaining full compatibility with the existing platform architecture.

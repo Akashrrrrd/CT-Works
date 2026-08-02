@@ -18,10 +18,10 @@ Added comprehensive logging throughout the `extractDeviceParameters()` method wi
 - Logs which row contains "PROTECTION PURPOSE / DEVICES"
 - Shows when section header is found or not found
 - Example output:
-  ```
-  🔎 Pass 1: Looking for section header row...
-  ✅ Found section header at row 25: "PROTECTION PURPOSE / DEVICES"
-  ```
+ ```
+ 🔎 Pass 1: Looking for section header row...
+ ✅ Found section header at row 25: "PROTECTION PURPOSE / DEVICES"
+ ```
 
 #### **Pass 2: Device Name Row Identification**
 - Shows each candidate row being evaluated
@@ -29,39 +29,39 @@ Added comprehensive logging throughout the `extractDeviceParameters()` method wi
 - Displays cell previews: `col2="RED670", col3="BCPU"`
 - Skips rows with parameter keywords in first cell
 - Example output:
-  ```
-  🔎 Pass 2: Looking for device name row...
-     Row 25: Found 0 device-like cells []
-     Row 26: Found 4 device-like cells [col2="RED670", col3="BCPU", col4="AMMETERS", col5="BB/BF"]
-  ✅ Selected row 26 as device name row
-  ```
+ ```
+ 🔎 Pass 2: Looking for device name row...
+ Row 25: Found 0 device-like cells []
+ Row 26: Found 4 device-like cells [col2="RED670", col3="BCPU", col4="AMMETERS", col5="BB/BF"]
+ ✅ Selected row 26 as device name row
+ ```
 
 #### **Pass 3: Device Name Collection**
 - Shows each row being processed for device names
 - Logs when fragments are added to columns
 - Shows when parameter row is detected (stops collection)
 - Example output:
-  ```
-  🔎 Pass 3: Collecting device names from header rows...
-     📝 Row 26: Processing for device name fragments...
-        col2: Added fragment "DISTANCE + DIFFERENTIAL PROTECTION"
-        col3: Added fragment "BCPU + OC/EF"
-     ⛔ Row 28: STOP - parameter row detected: "core"
-  ✅ Device name collection complete: 4 devices found
-     [1] Column 2: "DISTANCE + DIFFERENTIAL PROTECTION"
-     [2] Column 3: "BCPU + OC/EF"
-     [3] Column 4: "AMMETERS"
-     [4] Column 5: "BB/BF"
-  ```
+ ```
+ 🔎 Pass 3: Collecting device names from header rows...
+ 📝 Row 26: Processing for device name fragments...
+ col2: Added fragment "DISTANCE + DIFFERENTIAL PROTECTION"
+ col3: Added fragment "BCPU + OC/EF"
+ ⛔ Row 28: STOP - parameter row detected: "core"
+ ✅ Device name collection complete: 4 devices found
+ [1] Column 2: "DISTANCE + DIFFERENTIAL PROTECTION"
+ [2] Column 3: "BCPU + OC/EF"
+ [3] Column 4: "AMMETERS"
+ [4] Column 5: "BB/BF"
+ ```
 
 #### **Pass 4: Device Object Initialization**
 - Confirms device objects created
 - Shows all parameters initialized to N/A
 - Example output:
-  ```
-  🔎 Pass 4: Building device objects...
-  ✅ Created 4 device objects (all parameters initialized to N/A)
-  ```
+ ```
+ 🔎 Pass 4: Building device objects...
+ ✅ Created 4 device objects (all parameters initialized to N/A)
+ ```
 
 #### **Pass 5: Parameter Value Extraction**
 - Shows each parameter row being processed
@@ -70,40 +70,40 @@ Added comprehensive logging throughout the `extractDeviceParameters()` method wi
 - Shows merged cell fallback when used
 - Shows before/after values if overwriting
 - Example output:
-  ```
-  🔎 Pass 5: Extracting parameter values...
-  📍 Parameter section starts at row 28
-     Will scan from row 28 to end of sheet (50 total rows)
+ ```
+ 🔎 Pass 5: Extracting parameter values...
+ 📍 Parameter section starts at row 28
+ Will scan from row 28 to end of sheet (50 total rows)
 
-     📋 Row 30: Parameter "ct ratio" → ct_ratio
-        ✓ Device "RED670" (col2): ct_ratio = "800/1A"
-        ✓ Device "BCPU" (col3): ct_ratio = "2500/1A"
-        ✓ Device "AMMETERS" (col4): ct_ratio = "2500/1A"
-        ✓ Device "BB/BF" (col5): Empty, using col4
-        ✓ Device "BB/BF" (col4): ct_ratio = "800/1A"
-  
-  ✅ Parameter extraction complete: 8 parameters extracted
-  ```
+ 📋 Row 30: Parameter "ct ratio" → ct_ratio
+ ✓ Device "RED670" (col2): ct_ratio = "800/1A"
+ ✓ Device "BCPU" (col3): ct_ratio = "2500/1A"
+ ✓ Device "AMMETERS" (col4): ct_ratio = "2500/1A"
+ ✓ Device "BB/BF" (col5): Empty, using col4
+ ✓ Device "BB/BF" (col4): ct_ratio = "800/1A"
+ 
+ ✅ Parameter extraction complete: 8 parameters extracted
+ ```
 
 #### **Pass 6: Final Validation & Summary**
 - Shows complete device objects with all parameters
 - Displays in a structured tree format
 - Example output:
-  ```
-  ✅ ═══════════════════════════════════════════════════════════
-  ✅ EXTRACTION COMPLETE: 4 DEVICES
-  ✅ ═══════════════════════════════════════════════════════════
+ ```
+ ✅ ═══════════════════════════════════════════════════════════
+ ✅ EXTRACTION COMPLETE: 4 DEVICES
+ ✅ ═══════════════════════════════════════════════════════════
 
-  📦 Device [1]: DISTANCE + DIFFERENTIAL PROTECTION
-     ├─ Core: Core 1
-     ├─ CT Core Used For: Core 1
-     ├─ CT Ratio: 800/1A
-     ├─ Accuracy Class: PX
-     ├─ CT Resistance: 3.5Ω
-     ├─ Vk (Knee Point): 540V
-     ├─ Burden: 10VA
-     └─ Magnetizing Current: 20mA
-  ```
+ 📦 Device [1]: DISTANCE + DIFFERENTIAL PROTECTION
+ ├─ Core: Core 1
+ ├─ CT Core Used For: Core 1
+ ├─ CT Ratio: 800/1A
+ ├─ Accuracy Class: PX
+ ├─ CT Resistance: 3.5Ω
+ ├─ Vk (Knee Point): 540V
+ ├─ Burden: 10VA
+ └─ Magnetizing Current: 20mA
+ ```
 
 ### 2. Visual Device Summary (Frontend)
 
@@ -113,26 +113,26 @@ Added a prominent blue summary box that displays extracted device data immediate
 
 ```tsx
 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-  <h4 className="font-semibold text-sm mb-2 text-blue-900">
-    📋 Extracted Devices Summary
-  </h4>
-  <div className="space-y-2">
-    {processedData.data.devices.map((device, idx) => (
-      <div key={idx} className="bg-white rounded p-3 text-sm border">
-        <div className="font-semibold">{idx + 1}. {device.device_name}</div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
-          <div>CT Ratio: <strong>{device.ct_ratio}</strong></div>
-          <div>Accuracy: <strong>{device.accuracy_class}</strong></div>
-          <div>Rct: <strong>{device.ct_resistance}Ω</strong></div>
-          <div>Vk: <strong>{device.vk_knee_point_voltage}V</strong></div>
-          ...
-        </div>
-      </div>
-    ))}
-  </div>
-  <div className="mt-3 text-xs text-blue-700">
-    ⚠️ If these values don't match your Excel file, check the browser console (F12)
-  </div>
+ <h4 className="font-semibold text-sm mb-2 text-blue-900">
+ 📋 Extracted Devices Summary
+ </h4>
+ <div className="space-y-2">
+ {processedData.data.devices.map((device, idx) => (
+ <div key={idx} className="bg-white rounded p-3 text-sm border">
+ <div className="font-semibold">{idx + 1}. {device.device_name}</div>
+ <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+ <div>CT Ratio: <strong>{device.ct_ratio}</strong></div>
+ <div>Accuracy: <strong>{device.accuracy_class}</strong></div>
+ <div>Rct: <strong>{device.ct_resistance}Ω</strong></div>
+ <div>Vk: <strong>{device.vk_knee_point_voltage}V</strong></div>
+ ...
+ </div>
+ </div>
+ ))}
+ </div>
+ <div className="mt-3 text-xs text-blue-700">
+ ⚠️ If these values don't match your Excel file, check the browser console (F12)
+ </div>
 </div>
 ```
 
@@ -217,7 +217,7 @@ Added complete CT Adequacy Analysis System section including:
 **Step 2: Open Console - Pass 2**
 ```
 🔎 Pass 2: Looking for device name row...
-   Row 10: Found 4 device-like cells [col2="31.5kA/3sec", col3="50Hz", ...]
+ Row 10: Found 4 device-like cells [col2="31.5kA/3sec", col3="50Hz", ...]
 ✅ Selected row 10 as device name row
 ```
 ❌ Problem identified! Row 10 is in the standard parameters section, not the device section.

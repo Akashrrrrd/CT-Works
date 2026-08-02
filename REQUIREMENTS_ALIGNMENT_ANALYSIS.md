@@ -22,7 +22,7 @@
 | Your Requirement | Status | Priority |
 |------------------|--------|----------|
 | **Step 11: Detailed Calculation Page** | 🔨 **TODO** | HIGH |
-| **Step 12: Professional PDF Reports** | 🔨 **TODO** | HIGH |  
+| **Step 12: Professional PDF Reports** | 🔨 **TODO** | HIGH | 
 | **Step 13: Internal Data Model** | 🔨 **TODO** | MEDIUM |
 | **Multi-Project Management** | 🔨 **TODO** | MEDIUM |
 | **Excel Import/Export** | 🔨 **TODO** | LOW |
@@ -34,7 +34,7 @@ Your vision and my implementation are **perfectly aligned**!
 
 ### **What You Wanted:**
 - ❌ "Never ask user for derived values"
-- ❌ "No manual calculations required"  
+- ❌ "No manual calculations required" 
 - ❌ "User-friendly for non-coding engineers"
 - ❌ "Automatic IED parameter lookup"
 - ❌ "Professional engineering reports"

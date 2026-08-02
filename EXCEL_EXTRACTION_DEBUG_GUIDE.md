@@ -40,7 +40,7 @@ If values don't match, open the browser console to see detailed extraction logs:
 🔎 Pass 1: Looking for section header row...
 ✅ Found section header at row 25: "PROTECTION PURPOSE / DEVICES"
 🔎 Pass 2: Looking for device name row...
-   Row 26: Found 4 device-like cells [col2="RED670", col3="BCPU", ...]
+ Row 26: Found 4 device-like cells [col2="RED670", col3="BCPU", ...]
 ✅ Selected row 26 as device name row
 ```
 
@@ -52,10 +52,10 @@ Look for these key log lines:
 ```
 📍 Device name row identified: 26
 ✅ Device name collection complete: 4 devices found
-   [1] Column 2: "DISTANCE + DIFFERENTIAL PROTECTION"
-   [2] Column 3: "BCPU + OC/EF"
-   [3] Column 4: "AMMETERS"
-   [4] Column 5: "BB/BF"
+ [1] Column 2: "DISTANCE + DIFFERENTIAL PROTECTION"
+ [2] Column 3: "BCPU + OC/EF"
+ [3] Column 4: "AMMETERS"
+ [4] Column 5: "BB/BF"
 ```
 
 **What to check:**
@@ -66,10 +66,10 @@ Look for these key log lines:
 #### Parameter Extraction
 ```
 📋 Row 32: Parameter "ct ratio" → ct_ratio
-      ✓ Device "DISTANCE + DIFFERENTIAL PROTECTION" (col2): ct_ratio = "800/1A"
-      ✓ Device "BCPU + OC/EF" (col3): ct_ratio = "2500/1A"
-      ✓ Device "AMMETERS" (col4): ct_ratio = "2500/1A"
-      ✓ Device "BB/BF" (col5): ct_ratio = "800/1A"
+ ✓ Device "DISTANCE + DIFFERENTIAL PROTECTION" (col2): ct_ratio = "800/1A"
+ ✓ Device "BCPU + OC/EF" (col3): ct_ratio = "2500/1A"
+ ✓ Device "AMMETERS" (col4): ct_ratio = "2500/1A"
+ ✓ Device "BB/BF" (col5): ct_ratio = "800/1A"
 ```
 
 **What to check:**
@@ -112,10 +112,10 @@ Look for these key log lines:
 **Solutions:**
 1. Check console logs for "Pass 5: Extracting parameter values"
 2. For each parameter, verify the column numbers match your Excel layout:
-   ```
-   Device "BCPU" (col3): ct_ratio = "2500/1A"
-   ```
-   If col3 is wrong, your Excel might have extra columns before the device data
+ ```
+ Device "BCPU" (col3): ct_ratio = "2500/1A"
+ ```
+ If col3 is wrong, your Excel might have extra columns before the device data
 3. Look for "Empty, using col4" messages - indicates merged cell handling
 
 ### Issue 3: "N/A" for All Device Parameters
@@ -133,14 +133,14 @@ Look for these key log lines:
 1. Check console for "📍 Parameter section starts at row X"
 2. If you see "❌ ERROR: Could not find parameter rows", the system couldn't locate where parameters begin
 3. Verify your Excel has these parameter names (case-insensitive):
-   - Core
-   - CT Core Used For
-   - CT Ratio
-   - Accuracy Class / Class of Accuracy
-   - CT Resistance / Resistance
-   - Vk - Knee Point Voltage / Knee Point Voltage
-   - Burden
-   - Magnetizing Current
+ - Core
+ - CT Core Used For
+ - CT Ratio
+ - Accuracy Class / Class of Accuracy
+ - CT Resistance / Resistance
+ - Vk - Knee Point Voltage / Knee Point Voltage
+ - Burden
+ - Magnetizing Current
 
 ### Issue 4: Values from Standard Parameters Mixed with Device Data
 
@@ -154,8 +154,8 @@ Look for these key log lines:
 
 **Solutions:**
 1. Ensure your Excel has a clear section header like:
-   - "PROTECTION PURPOSE / DEVICES"
-   - "CONNECTED DEVICES"
+ - "PROTECTION PURPOSE / DEVICES"
+ - "CONNECTED DEVICES"
 2. Device names should appear in columns 2+ (not column 0 or 1)
 3. Standard parameters should be in a different section, higher up in the sheet
 
@@ -166,24 +166,24 @@ Look for these key log lines:
 The system expects this structure:
 
 ```
-Row 1-20:    STANDARD PARAMETERS SECTION
-             ├─ Bus Fault Level: [value1]  [value2 if applicable]
-             ├─ System Frequency: [value]
-             ├─ Bus Voltage Level: [value]
-             └─ ... (14 more parameters)
+Row 1-20: STANDARD PARAMETERS SECTION
+ ├─ Bus Fault Level: [value1] [value2 if applicable]
+ ├─ System Frequency: [value]
+ ├─ Bus Voltage Level: [value]
+ └─ ... (14 more parameters)
 
-Row 25-30:   DEVICE TABLE SECTION
-Row 25:      [PROTECTION PURPOSE / DEVICES]
-Row 26:      [param label]  [Device 1 Name]  [Device 2 Name]  [Device 3]  [Device 4]
-Row 27:      (optional merged row continuation)
-Row 28:      Core           Core 1           Core 2            T1          T1
-Row 29:      CT Core Used   Core 1           Core 2            Core 1      Core 2
-Row 30:      CT Ratio       800/1A           2500/1A           2500/1A     800/1A
-Row 31:      Accuracy       PX               PX                0.5         PX
-Row 32:      Resistance     3.5              6                 2.5         15
-Row 33:      Vk             540              400               N/A         400
-Row 34:      Burden         10               20                15          10
-Row 35:      Magnetizing    20               60                N/A         20
+Row 25-30: DEVICE TABLE SECTION
+Row 25: [PROTECTION PURPOSE / DEVICES]
+Row 26: [param label] [Device 1 Name] [Device 2 Name] [Device 3] [Device 4]
+Row 27: (optional merged row continuation)
+Row 28: Core Core 1 Core 2 T1 T1
+Row 29: CT Core Used Core 1 Core 2 Core 1 Core 2
+Row 30: CT Ratio 800/1A 2500/1A 2500/1A 800/1A
+Row 31: Accuracy PX PX 0.5 PX
+Row 32: Resistance 3.5 6 2.5 15
+Row 33: Vk 540 400 N/A 400
+Row 34: Burden 10 20 15 10
+Row 35: Magnetizing 20 60 N/A 20
 ```
 
 **Key Rules:**

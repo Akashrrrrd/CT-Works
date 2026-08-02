@@ -12,17 +12,17 @@ File: `page.tsx` → Search for "DialogContent"
 ### REPLACE THIS
 ```jsx
 <DialogHeader className="mb-6 shrink-0">
-  <DialogTitle className="text-2xl font-bold">
-    Create New IED - Complete CT Adequacy Analysis
-  </DialogTitle>
+ <DialogTitle className="text-2xl font-bold">
+ Create New IED - Complete CT Adequacy Analysis
+ </DialogTitle>
 </DialogHeader>
 ```
 
 ### WITH THIS
 ```jsx
 <div className="bg-gradient-to-r from-blue-600 to-blue-700 dark:from-blue-900 dark:to-blue-800 px-8 py-6 shrink-0 border-b border-blue-800">
-  <h2 className="text-2xl font-bold text-white">CT Adequacy Analysis</h2>
-  <p className="text-blue-100 text-sm mt-2">Configure transformer parameters and run computational analysis</p>
+ <h2 className="text-2xl font-bold text-white">CT Adequacy Analysis</h2>
+ <p className="text-blue-100 text-sm mt-2">Configure transformer parameters and run computational analysis</p>
 </div>
 ```
 
@@ -47,8 +47,8 @@ Search for "SUITABLY DIMENSIONED"
 ### WITH THIS
 ```jsx
 <Card className={computationResult.verdict === 'SUITABLY DIMENSIONED' 
-  ? 'border-l-4 border-emerald-600 bg-gradient-to-r from-emerald-50 to-emerald-50/30 dark:from-emerald-950/30 dark:to-emerald-900/20 shadow-lg' 
-  : 'border-l-4 border-red-600 bg-gradient-to-r from-red-50 to-red-50/30 dark:from-red-950/30 dark:to-red-900/20 shadow-lg'}>
+ ? 'border-l-4 border-emerald-600 bg-gradient-to-r from-emerald-50 to-emerald-50/30 dark:from-emerald-950/30 dark:to-emerald-900/20 shadow-lg' 
+ : 'border-l-4 border-red-600 bg-gradient-to-r from-red-50 to-red-50/30 dark:from-red-950/30 dark:to-red-900/20 shadow-lg'}>
 ```
 
 **Visual Result:**
@@ -67,18 +67,18 @@ Search for "Vk Required"
 ### REPLACE THIS
 ```jsx
 <div className="bg-muted rounded p-4 text-center">
-  <p className="text-xs text-muted-foreground mb-2">Vk Required</p>
-  <p className="text-2xl font-bold">{computationResult.vk_required}</p>
-  <p className="text-xs text-muted-foreground">V</p>
+ <p className="text-xs text-muted-foreground mb-2">Vk Required</p>
+ <p className="text-2xl font-bold">{computationResult.vk_required}</p>
+ <p className="text-xs text-muted-foreground">V</p>
 </div>
 ```
 
 ### WITH THIS
 ```jsx
 <div className="bg-white dark:bg-slate-800 rounded-lg p-4 border border-gray-200 dark:border-slate-700 shadow-sm">
-  <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-3 tracking-wide uppercase">Vk Required</p>
-  <p className="text-4xl font-bold text-gray-900 dark:text-white mb-1">{computationResult.vk_required.toFixed(2)}</p>
-  <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Volts (V)</p>
+ <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-3 tracking-wide uppercase">Vk Required</p>
+ <p className="text-4xl font-bold text-gray-900 dark:text-white mb-1">{computationResult.vk_required.toFixed(2)}</p>
+ <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Volts (V)</p>
 </div>
 ```
 
@@ -104,18 +104,18 @@ Search for "CT Primary (Ipn)"
 ### WITH THIS
 ```jsx
 <div className="space-y-2">
-  <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-    CT Primary (Ipn) <span className="text-red-500">*</span>
-  </label>
-  <Input 
-    type="number" 
-    step="any" 
-    value={iedForm.ctRatio} 
-    onChange={e => setIedForm(p => ({...p, ctRatio: e.target.value}))} 
-    placeholder="e.g. 600"
-    className="h-11 font-mono border border-gray-300 dark:border-gray-600 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900 rounded-lg"
-  />
-  <p className="text-xs text-gray-500 dark:text-gray-400">The primary current rating in Amperes</p>
+ <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+ CT Primary (Ipn) <span className="text-red-500">*</span>
+ </label>
+ <Input 
+ type="number" 
+ step="any" 
+ value={iedForm.ctRatio} 
+ onChange={e => setIedForm(p => ({...p, ctRatio: e.target.value}))} 
+ placeholder="e.g. 600"
+ className="h-11 font-mono border border-gray-300 dark:border-gray-600 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900 rounded-lg"
+ />
+ <p className="text-xs text-gray-500 dark:text-gray-400">The primary current rating in Amperes</p>
 </div>
 ```
 
@@ -136,20 +136,20 @@ Search for "Compute" button
 ### REPLACE THIS
 ```jsx
 <Button 
-  onClick={...}
-  disabled={saving}
-  size="sm"
-  className="gap-1.5 bg-blue-600 hover:bg-blue-700"
+ onClick={...}
+ disabled={saving}
+ size="sm"
+ className="gap-1.5 bg-blue-600 hover:bg-blue-700"
 >
 ```
 
 ### WITH THIS
 ```jsx
 <Button 
-  onClick={...}
-  disabled={saving}
-  size="lg"
-  className="gap-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white font-semibold shadow-md hover:shadow-lg transition-all rounded-lg h-12 px-6"
+ onClick={...}
+ disabled={saving}
+ size="lg"
+ className="gap-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white font-semibold shadow-md hover:shadow-lg transition-all rounded-lg h-12 px-6"
 >
 ```
 
@@ -169,16 +169,16 @@ Replace all instances of these:
 ### BAD COLORS → GOOD COLORS
 
 ```
-border-green-700  →  border-emerald-600
-bg-green-950/20   →  bg-emerald-50
-text-green-400    →  text-emerald-600
+border-green-700 → border-emerald-600
+bg-green-950/20 → bg-emerald-50
+text-green-400 → text-emerald-600
 
-border-red-700    →  border-red-600
-bg-red-950/20     →  bg-red-50
-text-red-400      →  text-red-600
+border-red-700 → border-red-600
+bg-red-950/20 → bg-red-50
+text-red-400 → text-red-600
 
-bg-muted          →  bg-gray-50 dark:bg-slate-800
-text-muted        →  text-gray-600 dark:text-gray-400
+bg-muted → bg-gray-50 dark:bg-slate-800
+text-muted → text-gray-600 dark:text-gray-400
 ```
 
 ---
@@ -191,15 +191,15 @@ Search for "TabsList"
 ### REPLACE THIS
 ```jsx
 <Tabs defaultValue="ct">
-  <TabsList className="grid grid-cols-5">
-    <TabsTrigger value="ct">CT Data</TabsTrigger>
+ <TabsList className="grid grid-cols-5">
+ <TabsTrigger value="ct">CT Data</TabsTrigger>
 ```
 
 ### WITH THIS
 ```jsx
 <Tabs defaultValue="ct" className="w-full">
-  <TabsList className="grid grid-cols-5 bg-gray-100 dark:bg-slate-800 p-1 rounded-lg">
-    <TabsTrigger value="ct" className="rounded data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700 data-[state=active]:shadow-sm">CT Data</TabsTrigger>
+ <TabsList className="grid grid-cols-5 bg-gray-100 dark:bg-slate-800 p-1 rounded-lg">
+ <TabsTrigger value="ct" className="rounded data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700 data-[state=active]:shadow-sm">CT Data</TabsTrigger>
 ```
 
 **Visual Result:**
@@ -224,8 +224,8 @@ Search for `<h3 className="font-semibold"`
 ### WITH THIS
 ```jsx
 <div className="mb-6 pb-4 border-b border-gray-200 dark:border-slate-700">
-  <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">CT Nameplate Parameters</h3>
-  <p className="text-sm text-gray-600 dark:text-gray-400">All values from manufacturer test certificate</p>
+ <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">CT Nameplate Parameters</h3>
+ <p className="text-sm text-gray-600 dark:text-gray-400">All values from manufacturer test certificate</p>
 </div>
 ```
 
@@ -245,20 +245,20 @@ Search for blue background `bg-blue-50`
 ### REPLACE THIS
 ```jsx
 <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 p-3 rounded mb-6 text-xs text-blue-900 dark:text-blue-200">
-  📋 <strong>Where to find:</strong> Look at the physical CT...
+ 📋 <strong>Where to find:</strong> Look at the physical CT...
 </div>
 ```
 
 ### WITH THIS
 ```jsx
 <div className="bg-blue-50 dark:bg-slate-800 border border-blue-200 dark:border-slate-700 border-l-4 border-l-blue-600 p-4 rounded-lg mb-6">
-  <p className="text-sm text-blue-900 dark:text-blue-200">
-    <strong className="font-semibold">📋 Where to find:</strong>
-    <br />
-    <span className="text-xs text-blue-800 dark:text-blue-300 mt-1 block">
-      Look at the physical CT unit in the substation or the CT test certificate.
-    </span>
-  </p>
+ <p className="text-sm text-blue-900 dark:text-blue-200">
+ <strong className="font-semibold">📋 Where to find:</strong>
+ <br />
+ <span className="text-xs text-blue-800 dark:text-blue-300 mt-1 block">
+ Look at the physical CT unit in the substation or the CT test certificate.
+ </span>
+ </p>
 </div>
 ```
 
@@ -275,25 +275,25 @@ Search for blue background `bg-blue-50`
 ### USE THIS SPACING EVERYWHERE
 
 ```
-Page/Dialog padding:      p-8     (32px)
-Section margin:           mb-6    (24px)
-Between sections:         gap-6   (24px)
-Card padding:            p-4-6   (16-24px)
-Between small items:      gap-2   (8px)
-Input height:            h-11    (44px)
+Page/Dialog padding: p-8 (32px)
+Section margin: mb-6 (24px)
+Between sections: gap-6 (24px)
+Card padding: p-4-6 (16-24px)
+Between small items: gap-2 (8px)
+Input height: h-11 (44px)
 ```
 
 ### FROM THIS
 ```
-mb-6  (24px) - Too big
-p-3   (12px) - Too small
-gap-1 (4px)  - Cramped
+mb-6 (24px) - Too big
+p-3 (12px) - Too small
+gap-1 (4px) - Cramped
 ```
 
 ### TO THIS
 ```
-mb-6  (24px) - Use for large sections
-p-4   (16px) - Use for normal cards
+mb-6 (24px) - Use for large sections
+p-4 (16px) - Use for normal cards
 gap-3 (12px) - Use for item spacing
 ```
 
@@ -313,7 +313,7 @@ gap-3 (12px) - Use for item spacing
 Consider hiring a designer to:
 - Create consistent design system
 - Update all components
-- Ensure Hitachi branding alignment
+- Ensure Standard Engineering branding alignment
 - Test on multiple devices
 
 ### Option 3: Theme System (Takes 4 hours)
@@ -348,17 +348,17 @@ After applying fixes:
 ### BEFORE
 ```
 ┌─────────────────────────┐
-│ Create New IED          │
+│ Create New IED │
 │ Complete CT Adequacy... │
 ├─────────────────────────┤
-│ [Modify]                │
-│                         │
+│ [Modify] │
+│ │
 │ ✓ SUITABLY DIMENSIONED │
-│                         │
+│ │
 │ [Small] [Small] [Small]│
-│  52.08   400    52.08  │
-│                         │
-│ [Small text breakdown]  │
+│ 52.08 400 52.08 │
+│ │
+│ [Small text breakdown] │
 └─────────────────────────┘
 
 Looks: Generic, unclear, unprofessional
@@ -367,19 +367,19 @@ Looks: Generic, unclear, unprofessional
 ### AFTER
 ```
 ╔═════════════════════════════════════╗
-║ CT Adequacy Analysis                ║
-║ Configure parameters and run        ║
+║ CT Adequacy Analysis ║
+║ Configure parameters and run ║
 ╠═════════════════════════════════════╣
-║                                     ║
-║ ✅ SUITABLY DIMENSIONED             ║
-║ CT is adequately specified          ║
-║                                     ║
+║ ║
+║ ✅ SUITABLY DIMENSIONED ║
+║ CT is adequately specified ║
+║ ║
 ║ ┌─────────────┬─────────┬─────────┐ ║
-║ │  52.08 V    │ 400 V   │ 668%    │ ║
-║ │ Vk Required │Available│ Margin  │ ║
+║ │ 52.08 V │ 400 V │ 668% │ ║
+║ │ Vk Required │Available│ Margin │ ║
 ║ └─────────────┴─────────┴─────────┘ ║
-║                                     ║
-║ [Detailed breakdown with icons]    ║
+║ ║
+║ [Detailed breakdown with icons] ║
 ╚═════════════════════════════════════╝
 
 Looks: Professional, clear, enterprise
@@ -437,5 +437,5 @@ If a fix doesn't work:
 
 **Your app will go from "looks like a hobby project" to "looks professional" with these changes.**
 
-Apply them now. Your Hitachi client will notice the difference.
+Apply them now. Your Standard Engineering client will notice the difference.
 

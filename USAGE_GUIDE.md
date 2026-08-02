@@ -9,19 +9,19 @@ The SIEMENS 7SJ85 template is used for **critical electrical engineering analysi
 ### 🏭 **Real-World Applications:**
 
 1. **Power Plant Protection Systems**
-   - Ensuring protection relays can detect faults accurately
-   - Preventing equipment damage from electrical faults
-   - Maintaining power system stability
+ - Ensuring protection relays can detect faults accurately
+ - Preventing equipment damage from electrical faults
+ - Maintaining power system stability
 
 2. **Industrial Substation Design**
-   - 132kV/33kV transformer stations
-   - Distribution system protection
-   - Grid interconnection points
+ - 132kV/33kV transformer stations
+ - Distribution system protection
+ - Grid interconnection points
 
 3. **Engineering Consultancy**
-   - Design verification for utility companies
-   - Compliance with international standards (IEC, IEEE)
-   - Technical documentation for regulatory approval
+ - Design verification for utility companies
+ - Compliance with international standards (IEC, IEEE)
+ - Technical documentation for regulatory approval
 
 ### ⚡ **Why This Matters:**
 - **Safety**: Improperly sized CTs can fail to detect dangerous faults
@@ -38,78 +38,78 @@ The SIEMENS 7SJ85 template is used for **critical electrical engineering analysi
 **Step 1: Test the API directly**
 ```bash
 curl -X POST http://localhost:3001/api/relay-formulas/siemens-7sj85 \
-  -H "Content-Type: application/json" \
-  -d '{
-    "ct_wiring": {
-      "conductor_cross_section": 6.00,
-      "resistance_w_km_20c": 3.69,
-      "specific_resistance_20c": 0.00393,
-      "conductor_length_m": 120
-    },
-    "vt_wiring": {
-      "conductor_cross_section": 2.50,
-      "resistance_w_km_20c": 8.87,
-      "specific_resistance_20c": 0.00393,
-      "conductor_length_m": 120,
-      "primary_voltage": 132,
-      "secondary_voltage": 0.11
-    },
-    "system": {
-      "system_frequency": 50,
-      "bus_voltage_level": 132,
-      "max_bus_fault_level": 50,
-      "xr_ratio": 15,
-      "mv_bus_voltage_level": 132,
-      "mv_max_bus_fault_rating": 40
-    },
-    "power_line": {
-      "assumed_cable": 3,
-      "cable_type": "CU HDPE",
-      "cable_mm2": 240,
-      "cables_per_phase": 1,
-      "positive_seq_resistance_r1": 0.0221,
-      "positive_seq_reactance_x1": 0.1600,
-      "zero_seq_resistance_r0": 0.1300,
-      "zero_seq_reactance_x0": 0.0600,
-      "route_length": 1.74
-    },
-    "ct_core": {
-      "ct_ratio_primary": 3150,
-      "ct_ratio_secondary": 1,
-      "class_of_accuracy": "5P 20",
-      "ct_resistance": 9,
-      "rated_burden": 7.5
-    },
-    "connected_devices": {
-      "device_7sj85": 0.02,
-      "device_sel751": 0.02,
-      "device_fms": 0.06,
-      "device_avr": 0.20
-    }
-  }'
+ -H "Content-Type: application/json" \
+ -d '{
+ "ct_wiring": {
+ "conductor_cross_section": 6.00,
+ "resistance_w_km_20c": 3.69,
+ "specific_resistance_20c": 0.00393,
+ "conductor_length_m": 120
+ },
+ "vt_wiring": {
+ "conductor_cross_section": 2.50,
+ "resistance_w_km_20c": 8.87,
+ "specific_resistance_20c": 0.00393,
+ "conductor_length_m": 120,
+ "primary_voltage": 132,
+ "secondary_voltage": 0.11
+ },
+ "system": {
+ "system_frequency": 50,
+ "bus_voltage_level": 132,
+ "max_bus_fault_level": 50,
+ "xr_ratio": 15,
+ "mv_bus_voltage_level": 132,
+ "mv_max_bus_fault_rating": 40
+ },
+ "power_line": {
+ "assumed_cable": 3,
+ "cable_type": "CU HDPE",
+ "cable_mm2": 240,
+ "cables_per_phase": 1,
+ "positive_seq_resistance_r1": 0.0221,
+ "positive_seq_reactance_x1": 0.1600,
+ "zero_seq_resistance_r0": 0.1300,
+ "zero_seq_reactance_x0": 0.0600,
+ "route_length": 1.74
+ },
+ "ct_core": {
+ "ct_ratio_primary": 3150,
+ "ct_ratio_secondary": 1,
+ "class_of_accuracy": "5P 20",
+ "ct_resistance": 9,
+ "rated_burden": 7.5
+ },
+ "connected_devices": {
+ "device_7sj85": 0.02,
+ "device_sel751": 0.02,
+ "device_fms": 0.06,
+ "device_avr": 0.20
+ }
+ }'
 ```
 
-**Expected Response (Exact Hitachi Values):**
+**Expected Response (Exact Standard Engineering Values):**
 ```json
 {
-  "final_verdict": "SUITABLY DIMENSIONED",
-  "ct_calculations": {
-    "resistance_at_75c": 4.48759,
-    "lead_resistance": 0.54,
-    "loop_resistance": 1.08,
-    "va_consumption": 1.08
-  },
-  "fault_calculations": {
-    "system_tp_ms": 40.94,
-    "through_fault_current_a": 43475,
-    "endzone1_fault_current_a": 43585
-  },
-  "adequacy_check": {
-    "required_kssc": 10.00,
-    "available_kssc": 31.81,
-    "suitable": true,
-    "verdict": "SUITABLY DIMENSIONED"
-  }
+ "final_verdict": "SUITABLY DIMENSIONED",
+ "ct_calculations": {
+ "resistance_at_75c": 4.48759,
+ "lead_resistance": 0.54,
+ "loop_resistance": 1.08,
+ "va_consumption": 1.08
+ },
+ "fault_calculations": {
+ "system_tp_ms": 40.94,
+ "through_fault_current_a": 43475,
+ "endzone1_fault_current_a": 43585
+ },
+ "adequacy_check": {
+ "required_kssc": 10.00,
+ "available_kssc": 31.81,
+ "suitable": true,
+ "verdict": "SUITABLY DIMENSIONED"
+ }
 }
 ```
 
@@ -122,7 +122,7 @@ curl -X POST http://localhost:3001/api/relay-formulas/siemens-7sj85 \
 4. URL will be: http://localhost:3001/workspaces/[workspace-id]/templates/siemens-7sj85
 
 **Step 2: Input Test Values**
-Use these exact values from the Hitachi document:
+Use these exact values from the Standard Engineering document:
 
 | Section | Parameter | Value |
 |---------|-----------|-------|
@@ -158,30 +158,30 @@ After clicking "Calculate CT/VT Adequacy", you should see:
 
 | Calculation | Expected Value | Document Reference |
 |-------------|----------------|-------------------|
-| CT Resistance at 75°C | 4.48759 Ω/km | Page 1, Hitachi Doc |
-| CT Lead Resistance | 0.54 Ω | Page 1, Hitachi Doc |
-| CT Loop Resistance | 1.08 Ω | Page 1, Hitachi Doc |
-| VA Consumption | 1.08 VA | Page 1, Hitachi Doc |
-| System Time Constant | 40.94 ms | Page 3, Hitachi Doc |
-| Through Fault Current | 43,475 A | Page 3, Hitachi Doc |
-| Endzone-1 Fault Current | 43,585 A | Page 4, Hitachi Doc |
-| Required Kssc | 10.00 | Page 6, Hitachi Doc |
-| Available Kssc | 31.81 | Page 6, Hitachi Doc |
-| **Final Verdict** | **SUITABLY DIMENSIONED** | **Page 6, Hitachi Doc** |
+| CT Resistance at 75°C | 4.48759 Ω/km | Page 1, Standard Engineering Doc |
+| CT Lead Resistance | 0.54 Ω | Page 1, Standard Engineering Doc |
+| CT Loop Resistance | 1.08 Ω | Page 1, Standard Engineering Doc |
+| VA Consumption | 1.08 VA | Page 1, Standard Engineering Doc |
+| System Time Constant | 40.94 ms | Page 3, Standard Engineering Doc |
+| Through Fault Current | 43,475 A | Page 3, Standard Engineering Doc |
+| Endzone-1 Fault Current | 43,585 A | Page 4, Standard Engineering Doc |
+| Required Kssc | 10.00 | Page 6, Standard Engineering Doc |
+| Available Kssc | 31.81 | Page 6, Standard Engineering Doc |
+| **Final Verdict** | **SUITABLY DIMENSIONED** | **Page 6, Standard Engineering Doc** |
 
 ### 🚨 **Error Scenarios to Test:**
 
 1. **Under-dimensioned CT Test:**
-   - Change CT Resistance to 50 Ω
-   - Should get "UNDER DIMENSIONED" verdict
+ - Change CT Resistance to 50 Ω
+ - Should get "UNDER DIMENSIONED" verdict
 
 2. **Invalid Input Test:**
-   - Enter negative values
-   - Should show validation errors
+ - Enter negative values
+ - Should show validation errors
 
 3. **Missing Parameters:**
-   - Leave fields empty
-   - Should show required field errors
+ - Leave fields empty
+ - Should show required field errors
 
 ---
 
@@ -190,25 +190,25 @@ After clicking "Calculate CT/VT Adequacy", you should see:
 ### ✅ **The implementation is working correctly if:**
 
 1. **Exact Value Match:**
-   - Final verdict is "SUITABLY DIMENSIONED"
-   - Available Kssc (31.81) > Required Kssc (10.00)
+ - Final verdict is "SUITABLY DIMENSIONED"
+ - Available Kssc (31.81) > Required Kssc (10.00)
 
 2. **API Response:**
-   - Returns JSON with all calculation sections
-   - No errors in browser console
-   - Response time < 2 seconds
+ - Returns JSON with all calculation sections
+ - No errors in browser console
+ - Response time < 2 seconds
 
 3. **User Interface:**
-   - All input fields accept values
-   - Results display correctly
-   - Document reference shown
-   - Professional styling matches design
+ - All input fields accept values
+ - Results display correctly
+ - Document reference shown
+ - Professional styling matches design
 
 4. **Mathematical Accuracy:**
-   - CT resistance temperature calculation: R₇₅ = 3.69 × (1 + 0.00393 × (75-20)) = 4.48759 Ω/km
-   - Lead resistance: RL = 4.48759 × (120/1000) = 0.54 Ω
-   - Loop resistance: 2RL = 2 × 0.54 = 1.08 Ω
-   - Available Kssc: 20 × ((9 + 7.5)/(9 + 1.38)) = 31.81
+ - CT resistance temperature calculation: R₇₅ = 3.69 × (1 + 0.00393 × (75-20)) = 4.48759 Ω/km
+ - Lead resistance: RL = 4.48759 × (120/1000) = 0.54 Ω
+ - Loop resistance: 2RL = 2 × 0.54 = 1.08 Ω
+ - Available Kssc: 20 × ((9 + 7.5)/(9 + 1.38)) = 31.81
 
 ---
 

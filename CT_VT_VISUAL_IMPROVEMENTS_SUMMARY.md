@@ -12,28 +12,28 @@ The CT/VT Adequacy Check page has been significantly improved to provide a profe
 ```jsx
 // Gradient background with professional branding
 <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-  
-  // Enhanced logo and title section
-  <div className="inline-flex items-center gap-3 mb-4">
-    <div className="w-12 h-12 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center">
-      <span className="text-white text-2xl">⚡</span>
-    </div>
-    <div className="text-left">
-      <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-        CT/VT Adequacy Check
-      </h1>
-      <p className="text-sm text-muted-foreground font-medium">Professional Engineering Solutions</p>
-    </div>
-  </div>
+ 
+ // Enhanced logo and title section
+ <div className="inline-flex items-center gap-3 mb-4">
+ <div className="w-12 h-12 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center">
+ <span className="text-white text-2xl">⚡</span>
+ </div>
+ <div className="text-left">
+ <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+ CT/VT Adequacy Check
+ </h1>
+ <p className="text-sm text-muted-foreground font-medium">Professional Engineering Solutions</p>
+ </div>
+ </div>
 ```
 
 #### **Feature Highlights Section:**
 ```jsx
 // Three feature cards highlighting key capabilities
 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-  // 1. Automated Calculations 🔄
-  // 2. Professional Reports 📊  
-  // 3. Multi-IED Support 🎯
+ // 1. Automated Calculations 🔄
+ // 2. Professional Reports 📊 
+ // 3. Multi-IED Support 🎯
 </div>
 ```
 
@@ -42,34 +42,34 @@ The CT/VT Adequacy Check page has been significantly improved to provide a profe
 #### **Improved Step Indicator:**
 ```jsx
 const renderStepIndicator = () => (
-  <div className="mb-8">
-    <div className="flex items-center justify-center mb-4">
-      <div className="flex items-center space-x-2">
-        {WIZARD_STEPS.map((step, index) => (
-          // Enhanced step circles with gradients and animations
-          <div className={`
-            w-10 h-10 rounded-full flex items-center justify-center font-semibold text-sm transition-all duration-300
-            ${currentStep === step.id 
-              ? 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-lg scale-110' 
-              : currentStep > step.id 
-                ? 'bg-green-500 text-white' 
-                : 'bg-gray-200 text-gray-500'
-            }
-          `}>
-            {currentStep > step.id ? '✓' : step.id}
-          </div>
-        ))}
-      </div>
-    </div>
-    
-    // Progress bar with gradient
-    <div className="w-full bg-gray-200 rounded-full h-2 mb-4">
-      <div 
-        className="bg-gradient-to-r from-blue-500 to-indigo-500 h-2 rounded-full transition-all duration-300 ease-out" 
-        style={{ width: `${(currentStep / WIZARD_STEPS.length) * 100}%` }}
-      />
-    </div>
-  </div>
+ <div className="mb-8">
+ <div className="flex items-center justify-center mb-4">
+ <div className="flex items-center space-x-2">
+ {WIZARD_STEPS.map((step, index) => (
+ // Enhanced step circles with gradients and animations
+ <div className={`
+ w-10 h-10 rounded-full flex items-center justify-center font-semibold text-sm transition-all duration-300
+ ${currentStep === step.id 
+ ? 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-lg scale-110' 
+ : currentStep > step.id 
+ ? 'bg-green-500 text-white' 
+ : 'bg-gray-200 text-gray-500'
+ }
+ `}>
+ {currentStep > step.id ? '✓' : step.id}
+ </div>
+ ))}
+ </div>
+ </div>
+ 
+ // Progress bar with gradient
+ <div className="w-full bg-gray-200 rounded-full h-2 mb-4">
+ <div 
+ className="bg-gradient-to-r from-blue-500 to-indigo-500 h-2 rounded-full transition-all duration-300 ease-out" 
+ style={{ width: `${(currentStep / WIZARD_STEPS.length) * 100}%` }}
+ />
+ </div>
+ </div>
 );
 ```
 
@@ -78,29 +78,29 @@ const renderStepIndicator = () => (
 ### **Special Highlighted Section:**
 ```jsx
 <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-  <div className="flex items-start gap-3">
-    <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-      <span className="text-white text-sm font-bold">!</span>
-    </div>
-    <div className="flex-1">
-      <Label htmlFor={`accuracy-limit-${index}`} className="text-blue-800 font-medium">
-        Accuracy Limit Factor (ALF)
-      </Label>
-      <Input 
-        id={`accuracy-limit-${index}`}
-        type="number"
-        step="1"
-        placeholder="20"
-        value={ied.accuracy_limit_factor}
-        onChange={(e) => updateIED(index, 'accuracy_limit_factor', parseFloat(e.target.value) || 0)}
-        className="mt-2 bg-white border-blue-300 focus:border-blue-500 focus:ring-blue-500"
-      />
-      <p className="text-sm text-blue-700 mt-2 leading-relaxed">
-        📋 <strong>Find this value on:</strong> CT Test Certificate, Nameplate, or Manufacturer Datasheet<br/>
-        💡 <strong>Common values:</strong> Protection CTs (10-30), Metering CTs (5-10)
-      </p>
-    </div>
-  </div>
+ <div className="flex items-start gap-3">
+ <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+ <span className="text-white text-sm font-bold">!</span>
+ </div>
+ <div className="flex-1">
+ <Label htmlFor={`accuracy-limit-${index}`} className="text-blue-800 font-medium">
+ Accuracy Limit Factor (ALF)
+ </Label>
+ <Input 
+ id={`accuracy-limit-${index}`}
+ type="number"
+ step="1"
+ placeholder="20"
+ value={ied.accuracy_limit_factor}
+ onChange={(e) => updateIED(index, 'accuracy_limit_factor', parseFloat(e.target.value) || 0)}
+ className="mt-2 bg-white border-blue-300 focus:border-blue-500 focus:ring-blue-500"
+ />
+ <p className="text-sm text-blue-700 mt-2 leading-relaxed">
+ 📋 <strong>Find this value on:</strong> CT Test Certificate, Nameplate, or Manufacturer Datasheet<br/>
+ 💡 <strong>Common values:</strong> Protection CTs (10-30), Metering CTs (5-10)
+ </p>
+ </div>
+ </div>
 </div>
 ```
 
@@ -109,21 +109,21 @@ const renderStepIndicator = () => (
 ### **Enhanced IED Cards:**
 ```jsx
 <Card key={index} className="border-2 border-gray-200 hover:border-blue-300 transition-colors shadow-lg">
-  <CardHeader className="bg-gradient-to-r from-gray-50 to-blue-50 border-b">
-    <CardTitle className="flex items-center justify-between">
-      <div className="flex items-center gap-3">
-        <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
-          <span className="text-white font-bold text-sm">{index + 1}</span>
-        </div>
-        <span className="text-gray-800">IED Configuration #{index + 1}</span>
-        {ied.ied_name && (
-          <Badge variant="secondary" className="ml-2 bg-green-100 text-green-800">
-            {ied.ied_name}
-          </Badge>
-        )}
-      </div>
-    </CardTitle>
-  </CardHeader>
+ <CardHeader className="bg-gradient-to-r from-gray-50 to-blue-50 border-b">
+ <CardTitle className="flex items-center justify-between">
+ <div className="flex items-center gap-3">
+ <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
+ <span className="text-white font-bold text-sm">{index + 1}</span>
+ </div>
+ <span className="text-gray-800">IED Configuration #{index + 1}</span>
+ {ied.ied_name && (
+ <Badge variant="secondary" className="ml-2 bg-green-100 text-green-800">
+ {ied.ied_name}
+ </Badge>
+ )}
+ </div>
+ </CardTitle>
+ </CardHeader>
 </Card>
 ```
 
@@ -136,12 +136,12 @@ const renderStepIndicator = () => (
 ### **Enhanced Add IED Button:**
 ```jsx
 <Button 
-  variant="outline" 
-  onClick={addIED} 
-  className="w-full max-w-md bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-dashed border-blue-300 hover:border-blue-500 hover:bg-gradient-to-r hover:from-blue-100 hover:to-indigo-100 text-blue-700 font-medium py-3"
+ variant="outline" 
+ onClick={addIED} 
+ className="w-full max-w-md bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-dashed border-blue-300 hover:border-blue-500 hover:bg-gradient-to-r hover:from-blue-100 hover:to-indigo-100 text-blue-700 font-medium py-3"
 >
-  <Plus className="w-5 h-5 mr-2" />
-  Add Another IED Device
+ <Plus className="w-5 h-5 mr-2" />
+ Add Another IED Device
 </Button>
 ```
 

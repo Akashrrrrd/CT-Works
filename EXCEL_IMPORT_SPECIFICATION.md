@@ -60,33 +60,33 @@ These parameters are **repeated for each device** (4-20 devices possible):
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                           PARAMETERS TABLE                                  │
+│ PARAMETERS TABLE │
 ├─────────────────────────────┬──────────┬─────────────────────────────────────┤
-│ Parameters                  │ Unit     │ Values                              │
+│ Parameters │ Unit │ Values │
 ├─────────────────────────────┼──────────┼─────────────────────────────────────┤
-│ Bus Fault level             │ kA       │ 31.5kA/3sec                        │
-│ System Frequency            │ Hz       │ 50                                  │
-│ Bus Voltage Level           │ kV       │ 33kV                                │
-│ X/R Ratio                   │ -        │ -                                   │
-│ ...                         │ ...      │ ...                                 │
+│ Bus Fault level │ kA │ 31.5kA/3sec │
+│ System Frequency │ Hz │ 50 │
+│ Bus Voltage Level │ kV │ 33kV │
+│ X/R Ratio │ - │ - │
+│ ... │ ... │ ... │
 └─────────────────────────────┴──────────┴─────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                           DEVICES TABLE                                     │
+│ DEVICES TABLE │
 ├─────────────────────────────┬──────────┬─────────┬─────────┬─────────┬──────┤
-│ PROTECTION PURPOSE          │          │DISTANCE │ BCPU+   │AMMETERS │ BB/BF│
-│ DEVICES                     │          │+DIFFER  │ OC/EF   │ FRER    │ REP670│
-│                             │          │ RED 670 │REX640+  │         │      │
-│                             │          │         │REF615   │         │      │
+│ PROTECTION PURPOSE │ │DISTANCE │ BCPU+ │AMMETERS │ BB/BF│
+│ DEVICES │ │+DIFFER │ OC/EF │ FRER │ REP670│
+│ │ │ RED 670 │REX640+ │ │ │
+│ │ │ │REF615 │ │ │
 ├─────────────────────────────┼──────────┼─────────┼─────────┼─────────┼──────┤
-│ Core                        │ -        │ Core 1  │ Core 2  │ T1      │Core3 │
-│ CT Core used For            │          │ Core 1  │ Core 2  │ -       │Core4 │
-│ CT Ratio                    │          │ 800/1A  │ 800/1A  │ 800/1A  │2500/1A│
-│ Accuracy Class              │ ohm      │ PX      │ PX      │ 0.5     │ PX   │
-│ CT Resistance               │ V        │ 3.5     │ 6       │ 2.5     │ 15   │
-│ Vk- Knee point Voltage      │ VA       │ 540     │ 400     │ -       │ 400  │
-│ Burden                      │ mA       │ -       │ -       │ 10      │ -    │
-│ Magnetizing current         │          │ 20      │ 20      │ -       │ 20   │
+│ Core │ - │ Core 1 │ Core 2 │ T1 │Core3 │
+│ CT Core used For │ │ Core 1 │ Core 2 │ - │Core4 │
+│ CT Ratio │ │ 800/1A │ 800/1A │ 800/1A │2500/1A│
+│ Accuracy Class │ ohm │ PX │ PX │ 0.5 │ PX │
+│ CT Resistance │ V │ 3.5 │ 6 │ 2.5 │ 15 │
+│ Vk- Knee point Voltage │ VA │ 540 │ 400 │ - │ 400 │
+│ Burden │ mA │ - │ - │ 10 │ - │
+│ Magnetizing current │ │ 20 │ 20 │ - │ 20 │
 └─────────────────────────────┴──────────┴─────────┴─────────┴─────────┴──────┘
 ```
 
@@ -120,7 +120,7 @@ These parameters are **repeated for each device** (4-20 devices possible):
 
 ### **Supported Device Types:**
 - **RED670** - Transformer Differential + Distance + Breaker Failure
-- **REF615** - Feeder Differential Protection  
+- **REF615** - Feeder Differential Protection 
 - **REL670** - Line Distance Protection
 - **BCPU** - Bay Control and Protection Unit
 - **Ammeters** - Current Measurement Devices
@@ -131,12 +131,12 @@ These parameters are **repeated for each device** (4-20 devices possible):
 
 ### **Protection Function Inference:**
 ```typescript
-RED670    → ['differential', 'distance', 'breaker_failure']
-REF615    → ['differential', 'overcurrent']  
-REL670    → ['distance', 'overcurrent']
-BB/BF     → ['breaker_failure']
-BCPU      → ['control', 'protection']
-Ammeters  → ['metering']
+RED670 → ['differential', 'distance', 'breaker_failure']
+REF615 → ['differential', 'overcurrent'] 
+REL670 → ['distance', 'overcurrent']
+BB/BF → ['breaker_failure']
+BCPU → ['control', 'protection']
+Ammeters → ['metering']
 ```
 
 ---
@@ -146,55 +146,55 @@ Ammeters  → ['metering']
 ### **Successful Import Response:**
 ```json
 {
-  "success": true,
-  "data": {
-    "standard_parameters": {
-      "bus_fault_level": "31.5kA/3sec",
-      "system_frequency": "50",
-      "bus_voltage_level": "33kV",
-      "route_length": "0.20",
-      // ... all 17 parameters
-    },
-    "devices": [
-      {
-        "device_name": "RED 670",
-        "core": "Core 1",
-        "ct_core_used_for": "Core 1", 
-        "ct_ratio": "800/1A",
-        "accuracy_class": "PX",
-        "ct_resistance": "3.5",
-        "vk_knee_point_voltage": "540",
-        "burden": "N/A",
-        "magnetizing_current": "20"
-      },
-      // ... up to 20 devices
-    ],
-    "total_devices": 4,
-    "device_types": ["RED 670", "REX640+REF615", "AMMETERS FRER", "BB/BF REP670"]
-  },
-  "message": "Excel file parsed successfully. Found 4 devices with 17 standard parameters.",
-  "summary": {
-    "standard_parameters_found": 17,
-    "devices_found": 4,
-    "device_types": ["RED 670", "REX640+REF615", "AMMETERS FRER", "BB/BF REP670"],
-    "warnings": []
-  }
+ "success": true,
+ "data": {
+ "standard_parameters": {
+ "bus_fault_level": "31.5kA/3sec",
+ "system_frequency": "50",
+ "bus_voltage_level": "33kV",
+ "route_length": "0.20",
+ // ... all 17 parameters
+ },
+ "devices": [
+ {
+ "device_name": "RED 670",
+ "core": "Core 1",
+ "ct_core_used_for": "Core 1", 
+ "ct_ratio": "800/1A",
+ "accuracy_class": "PX",
+ "ct_resistance": "3.5",
+ "vk_knee_point_voltage": "540",
+ "burden": "N/A",
+ "magnetizing_current": "20"
+ },
+ // ... up to 20 devices
+ ],
+ "total_devices": 4,
+ "device_types": ["RED 670", "REX640+REF615", "AMMETERS FRER", "BB/BF REP670"]
+ },
+ "message": "Excel file parsed successfully. Found 4 devices with 17 standard parameters.",
+ "summary": {
+ "standard_parameters_found": 17,
+ "devices_found": 4,
+ "device_types": ["RED 670", "REX640+REF615", "AMMETERS FRER", "BB/BF REP670"],
+ "warnings": []
+ }
 }
 ```
 
 ### **Error Response:**
 ```json
 {
-  "success": false,
-  "error": "Excel file validation failed",
-  "errors": [
-    "No device data found in Excel file",
-    "Device 2: Missing CT ratio"
-  ],
-  "warnings": [
-    "Only 3 devices found. Expected at least 4 devices.",
-    "Device 1 (RED670): Missing knee point voltage"
-  ]
+ "success": false,
+ "error": "Excel file validation failed",
+ "errors": [
+ "No device data found in Excel file",
+ "Device 2: Missing CT ratio"
+ ],
+ "warnings": [
+ "Only 3 devices found. Expected at least 4 devices.",
+ "Device 1 (RED670): Missing knee point voltage"
+ ]
 }
 ```
 
@@ -233,20 +233,20 @@ const formData = new FormData();
 formData.append('file', excelFile);
 
 const response = await fetch(`/api/workspaces/${workspaceId}/import-excel-ct`, {
-  method: 'POST',
-  body: formData
+ method: 'POST',
+ body: formData
 });
 
 const result = await response.json();
 
 if (result.success) {
-  console.log(`Found ${result.data.total_devices} devices`);
-  console.log(`Standard parameters: ${result.summary.standard_parameters_found}`);
-  
-  // Access standardized data
-  const busVoltage = result.data.standard_parameters.bus_voltage_level;
-  const firstDevice = result.data.devices[0];
-  const ctRatio = firstDevice.ct_ratio;
+ console.log(`Found ${result.data.total_devices} devices`);
+ console.log(`Standard parameters: ${result.summary.standard_parameters_found}`);
+ 
+ // Access standardized data
+ const busVoltage = result.data.standard_parameters.bus_voltage_level;
+ const firstDevice = result.data.devices[0];
+ const ctRatio = firstDevice.ct_ratio;
 }
 ```
 
@@ -254,11 +254,11 @@ if (result.success) {
 ```typescript
 // The extracted data automatically provides legacy fields
 const legacyData = {
-  ct_ratio_primary: result.data.ct_ratio_primary,
-  ct_ratio_secondary: result.data.ct_ratio_secondary,
-  frequency: result.data.frequency,
-  bus_voltage_kv: result.data.bus_voltage_kv,
-  // ... all legacy fields available
+ ct_ratio_primary: result.data.ct_ratio_primary,
+ ct_ratio_secondary: result.data.ct_ratio_secondary,
+ frequency: result.data.frequency,
+ bus_voltage_kv: result.data.bus_voltage_kv,
+ // ... all legacy fields available
 };
 
 // Use with existing CT adequacy calculation
@@ -272,7 +272,7 @@ const computation = await createComputation(templateId, legacyData);
 This standardized Excel import system provides:
 
 - ✅ **Consistent data extraction** from varying Excel formats
-- ✅ **Support for 4-20 devices** with 7 parameters each  
+- ✅ **Support for 4-20 devices** with 7 parameters each 
 - ✅ **17 standard parameters** always captured
 - ✅ **Robust error handling** and validation
 - ✅ **Legacy compatibility** with existing systems

@@ -208,14 +208,14 @@ VERDICT: ✅ SUITABLE (Both methods pass with excellent margins)
 ### **Results Dashboard Should Show:**
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                   RESULTS SUMMARY                       │
+│ RESULTS SUMMARY │
 ├─────────────────────────────────────────────────────────┤
-│ SIEMENS 7SJ85          │ 🟢 SUITABLE │ Safety: +512%   │
-│ ABB RET670             │ 🟢 SUITABLE │ Safety: +2881%  │
-│ SEL 751                │ 🟢 SUITABLE │ Safety: +293%   │
+│ SIEMENS 7SJ85 │ 🟢 SUITABLE │ Safety: +512% │
+│ ABB RET670 │ 🟢 SUITABLE │ Safety: +2881% │
+│ SEL 751 │ 🟢 SUITABLE │ Safety: +293% │
 ├─────────────────────────────────────────────────────────┤
-│ OVERALL VERDICT: 🟢 ALL SUITABLE                        │
-│ 3/3 IEDs are suitably dimensioned                      │
+│ OVERALL VERDICT: 🟢 ALL SUITABLE │
+│ 3/3 IEDs are suitably dimensioned │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -281,12 +281,12 @@ Check that the calculated values match my predictions within ±5%
 
 The results should be **highly accurate** because:
 
-✅ **System calculations** based on fundamental electrical engineering formulas  
-✅ **IED burdens** from verified database of manufacturer specifications  
-✅ **Cable resistances** from standard electrical tables  
-✅ **CT adequacy** using IEC 61869-2 and IEEE C37.110 methods  
-✅ **Temperature corrections** applied to cable resistance  
-✅ **Multiple verification methods** (KSSC + Vk) for cross-checking  
+✅ **System calculations** based on fundamental electrical engineering formulas 
+✅ **IED burdens** from verified database of manufacturer specifications 
+✅ **Cable resistances** from standard electrical tables 
+✅ **CT adequacy** using IEC 61869-2 and IEEE C37.110 methods 
+✅ **Temperature corrections** applied to cable resistance 
+✅ **Multiple verification methods** (KSSC + Vk) for cross-checking 
 
 The safety margins are intentionally **very high** in this test case to ensure clear SUITABLE verdicts. In real applications, margins of 20-50% are typical and acceptable.
 

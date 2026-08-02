@@ -1,11 +1,11 @@
 /**
  * MANUAL VERIFICATION OF SIEMENS 7SJ85 FORMULAS
- * Directly implements Hitachi N-19957 2-DF4W formulas for verification
+ * Directly implements Engineering Standard formulas for verification
  */
 
 console.log('╔' + '═'.repeat(70) + '╗');
 console.log('║' + ' SIEMENS 7SJ85 FORMULA VERIFICATION '.padStart(72) + '║');
-console.log('║' + ' Hitachi Standard N-19957 2-DF4W '.padStart(72) + '║');
+console.log('║' + ' Engineering Standard '.padStart(72) + '║');
 console.log('╚' + '═'.repeat(70) + '╝');
 
 // ============================================================
@@ -13,35 +13,35 @@ console.log('╚' + '═'.repeat(70) + '╝');
 // ============================================================
 
 const testCase1 = {
-  name: 'SIEMENS 7SJ85 Feeder Overcurrent Protection',
-  
-  // CT Data
-  ct_ratio_primary: 600,        // Ipn (A)
-  ct_ratio_secondary: 1,        // In (A)
-  ct_resistance: 2.5,           // Rct (Ω)
-  rated_burden: 15,             // PN (VA)
-  accuracy_limit_factor: 20,    // n
-  vk_available: 400,            // Vk from nameplate (V)
-  
-  // Wiring Data
-  cable_resistance_20c: 7.41,   // R20 (Ω/km)
-  cable_length_m: 50,           // l (m)
-  operating_temp: 75,           // t (°C)
-  temp_coeff: 0.00393,          // α (/K⁻¹)
-  ied_burden: 0.02,             // Device burden (VA)
-  
-  // System Data
-  max_fault_current_ka: 12.5,   // Fault level (kA)
-  bus_voltage_kv: 33,           // Bus voltage (kV)
-  system_frequency: 50,         // f (Hz)
-  xr_ratio: 15,                 // X/R ratio
-  
-  // Line Data
-  r1: 0.0221,
-  x1: 0.1600,
-  r0: 0.1300,
-  x0: 0.0600,
-  line_length: 1.74,
+ name: 'SIEMENS 7SJ85 Feeder Overcurrent Protection',
+ 
+ // CT Data
+ ct_ratio_primary: 600, // Ipn (A)
+ ct_ratio_secondary: 1, // In (A)
+ ct_resistance: 2.5, // Rct (Ω)
+ rated_burden: 15, // PN (VA)
+ accuracy_limit_factor: 20, // n
+ vk_available: 400, // Vk from nameplate (V)
+ 
+ // Wiring Data
+ cable_resistance_20c: 7.41, // R20 (Ω/km)
+ cable_length_m: 50, // l (m)
+ operating_temp: 75, // t (°C)
+ temp_coeff: 0.00393, // α (/K⁻¹)
+ ied_burden: 0.02, // Device burden (VA)
+ 
+ // System Data
+ max_fault_current_ka: 12.5, // Fault level (kA)
+ bus_voltage_kv: 33, // Bus voltage (kV)
+ system_frequency: 50, // f (Hz)
+ xr_ratio: 15, // X/R ratio
+ 
+ // Line Data
+ r1: 0.0221,
+ x1: 0.1600,
+ r0: 0.1300,
+ x0: 0.0600,
+ line_length: 1.74,
 };
 
 console.log('\n📋 TEST CASE 1: ' + testCase1.name);
@@ -61,17 +61,17 @@ console.log('System: ' + testCase1.bus_voltage_kv + 'kV, ' + testCase1.max_fault
 console.log('\n\n🔹 FORMULA 1: CT Resistance @ 75°C');
 console.log('─'.repeat(70));
 console.log('Formula: R(75°C) = R20 × [1 + α(t - 20)]');
-console.log('         OR simplified: R(75°C) = R20 × 1.21615 (for t=75°C, α=0.00393)');
+console.log(' OR simplified: R(75°C) = R20 × 1.21615 (for t=75°C, α=0.00393)');
 
 const r_75c = testCase1.cable_resistance_20c * (1 + testCase1.temp_coeff * (testCase1.operating_temp - 20));
 const r_75c_simplified = testCase1.cable_resistance_20c * 1.21615;
 
 console.log('\nCalculation:');
-console.log('  R(75°C) = ' + testCase1.cable_resistance_20c + ' × [1 + 0.00393 × (75 - 20)]');
-console.log('  R(75°C) = ' + testCase1.cable_resistance_20c + ' × [1 + 0.00393 × 55]');
-console.log('  R(75°C) = ' + testCase1.cable_resistance_20c + ' × 1.21615');
-console.log('  R(75°C) = ' + r_75c.toFixed(5) + ' Ω/km');
-console.log('  R(75°C) = ' + r_75c_simplified.toFixed(5) + ' Ω/km (simplified) ✓');
+console.log(' R(75°C) = ' + testCase1.cable_resistance_20c + ' × [1 + 0.00393 × (75 - 20)]');
+console.log(' R(75°C) = ' + testCase1.cable_resistance_20c + ' × [1 + 0.00393 × 55]');
+console.log(' R(75°C) = ' + testCase1.cable_resistance_20c + ' × 1.21615');
+console.log(' R(75°C) = ' + r_75c.toFixed(5) + ' Ω/km');
+console.log(' R(75°C) = ' + r_75c_simplified.toFixed(5) + ' Ω/km (simplified) ✓');
 
 // ============================================================
 // FORMULA 2: Loop Resistance
@@ -85,8 +85,8 @@ const cable_length_km = testCase1.cable_length_m / 1000;
 const loop_resistance = 2 * r_75c * cable_length_km;
 
 console.log('\nCalculation:');
-console.log('  2RL = 2 × ' + r_75c.toFixed(5) + ' × ' + cable_length_km);
-console.log('  2RL = ' + loop_resistance.toFixed(5) + ' Ω');
+console.log(' 2RL = 2 × ' + r_75c.toFixed(5) + ' × ' + cable_length_km);
+console.log(' 2RL = ' + loop_resistance.toFixed(5) + ' Ω');
 
 // ============================================================
 // FORMULA 3: Internal Burden
@@ -95,13 +95,13 @@ console.log('  2RL = ' + loop_resistance.toFixed(5) + ' Ω');
 console.log('\n\n🔹 FORMULA 3: Internal Burden (PE)');
 console.log('─'.repeat(70));
 console.log('Formula: PE = In² × Rct');
-console.log('         (In=1A typically, so PE = Rct)');
+console.log(' (In=1A typically, so PE = Rct)');
 
 const PE = Math.pow(testCase1.ct_ratio_secondary, 2) * testCase1.ct_resistance;
 
 console.log('\nCalculation:');
-console.log('  PE = ' + testCase1.ct_ratio_secondary + '² × ' + testCase1.ct_resistance);
-console.log('  PE = ' + PE.toFixed(2) + ' VA ✓');
+console.log(' PE = ' + testCase1.ct_ratio_secondary + '² × ' + testCase1.ct_resistance);
+console.log(' PE = ' + PE.toFixed(2) + ' VA ✓');
 
 // ============================================================
 // FORMULA 4: Total Load Burden
@@ -110,17 +110,17 @@ console.log('  PE = ' + PE.toFixed(2) + ' VA ✓');
 console.log('\n\n🔹 FORMULA 4: Total Load Burden (PL)');
 console.log('─'.repeat(70));
 console.log('Formula: PL = PL_wiring + PL_devices');
-console.log('         where PL_wiring = loop_resistance');
-console.log('         and PL_devices = sum of device burdens');
+console.log(' where PL_wiring = loop_resistance');
+console.log(' and PL_devices = sum of device burdens');
 
 const PL_wiring = loop_resistance;
 const PL_devices = testCase1.ied_burden;
 const PL_total = PL_wiring + PL_devices;
 
 console.log('\nCalculation:');
-console.log('  PL_wiring = ' + loop_resistance.toFixed(5) + ' VA');
-console.log('  PL_devices = ' + PL_devices.toFixed(2) + ' VA');
-console.log('  PL_total = ' + PL_total.toFixed(5) + ' VA ✓');
+console.log(' PL_wiring = ' + loop_resistance.toFixed(5) + ' VA');
+console.log(' PL_devices = ' + PL_devices.toFixed(2) + ' VA');
+console.log(' PL_total = ' + PL_total.toFixed(5) + ' VA ✓');
 
 // ============================================================
 // FORMULA 5: Required Kssc
@@ -129,29 +129,29 @@ console.log('  PL_total = ' + PL_total.toFixed(5) + ' VA ✓');
 console.log('\n\n🔹 FORMULA 5: Required Kssc');
 console.log('─'.repeat(70));
 console.log('Formula: Kssc_required = Itkmax / Ipn');
-console.log('         where Itkmax = max fault current (A)');
-console.log('         and Ipn = CT primary ratio (A)');
+console.log(' where Itkmax = max fault current (A)');
+console.log(' and Ipn = CT primary ratio (A)');
 
 const Itkmax = testCase1.max_fault_current_ka * 1000;
 const Kssc_required = Itkmax / testCase1.ct_ratio_primary;
 
 console.log('\nCalculation:');
-console.log('  Itkmax = ' + testCase1.max_fault_current_ka + ' × 1000 = ' + Itkmax.toFixed(0) + ' A');
-console.log('  Kssc_required = ' + Itkmax.toFixed(0) + ' / ' + testCase1.ct_ratio_primary);
-console.log('  Kssc_required = ' + Kssc_required.toFixed(2) + ' ✓');
+console.log(' Itkmax = ' + testCase1.max_fault_current_ka + ' × 1000 = ' + Itkmax.toFixed(0) + ' A');
+console.log(' Kssc_required = ' + Itkmax.toFixed(0) + ' / ' + testCase1.ct_ratio_primary);
+console.log(' Kssc_required = ' + Kssc_required.toFixed(2) + ' ✓');
 
 // ============================================================
 // FORMULA 6: Available Kssc (CORE FORMULA)
 // ============================================================
 
-console.log('\n\n🔹 FORMULA 6: Available Kssc (FROM HITACHI STANDARD)');
+console.log('\n\n🔹 FORMULA 6: Available Kssc (FROM ENGINEERING STANDARD)');
 console.log('─'.repeat(70));
 console.log('Formula: Kssc_available = n × ((PE + PN) / (PE + PL))');
-console.log('         This is the EXACT formula from Hitachi N-19957 2-DF4W');
-console.log('         n = Accuracy Limit Factor (ALF)');
-console.log('         PE = Internal Burden');
-console.log('         PN = Rated Burden');
-console.log('         PL = Total Load Burden');
+console.log(' This is the EXACT formula from ');
+console.log(' n = Accuracy Limit Factor (ALF)');
+console.log(' PE = Internal Burden');
+console.log(' PN = Rated Burden');
+console.log(' PL = Total Load Burden');
 
 const PN = testCase1.rated_burden;
 const n = testCase1.accuracy_limit_factor;
@@ -160,11 +160,11 @@ const denominator = PE + PL_total;
 const Kssc_available = n * (numerator / denominator);
 
 console.log('\nCalculation:');
-console.log('  numerator = PE + PN = ' + PE.toFixed(2) + ' + ' + PN + ' = ' + numerator.toFixed(2));
-console.log('  denominator = PE + PL = ' + PE.toFixed(2) + ' + ' + PL_total.toFixed(5) + ' = ' + denominator.toFixed(5));
-console.log('  fraction = ' + numerator.toFixed(2) + ' / ' + denominator.toFixed(5) + ' = ' + (numerator / denominator).toFixed(4));
-console.log('  Kssc_available = ' + n + ' × ' + (numerator / denominator).toFixed(4));
-console.log('  Kssc_available = ' + Kssc_available.toFixed(2) + ' ✓');
+console.log(' numerator = PE + PN = ' + PE.toFixed(2) + ' + ' + PN + ' = ' + numerator.toFixed(2));
+console.log(' denominator = PE + PL = ' + PE.toFixed(2) + ' + ' + PL_total.toFixed(5) + ' = ' + denominator.toFixed(5));
+console.log(' fraction = ' + numerator.toFixed(2) + ' / ' + denominator.toFixed(5) + ' = ' + (numerator / denominator).toFixed(4));
+console.log(' Kssc_available = ' + n + ' × ' + (numerator / denominator).toFixed(4));
+console.log(' Kssc_available = ' + Kssc_available.toFixed(2) + ' ✓');
 
 // ============================================================
 // FORMULA 7: CT Suitability
@@ -173,15 +173,15 @@ console.log('  Kssc_available = ' + Kssc_available.toFixed(2) + ' ✓');
 console.log('\n\n🔹 FORMULA 7: CT Suitability Check');
 console.log('─'.repeat(70));
 console.log('Formula: Suitable = Kssc_available > Kssc_required');
-console.log('         Verdict = "SUITABLY DIMENSIONED" if suitable');
-console.log('                   "UNDER DIMENSIONED" if not suitable');
+console.log(' Verdict = "SUITABLY DIMENSIONED" if suitable');
+console.log(' "UNDER DIMENSIONED" if not suitable');
 
 const suitable = Kssc_available > Kssc_required;
 const verdict = suitable ? 'SUITABLY DIMENSIONED' : 'UNDER DIMENSIONED';
 
 console.log('\nCalculation:');
-console.log('  ' + Kssc_available.toFixed(2) + ' > ' + Kssc_required.toFixed(2) + ' = ' + suitable);
-console.log('  Verdict: ' + verdict + ' ✓');
+console.log(' ' + Kssc_available.toFixed(2) + ' > ' + Kssc_required.toFixed(2) + ' = ' + suitable);
+console.log(' Verdict: ' + verdict + ' ✓');
 
 // ============================================================
 // FORMULA 8: Vk Calculations
@@ -198,10 +198,10 @@ const Vk_available = testCase1.vk_available;
 const Ealreq_max = Vk_required;
 
 console.log('\nCalculation:');
-console.log('  Vk_required = ' + Kssc_required.toFixed(2) + ' × ' + testCase1.ct_resistance);
-console.log('  Vk_required = ' + Vk_required.toFixed(2) + ' V');
-console.log('  Vk_available = ' + Vk_available.toFixed(2) + ' V (from nameplate)');
-console.log('  Ealreq_max = ' + Ealreq_max.toFixed(2) + ' V');
+console.log(' Vk_required = ' + Kssc_required.toFixed(2) + ' × ' + testCase1.ct_resistance);
+console.log(' Vk_required = ' + Vk_required.toFixed(2) + ' V');
+console.log(' Vk_available = ' + Vk_available.toFixed(2) + ' V (from nameplate)');
+console.log(' Ealreq_max = ' + Ealreq_max.toFixed(2) + ' V');
 
 // ============================================================
 // SUMMARY TABLE
@@ -212,24 +212,24 @@ console.log('║' + ' FORMULA VERIFICATION SUMMARY '.padStart(72) + '║');
 console.log('╚' + '═'.repeat(70) + '╝');
 
 const results = [
-  { formula: '1', name: 'R(75°C)', value: r_75c.toFixed(5), unit: 'Ω/km', expected: '≈ 9', pass: r_75c > 8 && r_75c < 10 },
-  { formula: '2', name: 'Loop Resistance', value: loop_resistance.toFixed(5), unit: 'Ω', expected: '< 1', pass: loop_resistance < 1 },
-  { formula: '3', name: 'Internal Burden (PE)', value: PE.toFixed(2), unit: 'VA', expected: '= 2.5', pass: Math.abs(PE - 2.5) < 0.1 },
-  { formula: '4', name: 'Total Load (PL)', value: PL_total.toFixed(5), unit: 'VA', expected: '> 0', pass: PL_total > 0 },
-  { formula: '5', name: 'Required Kssc', value: Kssc_required.toFixed(2), unit: '', expected: '≈ 20.83', pass: Math.abs(Kssc_required - 20.83) < 1 },
-  { formula: '6', name: 'Available Kssc', value: Kssc_available.toFixed(2), unit: '', expected: '>> 20.83', pass: Kssc_available > Kssc_required },
-  { formula: '7', name: 'Verdict', value: verdict, unit: '', expected: 'SUITABLE', pass: suitable },
-  { formula: '8a', name: 'Vk Required', value: Vk_required.toFixed(2), unit: 'V', expected: '< 400', pass: Vk_required < Vk_available },
-  { formula: '8b', name: 'Vk Available', value: Vk_available.toFixed(2), unit: 'V', expected: '= 400', pass: true },
+ { formula: '1', name: 'R(75°C)', value: r_75c.toFixed(5), unit: 'Ω/km', expected: '≈ 9', pass: r_75c > 8 && r_75c < 10 },
+ { formula: '2', name: 'Loop Resistance', value: loop_resistance.toFixed(5), unit: 'Ω', expected: '< 1', pass: loop_resistance < 1 },
+ { formula: '3', name: 'Internal Burden (PE)', value: PE.toFixed(2), unit: 'VA', expected: '= 2.5', pass: Math.abs(PE - 2.5) < 0.1 },
+ { formula: '4', name: 'Total Load (PL)', value: PL_total.toFixed(5), unit: 'VA', expected: '> 0', pass: PL_total > 0 },
+ { formula: '5', name: 'Required Kssc', value: Kssc_required.toFixed(2), unit: '', expected: '≈ 20.83', pass: Math.abs(Kssc_required - 20.83) < 1 },
+ { formula: '6', name: 'Available Kssc', value: Kssc_available.toFixed(2), unit: '', expected: '>> 20.83', pass: Kssc_available > Kssc_required },
+ { formula: '7', name: 'Verdict', value: verdict, unit: '', expected: 'SUITABLE', pass: suitable },
+ { formula: '8a', name: 'Vk Required', value: Vk_required.toFixed(2), unit: 'V', expected: '< 400', pass: Vk_required < Vk_available },
+ { formula: '8b', name: 'Vk Available', value: Vk_available.toFixed(2), unit: 'V', expected: '= 400', pass: true },
 ];
 
 console.log('\n┌─┬──────────────────────┬─────────┬──────┬────────────┐');
-console.log('│F│ Name                 │ Value   │ Unit │ Pass?      │');
+console.log('│F│ Name │ Value │ Unit │ Pass? │');
 console.log('├─┼──────────────────────┼─────────┼──────┼────────────┤');
 
 results.forEach(r => {
-  const status = r.pass ? '✅ YES' : '❌ NO';
-  console.log(`│${r.formula}│ ${r.name.padEnd(20)} │ ${r.value.padEnd(7)} │ ${r.unit.padEnd(4)} │ ${status.padEnd(10)} │`);
+ const status = r.pass ? '✅ YES' : '❌ NO';
+ console.log(`│${r.formula}│ ${r.name.padEnd(20)} │ ${r.value.padEnd(7)} │ ${r.unit.padEnd(4)} │ ${status.padEnd(10)} │`);
 });
 
 console.log('└─┴──────────────────────┴─────────┴──────┴────────────┘');
@@ -245,15 +245,15 @@ console.log('║' + ' FINAL VERIFICATION RESULT '.padStart(72) + '║');
 console.log('╚' + '═'.repeat(70) + '╝');
 
 if (allPass) {
-  console.log('\n✅ ✅ ✅  ALL FORMULAS ARE CORRECT!  ✅ ✅ ✅');
-  console.log('\n✅ The system IS using the correct formulas from Hitachi N-19957 2-DF4W');
-  console.log('✅ All calculations are accurate');
-  console.log('✅ Expected output matches our manual calculations');
-  console.log('\n🎉 FORMULA VERIFICATION PASSED!');
-  console.log('🎉 Ready for production use!');
+ console.log('\n✅ ✅ ✅ ALL FORMULAS ARE CORRECT! ✅ ✅ ✅');
+ console.log('\n✅ The system IS using the correct formulas from Engineering Standard ');
+ console.log('✅ All calculations are accurate');
+ console.log('✅ Expected output matches our manual calculations');
+ console.log('\n🎉 FORMULA VERIFICATION PASSED!');
+ console.log('🎉 Ready for production use!');
 } else {
-  console.log('\n❌ SOME FORMULAS FAILED VERIFICATION');
-  console.log('❌ Review the calculations above');
+ console.log('\n❌ SOME FORMULAS FAILED VERIFICATION');
+ console.log('❌ Review the calculations above');
 }
 
 console.log('\n' + '═'.repeat(70));

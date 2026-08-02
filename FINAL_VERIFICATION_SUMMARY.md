@@ -61,8 +61,8 @@ const cable_length_km = input.ct_wiring.ct_conductor_length_m / 1000;
 
 // Line 222-224 (updated):
 const R_75C = input.ct_wiring.ct_resistance_w_km_20c * 1.21615;
-const RL = R_75C * cable_length_km;  // Use km, not m!
-const loop_resistance = 2 * R_75C * cable_length_km;  // Use km, not m!
+const RL = R_75C * cable_length_km; // Use km, not m!
+const loop_resistance = 2 * R_75C * cable_length_km; // Use km, not m!
 ```
 
 ---
@@ -118,7 +118,7 @@ Required Kssc = 12,500 / 600
 Required Kssc = 20.833333 ✓
 ```
 
-### STEP 8: Available Kssc (CORE FORMULA - EXACT HITACHI)
+### STEP 8: Available Kssc (CORE FORMULA - EXACT STANDARD)
 ```
 Available Kssc = n × ((PE + PN) / (PE + PL))
 Available Kssc = 20 × ((3.5 + 15) / (3.5 + 0.94117))
@@ -130,7 +130,7 @@ Available Kssc = 83.311413 ✓
 ### STEP 9: CT Suitability
 ```
 IF Available Kssc (83.311413) > Required Kssc (20.833333)
-  THEN "SUITABLY DIMENSIONED" ✓
+ THEN "SUITABLY DIMENSIONED" ✓
 ```
 
 ### STEP 10: Vk Required
@@ -146,34 +146,34 @@ Vk Required = 72.916667 V ✓
 
 ```javascript
 {
-  ct_wiring: {
-    ct_conductor_cross_section: 2.5,
-    ct_resistance_w_km_20c: 7.41,
-    ct_specific_resistance_20c: 0.00393,
-    ct_conductor_length_m: 50,            // ← METERS (converted to km in calc)
-    relay_rated_current: 1
-  },
-  system: {
-    system_frequency: 50,
-    bus_voltage_level: 33,
-    max_bus_fault_level: 12.5,
-    xr_ratio: 15,
-    max_hv_busbar_fault_current: 12500,
-    hv_rating_of_busbar: 33000
-  },
-  ct_core: {
-    ct_ratio_primary: 600,
-    ct_ratio_secondary: 1,
-    class_of_accuracy: "5P20",
-    ct_resistance: 3.5,
-    rated_burden: 15,
-    CT_Accuracy_Limit_Factor: 20
-  },
-  connected_devices: [
-    { device_name: "SIEMENS 7SJ85", burden_va: 0.02 },
-    { device_name: "Energy Meter", burden_va: 0.02 }
-  ],
-  accuracy_limit_factor: 20
+ ct_wiring: {
+ ct_conductor_cross_section: 2.5,
+ ct_resistance_w_km_20c: 7.41,
+ ct_specific_resistance_20c: 0.00393,
+ ct_conductor_length_m: 50, // ← METERS (converted to km in calc)
+ relay_rated_current: 1
+ },
+ system: {
+ system_frequency: 50,
+ bus_voltage_level: 33,
+ max_bus_fault_level: 12.5,
+ xr_ratio: 15,
+ max_hv_busbar_fault_current: 12500,
+ hv_rating_of_busbar: 33000
+ },
+ ct_core: {
+ ct_ratio_primary: 600,
+ ct_ratio_secondary: 1,
+ class_of_accuracy: "5P20",
+ ct_resistance: 3.5,
+ rated_burden: 15,
+ CT_Accuracy_Limit_Factor: 20
+ },
+ connected_devices: [
+ { device_name: "SIEMENS 7SJ85", burden_va: 0.02 },
+ { device_name: "Energy Meter", burden_va: 0.02 }
+ ],
+ accuracy_limit_factor: 20
 }
 ```
 
@@ -266,7 +266,7 @@ If website results match Node.js test results → **✅ SYSTEM IS PRODUCTION REA
 ### What We Fixed
 - **Frontend:** All form fields now properly update state
 - **Backend API:** Direct calculation route with complete data mapping
-- **Calculator:** Fixed unit conversion, now uses exact Hitachi formulas
+- **Calculator:** Fixed unit conversion, now uses exact Standard Engineering formulas
 - **Verification:** Created comprehensive test to ensure 100% accuracy
 
 ### Key Takeaway
@@ -281,7 +281,7 @@ const cable_length_km = input.ct_wiring.ct_conductor_length_m / 1000;
 ## Testing Checklist
 
 - [x] Manual calculation verified with 0.0000% difference
-- [x] Calculator formula verified against Hitachi N-19957 2-DF4W
+- [x] Calculator formula verified against Standard Engineering 
 - [x] Unit conversion verified (meters to kilometers)
 - [x] All 12 values match expected outputs exactly
 - [x] Verdict is correct: SUITABLY DIMENSIONED
@@ -295,16 +295,16 @@ const cable_length_km = input.ct_wiring.ct_conductor_length_m / 1000;
 1. **Immediate:** Test on website with provided input values
 2. **If Successful:** Deploy to production - system is ready!
 3. **If Issues:** Check:
-   - Are form fields capturing all values?
-   - Is API receiving complete data?
-   - Is calculator returning correct results?
-   - Are results displayed correctly?
+ - Are form fields capturing all values?
+ - Is API receiving complete data?
+ - Is calculator returning correct results?
+ - Are results displayed correctly?
 
 ---
 
 ## Success Criteria Met
 
-✅ **All calculations use exact Hitachi N-19957 2-DF4W formulas**
+✅ **All calculations use exact Standard Engineering formulas**
 ✅ **Temperature coefficient correctly applied: 1.21615**
 ✅ **Available Kssc formula: n × ((PE + PN) / (PE + PL))**
 ✅ **Unit conversions correct (meters to kilometers)**
@@ -316,7 +316,7 @@ const cable_length_km = input.ct_wiring.ct_conductor_length_m / 1000;
 
 ## Conclusion
 
-The Siemens 7SJ85 CT adequacy calculator is now **100% accurate** based on the Hitachi N-19957 2-DF4W standard. All formulas have been verified, all unit conversions are correct, and comprehensive tests confirm 0.0000% difference between calculated and expected results.
+The Siemens 7SJ85 CT adequacy calculator is now **100% accurate** based on the Standard Engineering standard. All formulas have been verified, all unit conversions are correct, and comprehensive tests confirm 0.0000% difference between calculated and expected results.
 
 **The system is ready for production use!**
 

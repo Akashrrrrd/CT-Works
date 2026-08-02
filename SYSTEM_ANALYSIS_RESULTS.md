@@ -44,7 +44,7 @@ Secondary Current at max fault = 17,493 ÷ 800 = 21.87 A
 
 Total Resistance:
 - CT Resistance (Rct): 3.5 Ω
-- Lead Resistance: 0.05 Ω  
+- Lead Resistance: 0.05 Ω 
 - Relay Burden Resistance: 5.0 ÷ 1² = 5.0 Ω
 - Total Resistance: 3.5 + 0.05 + 5.0 = 8.55 Ω
 
@@ -54,8 +54,8 @@ Required Vk = 21.87 × 8.55 = 187.0 V
 
 ### **3. Discrepancy Found! ⚠️**
 
-**Your System Shows:** Vk Required = 299.18 V  
-**Correct Calculation:** Vk Required = 187.0 V  
+**Your System Shows:** Vk Required = 299.18 V 
+**Correct Calculation:** Vk Required = 187.0 V 
 
 **Your system is calculating ~60% higher than it should be!**
 
@@ -66,18 +66,18 @@ Required Vk = 21.87 × 8.55 = 187.0 V
 ### **Possible Issues in Your System:**
 
 1. **Wrong Fault Current Calculation:**
-   - Your system might be using a different fault level
-   - Or incorrect voltage base for calculation
+ - Your system might be using a different fault level
+ - Or incorrect voltage base for calculation
 
 2. **Incorrect Secondary Current:**
-   - Check: Is it using 21.87 A or a different value?
+ - Check: Is it using 21.87 A or a different value?
 
 3. **Wrong Total Resistance:**
-   - Check: Are all resistance components calculated correctly?
+ - Check: Are all resistance components calculated correctly?
 
 4. **Formula Error:**
-   - Your Ealreq (373.97 V) seems too high
-   - Should be around 187 V based on standard formulas
+ - Your Ealreq (373.97 V) seems too high
+ - Should be around 187 V based on standard formulas
 
 ---
 
@@ -94,7 +94,7 @@ Given Data:
 Step 1: Max Fault Current
 Ifault = 1000 MVA ÷ (33 kV × √3) = 17,493 A
 
-Step 2: CT Secondary Current  
+Step 2: CT Secondary Current 
 Isec = 17,493 ÷ 800 = 21.87 A
 
 Step 3: Total Burden Resistance
@@ -119,7 +119,7 @@ Safety Margin = (540-187)/187 × 100 = 189%
 
 ### **⚠️ CONCERNS:**
 - **Ealreq calculation appears incorrect** (373.97V vs ~187V expected)
-- **Vk Required calculation is off** (299.18V vs 187V expected)  
+- **Vk Required calculation is off** (299.18V vs 187V expected) 
 - This could lead to **false rejections** of adequate CTs in other cases
 
 ---
@@ -128,14 +128,14 @@ Safety Margin = (540-187)/187 × 100 = 189%
 
 ### **Immediate Actions:**
 1. **Check your fault current calculation**
-   - Verify: 1000 MVA ÷ (33kV × √3) = 17,493 A
-   
+ - Verify: 1000 MVA ÷ (33kV × √3) = 17,493 A
+ 
 2. **Verify secondary current calculation**
-   - Should be: 17,493 ÷ 800 = 21.87 A
-   
+ - Should be: 17,493 ÷ 800 = 21.87 A
+ 
 3. **Review total resistance formula**
-   - Should be: Rct + Rlead + (Relay_VA / In²)
-   - Should be: 3.5 + 0.05 + 5.0 = 8.55 Ω
+ - Should be: Rct + Rlead + (Relay_VA / In²)
+ - Should be: 3.5 + 0.05 + 5.0 = 8.55 Ω
 
 ### **Testing Needed:**
 1. **Try a borderline case** where Available Vk is close to Required Vk
@@ -148,9 +148,9 @@ Safety Margin = (540-187)/187 × 100 = 189%
 
 Your system **works** but has **calculation accuracy issues**:
 
-✅ **Correct Final Verdict:** SUITABLE (this CT is indeed adequate)  
-⚠️ **Incorrect Intermediate Values:** The Ealreq and Vk Required are too high  
-⚠️ **Potential Risk:** May reject adequate CTs in borderline cases  
+✅ **Correct Final Verdict:** SUITABLE (this CT is indeed adequate) 
+⚠️ **Incorrect Intermediate Values:** The Ealreq and Vk Required are too high 
+⚠️ **Potential Risk:** May reject adequate CTs in borderline cases 
 
 **Your system needs calibration of the calculation formulas to match engineering standards.**
 

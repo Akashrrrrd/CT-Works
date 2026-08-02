@@ -80,47 +80,47 @@ The verification uses these exact values:
 
 ### CT Parameters (CT Data Tab):
 ```
-CT Primary:         600 A
-CT Secondary:       1 A
-Accuracy Class:     5P20
-Rct:               3.5 Ω
-Rated Burden:      15 VA
-ALF:               20
-Vk Available:      400 V
-Io at Vk:          30 mA
+CT Primary: 600 A
+CT Secondary: 1 A
+Accuracy Class: 5P20
+Rct: 3.5 Ω
+Rated Burden: 15 VA
+ALF: 20
+Vk Available: 400 V
+Io at Vk: 30 mA
 ```
 
 ### Wiring Parameters (Wiring Tab):
 ```
-Conductor:         2.5 mm²
-R @ 20°C:          7.41 Ω/km
-Temp Coefficient:  0.00393 /K
-Temperature:       75°C
-Cable Length:      50 m ← CRITICAL: This is in METERS
+Conductor: 2.5 mm²
+R @ 20°C: 7.41 Ω/km
+Temp Coefficient: 0.00393 /K
+Temperature: 75°C
+Cable Length: 50 m ← CRITICAL: This is in METERS
 ```
 
 ### System Parameters (System Tab):
 ```
-Frequency:         50 Hz
-Bus Voltage:       33 kV
-Max Fault:         12.5 kA
-X/R Ratio:        15
+Frequency: 50 Hz
+Bus Voltage: 33 kV
+Max Fault: 12.5 kA
+X/R Ratio: 15
 ```
 
 ### Line Parameters (Line Tab):
 ```
-R1:               0.0221 Ω/km
-X1:               0.1600 Ω/km
-R0:               0.1300 Ω/km
-X0:               0.0600 Ω/km
-Line Length:      1.74 km
+R1: 0.0221 Ω/km
+X1: 0.1600 Ω/km
+R0: 0.1300 Ω/km
+X0: 0.0600 Ω/km
+Line Length: 1.74 km
 ```
 
 ### Connected Devices:
 ```
-SIEMENS 7SJ85:     0.02 VA
-Energy Meter:      0.02 VA
-Total:             0.04 VA
+SIEMENS 7SJ85: 0.02 VA
+Energy Meter: 0.02 VA
+Total: 0.04 VA
 ```
 
 ---
@@ -128,19 +128,19 @@ Total:             0.04 VA
 ## Expected Results (All Should Pass)
 
 ```
-Resistance @ 75°C:     8.99 Ω/km        ✓
-Lead Resistance:       0.45 Ω           ✓
-Loop Resistance:       0.90 Ω           ✓
-Wiring Burden:         0.90 VA          ✓
-Internal Burden PE:    3.5 VA           ✓
-Devices Burden:        0.04 VA          ✓
-Total Burden PL:       0.94 VA          ✓
-Required Kssc:         20.83            ✓
-Available Kssc:        83.31            ✓
-Vk Required:           72.91 V          ✓
-Vk Available:          400 V            ✓
-Ealreq Max:            72.91 V          ✓
-Verdict:               SUITABLY DIMENSIONED ✓
+Resistance @ 75°C: 8.99 Ω/km ✓
+Lead Resistance: 0.45 Ω ✓
+Loop Resistance: 0.90 Ω ✓
+Wiring Burden: 0.90 VA ✓
+Internal Burden PE: 3.5 VA ✓
+Devices Burden: 0.04 VA ✓
+Total Burden PL: 0.94 VA ✓
+Required Kssc: 20.83 ✓
+Available Kssc: 83.31 ✓
+Vk Required: 72.91 V ✓
+Vk Available: 400 V ✓
+Ealreq Max: 72.91 V ✓
+Verdict: SUITABLY DIMENSIONED ✓
 ```
 
 ---
@@ -195,8 +195,8 @@ Available Kssc = 83.31 ✓
 ### STEP 9: CT Suitability
 ```
 IF Available Kssc (83.31) > Required Kssc (20.83)
-  THEN "SUITABLY DIMENSIONED" ✓
-  ELSE "UNDER DIMENSIONED"
+ THEN "SUITABLY DIMENSIONED" ✓
+ ELSE "UNDER DIMENSIONED"
 ```
 
 ### STEP 10-12: Vk Calculations
@@ -302,8 +302,8 @@ If one value is wrong, trace it:
 
 The main bug was a **unit conversion issue**:
 ```
-WRONG:  loop_resistance = 2 × R(Ω/km) × length(m)      → 901 Ω ❌
-FIXED:  loop_resistance = 2 × R(Ω/km) × length(km)     → 0.90 Ω ✅
+WRONG: loop_resistance = 2 × R(Ω/km) × length(m) → 901 Ω ❌
+FIXED: loop_resistance = 2 × R(Ω/km) × length(km) → 0.90 Ω ✅
 ```
 
 This single line fix cascaded to fix ALL calculations!
@@ -313,23 +313,23 @@ This single line fix cascaded to fix ALL calculations!
 ## Next Actions
 
 1. **Run verification test:**
-   ```bash
-   node verify-calculations.js
-   ```
+ ```bash
+ node verify-calculations.js
+ ```
 
 2. **If test passes (all green):**
-   - Go to website and create a test IED with the above values
-   - Compare website output with expected values
-   - If they match → **DONE! System is working correctly!**
+ - Go to website and create a test IED with the above values
+ - Compare website output with expected values
+ - If they match → **DONE! System is working correctly!**
 
 3. **If test fails (red):**
-   - Review calculation steps in test output
-   - Find which step is wrong
-   - Debug that specific formula
+ - Review calculation steps in test output
+ - Find which step is wrong
+ - Debug that specific formula
 
 4. **If website output doesn't match test output:**
-   - Check form field capture
-   - Check network request
-   - Check server logs
-   - Debug data flow
+ - Check form field capture
+ - Check network request
+ - Check server logs
+ - Debug data flow
 

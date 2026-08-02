@@ -8,46 +8,46 @@ When filling the form, follow this simple approach:
 **"Go get the CT test certificate from substation office"**
 
 ```
-CT Primary:        600          (from nameplate "600/1A")
-CT Secondary:      1            (from nameplate "600/1A")
-Accuracy Class:    5P20         (from nameplate)
-Rct:               2.5          (from test certificate)
-Rated Burden:      15           (from nameplate)
-ALF:               20           (take the second number from "5P20")
-Vk Available:      400          (from test certificate)
-Io at Vk:          30           (from test certificate)
+CT Primary: 600 (from nameplate "600/1A")
+CT Secondary: 1 (from nameplate "600/1A")
+Accuracy Class: 5P20 (from nameplate)
+Rct: 2.5 (from test certificate)
+Rated Burden: 15 (from nameplate)
+ALF: 20 (take the second number from "5P20")
+Vk Available: 400 (from test certificate)
+Io at Vk: 30 (from test certificate)
 ```
 
 ### 🟠 ORANGE Tab: WIRING
 **"Measure the cable or check cable label"**
 
 ```
-Conductor:         6 mm²        (what does cable label say?)
-R at 20°C:         3.09         (look up in table for 6mm² copper)
-Temp Coefficient:  0.00393      (always this for copper)
-Temperature:       75           (worst case in substation)
-Cable Length:      120          (measure in meters)
+Conductor: 6 mm² (what does cable label say?)
+R at 20°C: 3.09 (look up in table for 6mm² copper)
+Temp Coefficient: 0.00393 (always this for copper)
+Temperature: 75 (worst case in substation)
+Cable Length: 120 (measure in meters)
 ```
 
 ### 🟡 YELLOW Tab: SYSTEM
 **"Ask your system planner or check the short-circuit study"**
 
 ```
-Frequency:         50 Hz        (50 in Europe, 60 in USA)
-Bus Voltage:       33 kV        (from substation nameplate)
-Max Fault:         12.5 kA      (from short-circuit study)
-X/R Ratio:         15           (typical value, ask if unsure)
+Frequency: 50 Hz (50 in Europe, 60 in USA)
+Bus Voltage: 33 kV (from substation nameplate)
+Max Fault: 12.5 kA (from short-circuit study)
+X/R Ratio: 15 (typical value, ask if unsure)
 ```
 
 ### 🟢 GREEN Tab: LINE
 **"Get from cable datasheet or system tables"**
 
 ```
-R1:                0.0221       (from cable table Ω/km)
-X1:                0.1600       (from cable table Ω/km)
-R0:                0.1300       (from cable table Ω/km)
-X0:                0.0600       (from cable table Ω/km)
-Line Length:       1.74         (in kilometers)
+R1: 0.0221 (from cable table Ω/km)
+X1: 0.1600 (from cable table Ω/km)
+R0: 0.1300 (from cable table Ω/km)
+X0: 0.0600 (from cable table Ω/km)
+Line Length: 1.74 (in kilometers)
 ```
 
 ---
@@ -153,29 +153,29 @@ If YES to all → **Click Compute with confidence**
 
 ```
 CT TAB:
-  Primary: 400        Secondary: 1
-  Class: 5P20         ALF: 20
-  Rct: 2.5            Burden: 15
-  Vk: 400             Io: 30
+ Primary: 400 Secondary: 1
+ Class: 5P20 ALF: 20
+ Rct: 2.5 Burden: 15
+ Vk: 400 Io: 30
 
 WIRING TAB:
-  Conductor: 6        Resistance: 3.09
-  Temp Coeff: 0.00393 Temperature: 75
-  Cable Length: 120
+ Conductor: 6 Resistance: 3.09
+ Temp Coeff: 0.00393 Temperature: 75
+ Cable Length: 120
 
 SYSTEM TAB:
-  Frequency: 50       Voltage: 33
-  Fault: 12.5         X/R: 15
+ Frequency: 50 Voltage: 33
+ Fault: 12.5 X/R: 15
 
 LINE TAB:
-  R1: 0.0221          X1: 0.16
-  R0: 0.13            X0: 0.06
-  Length: 1.74
+ R1: 0.0221 X1: 0.16
+ R0: 0.13 X0: 0.06
+ Length: 1.74
 ```
 
 ### Expected Result:
-✅ Vk Required: ~52V  
-✅ Vk Available: 400V  
+✅ Vk Required: ~52V 
+✅ Vk Available: 400V 
 ✅ **Verdict: SUITABLY DIMENSIONED**
 
 ---
@@ -219,25 +219,25 @@ LINE TAB:
 ## 📊 CONFIDENCE SCORING
 
 ### 100% Confident? (All exact documents)
-✅ CT test certificate  
-✅ Cable datasheet  
-✅ Short-circuit study  
-✅ System specifications  
+✅ CT test certificate 
+✅ Cable datasheet 
+✅ Short-circuit study 
+✅ System specifications 
 
 → **Click compute immediately**
 
 ### 80% Confident? (Some values from tables)
-✅ CT nameplate found  
-✅ Cable size measured  
-✅ Using standard copper resistance (3.09 for 6mm²)  
-✅ Using typical X/R ratio (15)  
+✅ CT nameplate found 
+✅ Cable size measured 
+✅ Using standard copper resistance (3.09 for 6mm²) 
+✅ Using typical X/R ratio (15) 
 
 → **Still good, click compute**
 
 ### 50% Confident? (Mostly using defaults)
-⚠️ Using guess for X/R ratio  
-⚠️ Not sure about cable size  
-⚠️ Unsure about fault current  
+⚠️ Using guess for X/R ratio 
+⚠️ Not sure about cable size 
+⚠️ Unsure about fault current 
 
 → **Ask system planner before computing**
 

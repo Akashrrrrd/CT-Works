@@ -12,10 +12,10 @@ Implemented a complete **Download Report** feature for IED computations that all
 
 **Key Features:**
 - `ReportDownloadService` class with static methods for:
-  - `generateHTMLReport()` - Professional styled HTML report
-  - `generateJSONReport()` - Structured JSON export for data integration
-  - `generateCSVReport()` - Spreadsheet-compatible CSV format
-  - `downloadReport()` - Browser download trigger mechanism
+ - `generateHTMLReport()` - Professional styled HTML report
+ - `generateJSONReport()` - Structured JSON export for data integration
+ - `generateCSVReport()` - Spreadsheet-compatible CSV format
+ - `downloadReport()` - Browser download trigger mechanism
 
 **Report Includes:**
 - ✅ Project information (name, substation, engineer, date)
@@ -30,24 +30,24 @@ Implemented a complete **Download Report** feature for IED computations that all
 
 **Export Formats:**
 1. **HTML** - Professional report with:
-  - Color-coded verdict indicators (green/red)
-  - Responsive grid layouts
-  - Summary statistics and KPIs
-  - Detailed calculation tables
-  - Formula references with explanations
-  - Print-optimized styling
+ - Color-coded verdict indicators (green/red)
+ - Responsive grid layouts
+ - Summary statistics and KPIs
+ - Detailed calculation tables
+ - Formula references with explanations
+ - Print-optimized styling
 
 2. **JSON** - Structured data export for:
-  - Database storage
-  - API integration
-  - Further processing
-  - Data analysis tools
+ - Database storage
+ - API integration
+ - Further processing
+ - Data analysis tools
 
 3. **CSV** - Spreadsheet format for:
-  - Excel/Google Sheets analysis
-  - Bulk data processing
-  - Custom pivot tables
-  - Team collaboration
+ - Excel/Google Sheets analysis
+ - Bulk data processing
+ - Custom pivot tables
+ - Team collaboration
 
 ---
 
@@ -75,9 +75,9 @@ import { ReportDownloadService } from '@/lib/services/report-download';
 
 **Button Styling:**
 ```
-📥 HTML Report  [Primary - Blue Gradient]
-📊 JSON Data    [Secondary - Outline]
-📈 CSV Export   [Secondary - Outline]
+📥 HTML Report [Primary - Blue Gradient]
+📊 JSON Data [Secondary - Outline]
+📈 CSV Export [Secondary - Outline]
 🔄 New Analysis [Full Width]
 ```
 
@@ -113,65 +113,65 @@ Users can choose download format:
 ### Sections Included
 
 1. **Header**
-   - Report title and subtitle
-   - Generation timestamp
-   - Professional branding
+ - Report title and subtitle
+ - Generation timestamp
+ - Professional branding
 
 2. **Overall Verdict**
-   - Color-coded box (green/red)
-   - Quick status indicator
-   - Success/failure summary
+ - Color-coded box (green/red)
+ - Quick status indicator
+ - Success/failure summary
 
 3. **Summary Statistics**
-   - Total IEDs checked
-   - Suitable count
-   - Under-dimensioned count
-   - Success percentage
+ - Total IEDs checked
+ - Suitable count
+ - Under-dimensioned count
+ - Success percentage
 
 4. **Project Information**
-   - Project name, substation, engineer
-   - Analysis date
-   - Contact details (if provided)
+ - Project name, substation, engineer
+ - Analysis date
+ - Contact details (if provided)
 
 5. **System Parameters**
-   - Bus voltage level
-   - System frequency
-   - Fault level
-   - X/R ratio
+ - Bus voltage level
+ - System frequency
+ - Fault level
+ - X/R ratio
 
 6. **Wiring Configuration**
-   - CT cable details (cross-section, resistance, lead length)
-   - VT cable details (cross-section, resistance, lead length)
+ - CT cable details (cross-section, resistance, lead length)
+ - VT cable details (cross-section, resistance, lead length)
 
 7. **IED Results Table**
-   - IED name and CT ratio
-   - Accuracy class
-   - Verdict (Suitable/Under-dimensioned)
-   - Total burden
-   - Required vs Available Vk
-   - Safety margin percentage
+ - IED name and CT ratio
+ - Accuracy class
+ - Verdict (Suitable/Under-dimensioned)
+ - Total burden
+ - Required vs Available Vk
+ - Safety margin percentage
 
 8. **Recommendations**
-   - Auto-generated engineering recommendations
-   - Actions for under-dimensioned IEDs
-   - Best practices
+ - Auto-generated engineering recommendations
+ - Actions for under-dimensioned IEDs
+ - Best practices
 
 9. **Formulas & Standards**
-   - Vk calculation formula with explanation
-   - Verdict criteria definitions
-   - Applicable international standards (IEC, IEEE, IS, EN)
+ - Vk calculation formula with explanation
+ - Verdict criteria definitions
+ - Applicable international standards (IEC, IEEE, IS, EN)
 
 10. **Footer**
-    - Legal disclaimer
-    - Report reference number
-    - Copyright notice
+ - Legal disclaimer
+ - Report reference number
+ - Copyright notice
 
 ### Styling Highlights
 - **Professional Design:** Corporate color scheme (blue primary)
 - **Color Coding:** 
-  - ✅ Green for suitable equipment
-  - ❌ Red for under-dimensioned equipment
-  - Blue accents for headers and emphasis
+ - ✅ Green for suitable equipment
+ - ❌ Red for under-dimensioned equipment
+ - Blue accents for headers and emphasis
 - **Responsive:** Works on desktop, tablet, and mobile
 - **Print Friendly:** Optimized for PDF printing
 - **Accessible:** Proper contrast and semantic HTML
@@ -183,26 +183,26 @@ Users can choose download format:
 ### Download HTML Report
 ```typescript
 const handleDownloadReport = async (format: 'html' | 'json' | 'csv' = 'html') => {
-  if (!results) return;
-  
-  const projectName = projectInfo.name || 'CT_VT_Analysis';
-  
-  let content: string;
-  let filename: string;
-  let mimeType: string;
+ if (!results) return;
+ 
+ const projectName = projectInfo.name || 'CT_VT_Analysis';
+ 
+ let content: string;
+ let filename: string;
+ let mimeType: string;
 
-  // Generate content based on format
-  content = ReportDownloadService.generateHTMLReport(
-    results,
-    projectInfo,
-    systemParams,
-    ctWiring,
-    vtWiring,
-    { projectName }
-  );
-  
-  // Trigger download
-  ReportDownloadService.downloadReport(content, filename, mimeType);
+ // Generate content based on format
+ content = ReportDownloadService.generateHTMLReport(
+ results,
+ projectInfo,
+ systemParams,
+ ctWiring,
+ vtWiring,
+ { projectName }
+ );
+ 
+ // Trigger download
+ ReportDownloadService.downloadReport(content, filename, mimeType);
 };
 ```
 
@@ -210,18 +210,18 @@ const handleDownloadReport = async (format: 'html' | 'json' | 'csv' = 'html') =>
 ```typescript
 // HTML Report
 <Button onClick={() => handleDownloadReport('html')}>
-  <Download className="w-5 h-5 mr-2" />
-  📥 HTML Report
+ <Download className="w-5 h-5 mr-2" />
+ 📥 HTML Report
 </Button>
 
 // JSON Data
 <Button onClick={() => handleDownloadReport('json')}>
-  📊 JSON Data
+ 📊 JSON Data
 </Button>
 
 // CSV Export
 <Button onClick={() => handleDownloadReport('csv')}>
-  📈 CSV Export
+ 📈 CSV Export
 </Button>
 ```
 
@@ -238,30 +238,30 @@ const handleDownloadReport = async (format: 'html' | 'json' | 'csv' = 'html') =>
 ### JSON Format
 ```json
 {
-  "metadata": {
-    "projectName": "Alpha Substation",
-    "generatedAt": "2025-07-28T10:30:00Z",
-    "format": "json",
-    "version": "1.0"
-  },
-  "summary": {
-    "total_ieds_checked": 3,
-    "suitable_ieds": 2,
-    "overall_verdict": "ALL_SUITABLE"
-  },
-  "iedResults": [
-    {
-      "ied_name": "SIEMENS 7SJ85",
-      "ct_ratio_primary": 3200,
-      "ct_ratio_secondary": 1,
-      "verdict": "SUITABLE",
-      "total_burden": 15.2,
-      "required_vk": 450.5,
-      "available_vk": 520.0,
-      "safety_margin": 15.4
-    }
-  ],
-  "recommendations": [...]
+ "metadata": {
+ "projectName": "Alpha Substation",
+ "generatedAt": "2025-07-28T10:30:00Z",
+ "format": "json",
+ "version": "1.0"
+ },
+ "summary": {
+ "total_ieds_checked": 3,
+ "suitable_ieds": 2,
+ "overall_verdict": "ALL_SUITABLE"
+ },
+ "iedResults": [
+ {
+ "ied_name": "SIEMENS 7SJ85",
+ "ct_ratio_primary": 3200,
+ "ct_ratio_secondary": 1,
+ "verdict": "SUITABLE",
+ "total_burden": 15.2,
+ "required_vk": 450.5,
+ "available_vk": 520.0,
+ "safety_margin": 15.4
+ }
+ ],
+ "recommendations": [...]
 }
 ```
 
@@ -280,26 +280,26 @@ IED Name,CT Ratio Primary,CT Ratio Secondary,Accuracy Class,Verdict,Total Burden
 ```
 AdequacyWizard.tsx
 ├── State Management
-│   ├── currentStep
-│   ├── results
-│   ├── projectInfo
-│   ├── systemParams
-│   └── ...other parameters
+│ ├── currentStep
+│ ├── results
+│ ├── projectInfo
+│ ├── systemParams
+│ └── ...other parameters
 ├── Functions
-│   ├── handleNext()
-│   ├── handlePrevious()
-│   ├── handleCalculate()
-│   └── handleDownloadReport(format) ← NEW
+│ ├── handleNext()
+│ ├── handlePrevious()
+│ ├── handleCalculate()
+│ └── handleDownloadReport(format) ← NEW
 ├── Rendering
-│   ├── renderStepIndicator()
-│   ├── renderStepContent()
-│   │   ├── Step 1-5: Input forms
-│   │   └── Step 6: Results + Download Buttons
-│   └── UI Components
+│ ├── renderStepIndicator()
+│ ├── renderStepContent()
+│ │ ├── Step 1-5: Input forms
+│ │ └── Step 6: Results + Download Buttons
+│ └── UI Components
 └── Services
-    ├── AutomatedCalculationEngine
-    ├── IEDDatabaseService
-    └── ReportDownloadService ← NEW
+ ├── AutomatedCalculationEngine
+ ├── IEDDatabaseService
+ └── ReportDownloadService ← NEW
 ```
 
 ---

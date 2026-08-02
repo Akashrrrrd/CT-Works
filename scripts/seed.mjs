@@ -249,11 +249,11 @@ async function main() {
   const now = new Date();
 
   // ── Organisation ────────────────────────────────────────────────────────────
-  let org = await orgs.findOne({ name: 'Hitachi Energy' });
+  let org = await orgs.findOne({ name: 'Enterprise Power' });
   if (!org) {
-    const r = await orgs.insertOne({ name: 'Hitachi Energy', ownerId: null, settings: {}, createdAt: now, updatedAt: now });
+    const r = await orgs.insertOne({ name: 'Enterprise Power', ownerId: null, settings: {}, createdAt: now, updatedAt: now });
     org = await orgs.findOne({ _id: r.insertedId });
-    console.log('Created org: Hitachi Energy');
+    console.log('Created org: Enterprise Power');
   } else {
     console.log('Org exists, skipping');
   }
@@ -293,8 +293,8 @@ async function main() {
   if (!workspace) {
     const r = await workspaces.insertOne({
       organizationId: org._id,
-      name:        '33kV DF5W SS – CT/VT Adequacy',
-      description: 'CT/VT Adequacy Check for 33kV Cable Feeders | Contract: N-19957.1-DF5W',
+      name:        '2026 Substation – CT/VT Adequacy',
+      description: 'CT/VT Adequacy Check for 33kV Cable Feeders (2026)',
       ownerId:     adminId,
       members:     [],
       createdAt:   now,

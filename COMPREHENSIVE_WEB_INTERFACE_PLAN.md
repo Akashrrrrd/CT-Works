@@ -8,16 +8,16 @@
 ### **📱 MAIN DASHBOARD**
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  ⚡ CT/VT ADEQUACY CHECK SYSTEM                             │
-│                                                             │
-│  🏗️ New Analysis     📊 Previous Reports     ⚙️ Settings    │
-│                                                             │
-│  Recent Projects:                                           │
-│  • 132kV Substation Alpha (3 IEDs) - ✅ ALL SUITABLE       │
-│  • 33kV Feeder Beta (5 IEDs) - ⚠️ 2 ISSUES                 │
-│  • 11kV Distribution (8 IEDs) - ✅ ALL SUITABLE            │
-│                                                             │
-│  📈 Quick Stats: 127 IEDs analyzed this month              │
+│ ⚡ CT/VT ADEQUACY CHECK SYSTEM │
+│ │
+│ 🏗️ New Analysis 📊 Previous Reports ⚙️ Settings │
+│ │
+│ Recent Projects: │
+│ • 132kV Substation Alpha (3 IEDs) - ✅ ALL SUITABLE │
+│ • 33kV Feeder Beta (5 IEDs) - ⚠️ 2 ISSUES │
+│ • 11kV Distribution (8 IEDs) - ✅ ALL SUITABLE │
+│ │
+│ 📈 Quick Stats: 127 IEDs analyzed this month │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -28,139 +28,139 @@
 ### **STEP 1: Project Information**
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  📋 Project Information                            (1/6)    │
+│ 📋 Project Information (1/6) │
 ├─────────────────────────────────────────────────────────────┤
-│                                                             │
-│  Project Name: [_____________________________]              │
-│  Substation:   [_____________________________]              │
-│  Engineer:     [_____________________________]              │
-│  Date:         [2026-07-17__] (auto-filled)                │
-│                                                             │
-│  📄 Load from template:                                     │
-│  ○ 132kV Transmission    ○ 33kV Sub-transmission            │
-│  ○ 11kV Distribution     ○ Custom configuration             │
-│                                                             │
-│                              [Previous] [Next: System >>]   │
+│ │
+│ Project Name: [_____________________________] │
+│ Substation: [_____________________________] │
+│ Engineer: [_____________________________] │
+│ Date: [2026-07-17__] (auto-filled) │
+│ │
+│ 📄 Load from template: │
+│ ○ 132kV Transmission ○ 33kV Sub-transmission │
+│ ○ 11kV Distribution ○ Custom configuration │
+│ │
+│ [Previous] [Next: System >>] │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 ### **STEP 2: System Parameters**
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  ⚡ System Parameters                              (2/6)    │
+│ ⚡ System Parameters (2/6) │
 ├─────────────────────────────────────────────────────────────┤
-│                                                             │
-│  🔌 Basic Electrical System:                               │
-│                                                             │
-│  Bus Voltage Level:     [132____] kV                       │
-│  System Frequency:      [50_] Hz    ○ 50Hz  ○ 60Hz        │
-│  Bus Fault Level:       [31.5__] kA (3-phase)             │
-│  X/R Ratio:            [15___] (Auto: 15 for 132kV)       │
-│                                                             │
-│  💡 Common Values:                                          │
-│  132kV: 31.5kA, X/R=40  │  33kV: 25kA, X/R=15            │
-│  11kV: 20kA, X/R=10     │  Custom: [____]                 │
-│                                                             │
-│                    [<< Previous] [Next: Wiring >>]         │
+│ │
+│ 🔌 Basic Electrical System: │
+│ │
+│ Bus Voltage Level: [132____] kV │
+│ System Frequency: [50_] Hz ○ 50Hz ○ 60Hz │
+│ Bus Fault Level: [31.5__] kA (3-phase) │
+│ X/R Ratio: [15___] (Auto: 15 for 132kV) │
+│ │
+│ 💡 Common Values: │
+│ 132kV: 31.5kA, X/R=40 │ 33kV: 25kA, X/R=15 │
+│ 11kV: 20kA, X/R=10 │ Custom: [____] │
+│ │
+│ [<< Previous] [Next: Wiring >>] │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 ### **STEP 3: Wiring Configuration**
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  🔌 Wiring Configuration                           (3/6)    │
+│ 🔌 Wiring Configuration (3/6) │
 ├─────────────────────────────────────────────────────────────┤
-│                                                             │
-│  📐 CT Wiring (Current Transformer):                       │
-│                                                             │
-│  Cable Cross Section:   [6____] mm² ▼                      │
-│  ├─ 2.5mm² (short runs) │ 6mm² (typical) │ 16mm² (long)   │
-│                                                             │
-│  Resistance @ 20°C:     [2.91__] Ω/km (Auto-filled)       │
-│  Lead Length:           [120___] meters                    │
-│                                                             │
-│  📐 VT Wiring (Voltage Transformer):                       │
-│                                                             │
-│  Cable Cross Section:   [2.5___] mm² ▼                     │
-│  Resistance @ 20°C:     [7.41__] Ω/km (Auto-filled)       │ 
-│  Lead Length:           [120___] meters                    │
-│                                                             │
-│                  [<< Previous] [Next: Transmission >>]     │
+│ │
+│ 📐 CT Wiring (Current Transformer): │
+│ │
+│ Cable Cross Section: [6____] mm² ▼ │
+│ ├─ 2.5mm² (short runs) │ 6mm² (typical) │ 16mm² (long) │
+│ │
+│ Resistance @ 20°C: [2.91__] Ω/km (Auto-filled) │
+│ Lead Length: [120___] meters │
+│ │
+│ 📐 VT Wiring (Voltage Transformer): │
+│ │
+│ Cable Cross Section: [2.5___] mm² ▼ │
+│ Resistance @ 20°C: [7.41__] Ω/km (Auto-filled) │ 
+│ Lead Length: [120___] meters │
+│ │
+│ [<< Previous] [Next: Transmission >>] │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 ### **STEP 4: Transmission Line Parameters**
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  🏗️ Transmission Line Parameters                  (4/6)    │
+│ 🏗️ Transmission Line Parameters (4/6) │
 ├─────────────────────────────────────────────────────────────┤
-│                                                             │
-│  ⚡ Line Impedances (from line design):                     │
-│                                                             │
-│  Positive Seq. R1:      [0.0271_] Ω/km                     │
-│  Positive Seq. X1:      [0.1600_] Ω/km                     │
-│  Zero Seq. R0:          [0.1300_] Ω/km                     │
-│  Zero Seq. X0:          [0.0600_] Ω/km                     │
-│  Route Length:          [1.74___] km                       │
-│                                                             │
-│  💡 Typical Values by Cable Type:                          │
-│  XLPE 132kV  │  CU HDPE  │  Overhead  │  Gas Insulated     │
-│  [Use This]  │  [Use]    │  [Use]     │  [Use]            │
-│                                                             │
-│                    [<< Previous] [Next: IEDs >>]           │
+│ │
+│ ⚡ Line Impedances (from line design): │
+│ │
+│ Positive Seq. R1: [0.0271_] Ω/km │
+│ Positive Seq. X1: [0.1600_] Ω/km │
+│ Zero Seq. R0: [0.1300_] Ω/km │
+│ Zero Seq. X0: [0.0600_] Ω/km │
+│ Route Length: [1.74___] km │
+│ │
+│ 💡 Typical Values by Cable Type: │
+│ XLPE 132kV │ CU HDPE │ Overhead │ Gas Insulated │
+│ [Use This] │ [Use] │ [Use] │ [Use] │
+│ │
+│ [<< Previous] [Next: IEDs >>] │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-### **STEP 5: IED Selection & Configuration**  
+### **STEP 5: IED Selection & Configuration** 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  🤖 IED Selection & Configuration                  (5/6)    │
+│ 🤖 IED Selection & Configuration (5/6) │
 ├─────────────────────────────────────────────────────────────┤
-│                                                             │
-│  📱 Connected IEDs (Protection, Metering, Control):        │
-│                                                             │
-│  IED #1: [SIEMENS 7SJ85________________] ▼  [Remove]       │
-│  ├─ CT Ratio:         [3200/1A__] ▼                        │
-│  ├─ Accuracy Class:   [5P20____] ▼                        │
-│  ├─ CT Resistance:    [2.5_____] Ω                        │
-│  ├─ Knee Point:       [2000____] V                        │
-│  ├─ Burden:           [0.5_____] VA (Auto from database)   │
-│  └─ Mag Current:      [10______] mA                        │
-│                                                             │
-│  IED #2: [ABB RET670_________________] ▼  [Remove]         │
-│  ├─ CT Ratio:         [1600/1A__] ▼                        │
-│  ├─ Accuracy Class:   [PX______] ▼                        │  
-│  ├─ CT Resistance:    [1.8_____] Ω                        │
-│  ├─ Knee Point:       [1600____] V                        │
-│  └─ Burden:           [0.1_____] VA (Auto from database)   │
-│                                                             │
-│  [+ Add Another IED]                                       │
-│                                                             │
-│              [<< Previous] [Next: Calculate >>]            │
+│ │
+│ 📱 Connected IEDs (Protection, Metering, Control): │
+│ │
+│ IED #1: [SIEMENS 7SJ85________________] ▼ [Remove] │
+│ ├─ CT Ratio: [3200/1A__] ▼ │
+│ ├─ Accuracy Class: [5P20____] ▼ │
+│ ├─ CT Resistance: [2.5_____] Ω │
+│ ├─ Knee Point: [2000____] V │
+│ ├─ Burden: [0.5_____] VA (Auto from database) │
+│ └─ Mag Current: [10______] mA │
+│ │
+│ IED #2: [ABB RET670_________________] ▼ [Remove] │
+│ ├─ CT Ratio: [1600/1A__] ▼ │
+│ ├─ Accuracy Class: [PX______] ▼ │ 
+│ ├─ CT Resistance: [1.8_____] Ω │
+│ ├─ Knee Point: [1600____] V │
+│ └─ Burden: [0.1_____] VA (Auto from database) │
+│ │
+│ [+ Add Another IED] │
+│ │
+│ [<< Previous] [Next: Calculate >>] │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 ### **STEP 6: Real-Time Calculation Results**
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  📊 CT/VT Adequacy Results                         (6/6)    │
+│ 📊 CT/VT Adequacy Results (6/6) │
 ├─────────────────────────────────────────────────────────────┤
-│                                                             │
-│  🎯 Overall Verdict: ✅ ALL IEDs SUITABLE                  │
-│                                                             │
-│  ┌───────────────────────────────────────────────────────┐  │
-│  │ IED Results Summary:                               │  │
-│  │                                                     │  │
-│  │ 🟢 SIEMENS 7SJ85    ✅ SUITABLE    Safety: 187%   │  │
-│  │    Available: 31.79    Required: 10.00             │  │
-│  │                                                     │  │
-│  │ 🟢 ABB RET670       ✅ SUITABLE    Safety: 628%    │  │
-│  │    Available: 1600V   Required: 220V               │  │  
-│  │                                                     │  │
-│  │ 🔍 [View Detailed Calculations for each IED]       │  │
-│  └───────────────────────────────────────────────────────┘  │
-│                                                             │
-│  [<< Previous] [📄 Generate Report] [🔄 New Analysis]      │
+│ │
+│ 🎯 Overall Verdict: ✅ ALL IEDs SUITABLE │
+│ │
+│ ┌───────────────────────────────────────────────────────┐ │
+│ │ IED Results Summary: │ │
+│ │ │ │
+│ │ 🟢 SIEMENS 7SJ85 ✅ SUITABLE Safety: 187% │ │
+│ │ Available: 31.79 Required: 10.00 │ │
+│ │ │ │
+│ │ 🟢 ABB RET670 ✅ SUITABLE Safety: 628% │ │
+│ │ Available: 1600V Required: 220V │ │ 
+│ │ │ │
+│ │ 🔍 [View Detailed Calculations for each IED] │ │
+│ └───────────────────────────────────────────────────────┘ │
+│ │
+│ [<< Previous] [📄 Generate Report] [🔄 New Analysis] │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -171,37 +171,37 @@
 ### **Individual IED Analysis Screen**
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  📊 SIEMENS 7SJ85 - Detailed Analysis                      │
+│ 📊 SIEMENS 7SJ85 - Detailed Analysis │
 ├─────────────────────────────────────────────────────────────┤
-│                                                             │
-│  📋 Input Summary:                                          │
-│  • CT Ratio: 3200/1A  • Class: 5P20  • Rct: 2.5Ω         │
-│  • Vk: 2000V  • Burden: 0.5VA (from database)             │
-│                                                             │
-│  🧮 Calculation Method: KSSC (Accuracy Limit Factor)       │
-│                                                             │
-│  ┌─ System Calculations ─────────────────────────────────┐  │
-│  │ Max Fault Current:    31,500 A                       │  │
-│  │ Phase Voltage:        76,210 V                       │  │
-│  │ CT Secondary Current: 9.84 A (at max fault)          │  │
-│  │ Time Constant:        0.048 s                        │  │
-│  └───────────────────────────────────────────────────────┘  │
-│                                                             │
-│  ┌─ Burden Analysis ──────────────────────────────────────┐  │
-│  │ Internal Burden (PE): 2.5 VA                         │  │
-│  │ Lead Burden (PL):     0.54 VA                        │  │
-│  │ IED Burden:           0.5 VA                          │  │
-│  │ Total Burden:         3.54 VA                         │  │
-│  └───────────────────────────────────────────────────────┘  │
-│                                                             │
-│  ┌─ Adequacy Check ───────────────────────────────────────┐  │
-│  │ Required Kssc:        10.00                           │  │
-│  │ Available Kssc:       31.79                           │  │
-│  │ Safety Margin:        187%                            │  │  
-│  │ Verdict:              ✅ SUITABLY DIMENSIONED         │  │
-│  └───────────────────────────────────────────────────────┘  │
-│                                                             │
-│  [📋 Copy Results] [📧 Email Report] [⬅️ Back to Summary]  │
+│ │
+│ 📋 Input Summary: │
+│ • CT Ratio: 3200/1A • Class: 5P20 • Rct: 2.5Ω │
+│ • Vk: 2000V • Burden: 0.5VA (from database) │
+│ │
+│ 🧮 Calculation Method: KSSC (Accuracy Limit Factor) │
+│ │
+│ ┌─ System Calculations ─────────────────────────────────┐ │
+│ │ Max Fault Current: 31,500 A │ │
+│ │ Phase Voltage: 76,210 V │ │
+│ │ CT Secondary Current: 9.84 A (at max fault) │ │
+│ │ Time Constant: 0.048 s │ │
+│ └───────────────────────────────────────────────────────┘ │
+│ │
+│ ┌─ Burden Analysis ──────────────────────────────────────┐ │
+│ │ Internal Burden (PE): 2.5 VA │ │
+│ │ Lead Burden (PL): 0.54 VA │ │
+│ │ IED Burden: 0.5 VA │ │
+│ │ Total Burden: 3.54 VA │ │
+│ └───────────────────────────────────────────────────────┘ │
+│ │
+│ ┌─ Adequacy Check ───────────────────────────────────────┐ │
+│ │ Required Kssc: 10.00 │ │
+│ │ Available Kssc: 31.79 │ │
+│ │ Safety Margin: 187% │ │ 
+│ │ Verdict: ✅ SUITABLY DIMENSIONED │ │
+│ └───────────────────────────────────────────────────────┘ │
+│ │
+│ [📋 Copy Results] [📧 Email Report] [⬅️ Back to Summary] │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -212,30 +212,30 @@
 ### **Mobile Stack View (Collapsible Sections)**
 ```
 ┌─────────────────────┐
-│ ⚡ CT/VT Adequacy   │
+│ ⚡ CT/VT Adequacy │
 ├─────────────────────┤
-│ 📱 Project Info ▼   │
-│ • Alpha Substation  │
-│ • 132kV System      │
-│ • 2 IEDs Added      │
-├─────────────────────┤  
-│ ⚡ System Params ▼  │
-│ • 132kV, 31.5kA     │
-│ • 50Hz, X/R=15      │
+│ 📱 Project Info ▼ │
+│ • Alpha Substation │
+│ • 132kV System │
+│ • 2 IEDs Added │
+├─────────────────────┤ 
+│ ⚡ System Params ▼ │
+│ • 132kV, 31.5kA │
+│ • 50Hz, X/R=15 │
 ├─────────────────────┤
-│ 🔌 Wiring Config ▼  │
-│ • CT: 6mm², 120m    │
-│ • VT: 2.5mm², 120m  │
+│ 🔌 Wiring Config ▼ │
+│ • CT: 6mm², 120m │
+│ • VT: 2.5mm², 120m │
 ├─────────────────────┤
-│ 🏗️ Line Params ▼   │ 
-│ • XLPE Cable        │
-│ • 1.74km Route      │
+│ 🏗️ Line Params ▼ │ 
+│ • XLPE Cable │
+│ • 1.74km Route │
 ├─────────────────────┤
-│ 🤖 IEDs (2) ▼       │
-│ • 7SJ85: ✅ OK      │
-│ • RET670: ✅ OK     │
+│ 🤖 IEDs (2) ▼ │
+│ • 7SJ85: ✅ OK │
+│ • RET670: ✅ OK │
 ├─────────────────────┤
-│ [🧮 CALCULATE]      │
+│ [🧮 CALCULATE] │
 └─────────────────────┘
 ```
 
@@ -267,7 +267,7 @@
 ### **🎨 VISUAL FEEDBACK**
 - **Color-coded results** (Green=OK, Red=Issues, Yellow=Warning) 
 - **Progress bars** for safety margins
-- **Interactive charts** showing calculation breakdown  
+- **Interactive charts** showing calculation breakdown 
 - **Before/after comparisons** for design changes
 - **Real-time calculation updates**
 
@@ -329,7 +329,7 @@
 ### **Frontend (React/Next.js)**
 - **shadcn/ui** for consistent, beautiful components
 - **React Hook Form** for form handling & validation
-- **Recharts** for calculation result visualizations  
+- **Recharts** for calculation result visualizations 
 - **React PDF** for professional report generation
 - **Tailwind CSS** for responsive design
 
@@ -353,7 +353,7 @@ Results Display → PDF Generation → Download
 ### **User Experience Goals:**
 - ⏱️ **<3 minutes** from start to results (average user)
 - 📱 **90%+ mobile usability** score
-- 🎯 **<5 clicks** to complete basic analysis  
+- 🎯 **<5 clicks** to complete basic analysis 
 - 📚 **<1 minute** learning curve for electrical engineers
 - ❌ **Zero manual burden lookups** required
 

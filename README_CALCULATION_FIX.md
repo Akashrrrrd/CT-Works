@@ -60,15 +60,15 @@ Verdict: SUITABLY DIMENSIONED ✅ (CORRECT!)
 // ✅ ADDED: Extract and validate accuracy_limit_factor
 const accuracy_limit_factor = input.ct_core?.accuracy_limit_factor;
 if (typeof accuracy_limit_factor !== 'number') {
-  return NextResponse.json({ 
-    error: 'accuracy_limit_factor must be a number in ct_core' 
-  }, { status: 400 });
+ return NextResponse.json({ 
+ error: 'accuracy_limit_factor must be a number in ct_core' 
+ }, { status: 400 });
 }
 
 // ✅ ADDED: Create calculation input with ALF at top-level
 const calculationInput = {
-  ...input,
-  accuracy_limit_factor  // Now at the top-level!
+ ...input,
+ accuracy_limit_factor // Now at the top-level!
 };
 
 // ✅ CHANGED: Pass corrected input to calculation service
@@ -115,9 +115,9 @@ Expected output:
 ### Option 3: Manual Calculation
 ```
 available_kssc = 20 × ((9 + 7.5) / (9 + 0.02))
-               = 20 × (16.5 / 9.02)
-               = 20 × 1.8293
-               = 36.59 ✅
+ = 20 × (16.5 / 9.02)
+ = 20 × 1.8293
+ = 36.59 ✅
 ```
 
 ---
@@ -126,13 +126,13 @@ available_kssc = 20 × ((9 + 7.5) / (9 + 0.02))
 
 ```
 UI Component
-  ↓ (sends ct_core.accuracy_limit_factor)
+ ↓ (sends ct_core.accuracy_limit_factor)
 API Endpoint
-  ↓ (extracts and elevates to top-level)
+ ↓ (extracts and elevates to top-level)
 Calculation Service
-  ↓ (receives accuracy_limit_factor at top-level)
+ ↓ (receives accuracy_limit_factor at top-level)
 Formula Calculation
-  ↓ (20 × ((9 + 7.5) / (9 + 0.02)))
+ ↓ (20 × ((9 + 7.5) / (9 + 0.02)))
 Result: 36.59 ✅
 ```
 
@@ -143,24 +143,24 @@ Result: 36.59 ✅
 The calculation service interface is designed to receive:
 ```typescript
 {
-  ct_wiring: {...},
-  system: {...},
-  ct_core: {...},
-  connected_devices: {...},
-  accuracy_limit_factor: number  // ← HERE at top-level
+ ct_wiring: {...},
+ system: {...},
+ ct_core: {...},
+ connected_devices: {...},
+ accuracy_limit_factor: number // ← HERE at top-level
 }
 ```
 
 But the component was sending:
 ```typescript
 {
-  ct_wiring: {...},
-  system: {...},
-  ct_core: {
-    ...
-    accuracy_limit_factor: 20  // ← HERE nested inside
-  },
-  connected_devices: {...}
+ ct_wiring: {...},
+ system: {...},
+ ct_core: {
+ ...
+ accuracy_limit_factor: 20 // ← HERE nested inside
+ },
+ connected_devices: {...}
 }
 ```
 
@@ -195,9 +195,9 @@ But the component was sending:
 ## 📋 Next Steps
 
 1. **Rebuild** (if deploying)
-   ```bash
-   npm run build
-   ```
+ ```bash
+ npm run build
+ ```
 
 2. **Test** with the calculator UI or test file
 
@@ -209,7 +209,7 @@ But the component was sending:
 
 ## 📚 Reference
 
-**Hitachi Document:** N-19957 2-DF4W
+**Standard Engineering Document:** 
 **Topic:** CT/VT Adequacy Check for 132/33kV Substation
 **Key Formula:** `available_kssc = n × ((PE + PN) / (PE + PL))`
 
@@ -248,11 +248,11 @@ A: Yes. Use the provided test file: `test-calculation-fix.ts`
 
 ## 🎯 Summary
 
-**What was broken:** Accuracy Limit Factor not passed to calculation service  
-**Where it was broken:** API endpoint data transformation  
-**How it was fixed:** Extract ALF from nested location and pass at top-level  
-**Impact:** All calculations now produce correct results  
-**Status:** ✅ FIXED and READY FOR TESTING  
+**What was broken:** Accuracy Limit Factor not passed to calculation service 
+**Where it was broken:** API endpoint data transformation 
+**How it was fixed:** Extract ALF from nested location and pass at top-level 
+**Impact:** All calculations now produce correct results 
+**Status:** ✅ FIXED and READY FOR TESTING 
 
 ---
 
@@ -261,7 +261,7 @@ A: Yes. Use the provided test file: `test-calculation-fix.ts`
 If calculations still don't match after this fix:
 
 1. Check that accuracy_limit_factor is a valid number in the UI
-2. Verify input parameters match Hitachi document
+2. Verify input parameters match Standard Engineering document
 3. Review error messages if calculation fails
 4. Check that all required fields are filled in
 5. Run the test file to verify calculations work
@@ -273,12 +273,12 @@ For detailed analysis, see:
 
 ---
 
-**Fix Applied:** ✅ YES  
-**Status:** READY FOR DEPLOYMENT  
-**Risk Level:** LOW (API transformation only)  
-**Breaking Changes:** NONE  
+**Fix Applied:** ✅ YES 
+**Status:** READY FOR DEPLOYMENT 
+**Risk Level:** LOW (API transformation only) 
+**Breaking Changes:** NONE 
 
 ---
 
-*Documentation created: July 2026*  
+*Documentation created: July 2026* 
 *Fix applied to: /app/api/relay-formulas/siemens-7sj85/route.ts*

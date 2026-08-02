@@ -50,18 +50,18 @@ Look for these emoji markers in the logs:
 ## 📋 Expected Excel Structure (Quick View)
 
 ```
-Row 1-20:    [STANDARD PARAMETERS]
-             Bus Fault Level, Frequency, Voltage, etc.
+Row 1-20: [STANDARD PARAMETERS]
+ Bus Fault Level, Frequency, Voltage, etc.
 
-Row 25:      [PROTECTION PURPOSE / DEVICES]  ← Must have this header!
-Row 26:      [Label]    [Device 1]  [Device 2]  [Device 3]  [Device 4]
-Row 27:      Core       Core 1      Core 2      T1          T1
-Row 28:      CT Ratio   800/1A      2500/1A     2500/1A     800/1A
-Row 29:      Accuracy   PX          PX          0.5         PX
-Row 30:      Resistance 3.5         6           2.5         15
-Row 31:      Vk         540         400         N/A         400
-Row 32:      Burden     10          20          15          10
-Row 33:      Magnetizing 20         60          N/A         20
+Row 25: [PROTECTION PURPOSE / DEVICES] ← Must have this header!
+Row 26: [Label] [Device 1] [Device 2] [Device 3] [Device 4]
+Row 27: Core Core 1 Core 2 T1 T1
+Row 28: CT Ratio 800/1A 2500/1A 2500/1A 800/1A
+Row 29: Accuracy PX PX 0.5 PX
+Row 30: Resistance 3.5 6 2.5 15
+Row 31: Vk 540 400 N/A 400
+Row 32: Burden 10 20 15 10
+Row 33: Magnetizing 20 60 N/A 20
 ```
 
 **Key Requirements:**
@@ -93,18 +93,18 @@ Or share with dev team:
 ✅ Selected row 26 as device name row
 
 ✅ Device name collection complete: 4 devices found
-   [1] Column 2: "DISTANCE + DIFFERENTIAL PROTECTION"
-   [2] Column 3: "BCPU + OC/EF"
-   [3] Column 4: "AMMETERS"
-   [4] Column 5: "BB/BF"
+ [1] Column 2: "DISTANCE + DIFFERENTIAL PROTECTION"
+ [2] Column 3: "BCPU + OC/EF"
+ [3] Column 4: "AMMETERS"
+ [4] Column 5: "BB/BF"
 
 📍 Parameter section starts at row 28
 
 📋 Row 30: Parameter "ct ratio" → ct_ratio
-      ✓ Device "DISTANCE + DIFFERENTIAL" (col2): ct_ratio = "800/1A"
-      ✓ Device "BCPU + OC/EF" (col3): ct_ratio = "2500/1A"
-      ✓ Device "AMMETERS" (col4): ct_ratio = "2500/1A"
-      ✓ Device "BB/BF" (col5): ct_ratio = "800/1A"
+ ✓ Device "DISTANCE + DIFFERENTIAL" (col2): ct_ratio = "800/1A"
+ ✓ Device "BCPU + OC/EF" (col3): ct_ratio = "2500/1A"
+ ✓ Device "AMMETERS" (col4): ct_ratio = "2500/1A"
+ ✓ Device "BB/BF" (col5): ct_ratio = "800/1A"
 
 ✅ EXTRACTION COMPLETE: 4 DEVICES
 ```

@@ -2,7 +2,7 @@
 
 ## How Projects Use the 3 IED Templates with Exact Outputs
 
-This guide shows you **exactly** how to verify that projects are using the IED templates and producing the correct Hitachi document outputs.
+This guide shows you **exactly** how to verify that projects are using the IED templates and producing the correct Standard Engineering document outputs.
 
 ---
 
@@ -10,8 +10,8 @@ This guide shows you **exactly** how to verify that projects are using the IED t
 
 **Projects should automatically:**
 1. **Detect** when you select one of the 3 IED templates
-2. **Route** calculations to the appropriate IED calculator  
-3. **Return** exact Hitachi N-19957 2-DF4W values
+2. **Route** calculations to the appropriate IED calculator 
+3. **Return** exact Standard Engineering values
 4. **Show** "IED Template" in calculation method
 
 ---
@@ -42,7 +42,7 @@ npm run dev
 ```json
 Sheet1 (CT Parameters):
 - CT Ratio Primary: 2000 A
-- CT Ratio Secondary: 1 A  
+- CT Ratio Secondary: 1 A 
 - Accuracy Class: PX
 - CT Resistance: 0.5 Ω
 - Rated Burden: 7.5 VA
@@ -63,7 +63,7 @@ Sheet2 (System Parameters):
 ✅ EXPECTED RESULTS:
 - Verdict: "ADEQUATE" 
 - Required Kssc: 25.00
-- Available Kssc: 27.93  
+- Available Kssc: 27.93 
 - Calculation Method: "IED Template"
 - Intermediates should show: template_type: "SIEMENS_7SJ85"
 ```
@@ -83,7 +83,7 @@ Sheet1 (CT Parameters):
 - Knee Point Voltage: 1600 V
 - Cable Length: 120 m
 
-Sheet2 (System Parameters):  
+Sheet2 (System Parameters): 
 - System Frequency: 50 Hz
 - Bus Voltage: 132 kV
 - Max Fault Current: 50 kA
@@ -95,7 +95,7 @@ Sheet2 (System Parameters):
 ✅ EXPECTED RESULTS:
 - Verdict: "ADEQUATE"
 - Ealreq Max: ~274.67 V (Equation 3 controlling)
-- Vk Required: ~219.73 V  
+- Vk Required: ~219.73 V 
 - Vk Available: 1600 V
 - Calculation Method: "IED Template"
 - Intermediates should show: template_type: "ABB_RET670"
@@ -117,7 +117,7 @@ Sheet1 (CT Parameters):
 - Cable Length: 120 m
 
 Sheet2 (System Parameters):
-- System Frequency: 50 Hz  
+- System Frequency: 50 Hz 
 - Bus Voltage: 132 kV
 - Max Fault Current: 50 kA
 - X/R Ratio: 15
@@ -129,7 +129,7 @@ Sheet2 (System Parameters):
 - Verdict: "ADEQUATE"
 - Ealreq Max: ~500.06 V (Distance Endzone-1 1ph controlling)
 - Vk Required: ~400.05 V
-- Vk Available: 1250 V  
+- Vk Available: 1250 V 
 - Calculation Method: "IED Template"
 - Intermediates should show: template_type: "RED670"
 ```
@@ -142,9 +142,9 @@ Sheet2 (System Parameters):
 In the computation results, look for:
 ```json
 "intermediates": {
-  "calculation_method": "IED Template",  ← Should say this!
-  "template_type": "SIEMENS_7SJ85",     ← Template type
-  "hitachi_reference": "N-19957 2-DF4W" ← Document reference
+ "calculation_method": "IED Template", ← Should say this!
+ "template_type": "SIEMENS_7SJ85", ← Template type
+ "standard_engineering_reference": "" ← Document reference
 }
 ```
 
@@ -171,7 +171,7 @@ Compare your results with the expected outputs above.
 **Solution:** Check calculation routing logic
 
 ### **❌ Problem: Calculation fails with error**
-**Cause:** Input conversion issues  
+**Cause:** Input conversion issues 
 **Solution:** Check input parameter mapping
 
 ---
@@ -181,8 +181,8 @@ Compare your results with the expected outputs above.
 **🎯 Project integration is working if ALL of these are true:**
 
 1. ✅ **Template Detection:** System recognizes IED template types
-2. ✅ **Calculation Routing:** Routes to correct IED calculator  
-3. ✅ **Exact Values:** Results match Hitachi document expected values
+2. ✅ **Calculation Routing:** Routes to correct IED calculator 
+3. ✅ **Exact Values:** Results match Standard Engineering document expected values
 4. ✅ **Method Indication:** Shows "IED Template" in calculation method
 5. ✅ **All 3 Templates:** SIEMENS 7SJ85, ABB RET670, and RED670 all work
 
@@ -195,23 +195,23 @@ If web interface isn't available, test the API directly:
 ```bash
 # Test computation API with SIEMENS 7SJ85
 curl -X POST http://localhost:3001/api/workspaces/[workspace-id]/computations \
-  -H "Content-Type: application/json" \
-  -H "Cookie: auth-token=YOUR_TOKEN" \
-  -d '{
-    "templateId": "template-id-for-7sj85",
-    "sheet1": {"ct_ratio_primary": 2000, "ct_ratio_secondary": 1},
-    "sheet2": {"system_frequency": 50, "bus_voltage": 132}
-  }'
+ -H "Content-Type: application/json" \
+ -H "Cookie: auth-token=YOUR_TOKEN" \
+ -d '{
+ "templateId": "template-id-for-7sj85",
+ "sheet1": {"ct_ratio_primary": 2000, "ct_ratio_secondary": 1},
+ "sheet2": {"system_frequency": 50, "bus_voltage": 132}
+ }'
 ```
 
 **Expected Response:**
 ```json
 {
-  "verdict": "ADEQUATE",
-  "intermediates": {
-    "calculation_method": "IED Template",
-    "template_type": "SIEMENS_7SJ85"
-  }
+ "verdict": "ADEQUATE",
+ "intermediates": {
+ "calculation_method": "IED Template",
+ "template_type": "SIEMENS_7SJ85"
+ }
 }
 ```
 
@@ -221,8 +221,8 @@ curl -X POST http://localhost:3001/api/workspaces/[workspace-id]/computations \
 
 **The project integration is successful when:**
 - Projects automatically use IED templates when selected
-- Calculations produce exact Hitachi document values
+- Calculations produce exact Standard Engineering document values
 - System shows "IED Template" as calculation method
 - All three templates (7SJ85, RET670, RED670) work correctly
 
-**This ensures all projects get exact, validated results from the Hitachi N-19957 2-DF4W formulas!**
+**This ensures all projects get exact, validated results from the Standard Engineering formulas!**

@@ -1,4 +1,4 @@
-# SIEMENS 7SJ85 - EXACT FORMULAS FROM HITACHI N-19957 2-DF4W
+# SIEMENS 7SJ85 - EXACT FORMULAS FROM STANDARD 
 
 ## PAGE 1: CT WIRING BURDEN CALCULATIONS
 
@@ -200,18 +200,18 @@ Required Kssc = Itkmax / Ipn
 ```
 Available Kssc = n × ((PE + PN) / (PE + PL_total))
 Where:
-  n = CT Accuracy Limiting Factor (ALF)
-  PE = Internal Burden = Rct
-  PN = Rated Burden (user input)
-  PL_total = Total lead burden + connected device burdens
+ n = CT Accuracy Limiting Factor (ALF)
+ PE = Internal Burden = Rct
+ PN = Rated Burden (user input)
+ PL_total = Total lead burden + connected device burdens
 ```
 
 **VERDICT:**
 ```
 IF Available Kssc > Required Kssc:
-  CT is "SUITABLY DIMENSIONED"
+ CT is "SUITABLY DIMENSIONED"
 ELSE:
-  CT is "UNDER DIMENSIONED"
+ CT is "UNDER DIMENSIONED"
 ```
 
 ---
@@ -229,25 +229,25 @@ Same formulas as CT wiring but using VT parameters:
 1. **All R values at 75°C use multiplier 1.21615** (coefficient for 0.00393 temp increase over 55°C)
 
 2. **Available Kssc formula is NON-NEGOTIABLE:**
-   ```
-   Available Kssc = ALF × ((PE + PN) / (PE + PL))
-   ```
-   Where PL is TOTAL of:
-   - Lead resistance burden
-   - Connected device burdens
-   - Does NOT include PE (internal burden)
+ ```
+ Available Kssc = ALF × ((PE + PN) / (PE + PL))
+ ```
+ Where PL is TOTAL of:
+ - Lead resistance burden
+ - Connected device burdens
+ - Does NOT include PE (internal burden)
 
 3. **Required Kssc depends ONLY on:**
-   - Max fault current (Itkmax = fault level × 1000)
-   - CT primary ratio (Ipn)
+ - Max fault current (Itkmax = fault level × 1000)
+ - CT primary ratio (Ipn)
 
 4. **Vk Calculations (from CT nameplate):**
-   - Vk Available: From CT test certificate
-   - Vk Required: Calculated based on fault currents and impedances
+ - Vk Available: From CT test certificate
+ - Vk Required: Calculated based on fault currents and impedances
 
 5. **Output values MUST match:**
-   - Vk Required (voltage)
-   - Vk Available (voltage)
-   - Ealreq Max (maximum electrical adequacy requirement)
-   - Verdict (SUITABLE / UNDER DIMENSIONED)
+ - Vk Required (voltage)
+ - Vk Available (voltage)
+ - Ealreq Max (maximum electrical adequacy requirement)
+ - Verdict (SUITABLE / UNDER DIMENSIONED)
 

@@ -50,8 +50,8 @@ Each value has a source. Know the source, fill the value correctly.
 - **Where to find**: CT nameplate, marked as "Accuracy Class" or "Class"
 - **Example values**: 5P20, 10P15, 5P10, PX
 - **What it means**:
-  - First part (5, 10): Composite error at rated burden (%)
-  - Second part (20, 15, 10): Accuracy Limit Factor
+ - First part (5, 10): Composite error at rated burden (%)
+ - Second part (20, 15, 10): Accuracy Limit Factor
 - **Standard**: For protection relays, usually "5P20" or similar
 - **Why it matters**: Determines the accuracy limit factor used in calculations
 
@@ -77,10 +77,10 @@ Each value has a source. Know the source, fill the value correctly.
 - **Where to find**: CT nameplate or from Accuracy Class
 - **Example values**: 10, 15, 20, 30
 - **How to determine**:
-  - From nameplate: Extract the second number from Accuracy Class
-  - "5P20" → ALF = 20
-  - "10P15" → ALF = 15
-  - "PX" → ALF = Usually 10-20 (check datasheet)
+ - From nameplate: Extract the second number from Accuracy Class
+ - "5P20" → ALF = 20
+ - "10P15" → ALF = 15
+ - "PX" → ALF = Usually 10-20 (check datasheet)
 - **Why it matters**: Used in the core calculation formula
 
 #### 7️⃣ Vk Available (V) - REQUIRED
@@ -116,9 +116,9 @@ Each value has a source. Know the source, fill the value correctly.
 - **Example values**: 1.5, 2.5, 4, 6, 10, 16 mm²
 - **Standard cable sizes**: 1.5, 2.5, 4, 6, 10, 16, 25 mm²
 - **How to identify**: 
-  - Look at cable label: "4 mm²"
-  - Or look at core diameter and calculate
-  - Or check cable schedule in project drawings
+ - Look at cable label: "4 mm²"
+ - Or look at core diameter and calculate
+ - Or check cable schedule in project drawings
 - **Why it matters**: Determines cable resistance
 
 #### 2️⃣ R at 20°C (Ω/km) - REQUIRED
@@ -126,16 +126,16 @@ Each value has a source. Know the source, fill the value correctly.
 - **Unit**: Ohms per kilometer (Ω/km)
 - **Where to find**: Cable datasheet or standard tables
 - **Standard table** (Copper at 20°C):
-  - 1.5 mm² → 12.4 Ω/km
-  - 2.5 mm² → 7.41 Ω/km
-  - 4 mm² → 4.66 Ω/km
-  - 6 mm² → 3.09 Ω/km
-  - 10 mm² → 1.87 Ω/km
-  - 16 mm² → 1.17 Ω/km
+ - 1.5 mm² → 12.4 Ω/km
+ - 2.5 mm² → 7.41 Ω/km
+ - 4 mm² → 4.66 Ω/km
+ - 6 mm² → 3.09 Ω/km
+ - 10 mm² → 1.87 Ω/km
+ - 16 mm² → 1.17 Ω/km
 - **How to find**: 
-  - Check cable datasheet
-  - Use standard copper resistance table
-  - Ask cable manufacturer
+ - Check cable datasheet
+ - Use standard copper resistance table
+ - Ask cable manufacturer
 - **Why it matters**: Base resistance before temperature correction
 
 #### 3️⃣ Temp. Coefficient - REQUIRED
@@ -143,9 +143,9 @@ Each value has a source. Know the source, fill the value correctly.
 - **Unit**: Per °C (1/°C)
 - **Where to find**: Cable datasheet or standard value
 - **Standard values**:
-  - Copper: 0.00393 /°C (most common)
-  - Aluminum: 0.00403 /°C
-  - Nichrome: 0.0002 /°C
+ - Copper: 0.00393 /°C (most common)
+ - Aluminum: 0.00403 /°C
+ - Nichrome: 0.0002 /°C
 - **Default value**: Use 0.00393 for copper cables (99% of cases)
 - **Why it matters**: Adjusts resistance for operating temperature
 
@@ -154,15 +154,15 @@ Each value has a source. Know the source, fill the value correctly.
 - **Unit**: Degrees Celsius (°C)
 - **Where to find**: System design specification or standard practice
 - **Example values**:
-  - Indoor substation: 50°C
-  - Outdoor in hot climate: 75°C
-  - Worst case: 80°C
-  - Standard assumption: 75°C
+ - Indoor substation: 50°C
+ - Outdoor in hot climate: 75°C
+ - Worst case: 80°C
+ - Standard assumption: 75°C
 - **How to determine**:
-  - Check electrical design manual
-  - Typical worst-case: 75°C
-  - Conservative: 80°C
-  - Cool environment: 50°C
+ - Check electrical design manual
+ - Typical worst-case: 75°C
+ - Conservative: 80°C
+ - Cool environment: 50°C
 - **Why it matters**: Higher temperature = higher resistance
 
 #### 5️⃣ Cable Length (m) - REQUIRED
@@ -171,10 +171,10 @@ Each value has a source. Know the source, fill the value correctly.
 - **Where to find**: Physical measurement or cable schedule
 - **Example values**: 25m, 50m, 100m, 150m
 - **How to measure**:
-  - Measure along the cable route
-  - Account for routing through conduits
-  - Add extra for connections (usually 10% margin)
-  - Use cable schedule from project drawings
+ - Measure along the cable route
+ - Account for routing through conduits
+ - Add extra for connections (usually 10% margin)
+ - Use cable schedule from project drawings
 - **Why it matters**: Longer cable = more resistance = more burden
 
 ---
@@ -192,8 +192,8 @@ Each value has a source. Know the source, fill the value correctly.
 - **Unit**: Hertz (Hz)
 - **Where to find**: Power system specification
 - **Standard values**:
-  - 50 Hz (Europe, Asia, Africa, Australia)
-  - 60 Hz (North America)
+ - 50 Hz (Europe, Asia, Africa, Australia)
+ - 60 Hz (North America)
 - **How to determine**: Ask your power utility
 - **Why it matters**: Affects fault current calculations
 
@@ -203,9 +203,9 @@ Each value has a source. Know the source, fill the value correctly.
 - **Where to find**: Substation single-line diagram or nameplate
 - **Example values**: 33kV, 66kV, 110kV, 132kV, 220kV, 400kV
 - **How to determine**:
-  - Look at substation nameplate
-  - Check one-line diagram
-  - Ask substation operator
+ - Look at substation nameplate
+ - Check one-line diagram
+ - Ask substation operator
 - **Why it matters**: Affects fault current magnitude
 
 #### 3️⃣ Max Fault (kA) - REQUIRED
@@ -214,10 +214,10 @@ Each value has a source. Know the source, fill the value correctly.
 - **Where to find**: Short-circuit study or system load flow study
 - **Example values**: 5kA, 10kA, 20kA, 50kA
 - **How to determine**:
-  - Use short-circuit analysis software (DIgSILENT, ETAP, PSS/E)
-  - Ask system operator
-  - From system documentation
-  - For new design: Calculate using Zs method
+ - Use short-circuit analysis software (DIgSILENT, ETAP, PSS/E)
+ - Ask system operator
+ - From system documentation
+ - For new design: Calculate using Zs method
 - **Why it matters**: Determines the fault current the relay must handle
 
 #### 4️⃣ X/R Ratio - REQUIRED
@@ -225,13 +225,13 @@ Each value has a source. Know the source, fill the value correctly.
 - **Unit**: Dimensionless (number only)
 - **Where to find**: System impedance data or typical values
 - **Typical values**:
-  - HV systems (>110kV): 15-20
-  - MV systems (33-110kV): 10-15
-  - LV systems (<33kV): 5-10
+ - HV systems (>110kV): 15-20
+ - MV systems (33-110kV): 10-15
+ - LV systems (<33kV): 5-10
 - **How to determine**:
-  - From short-circuit study
-  - From system impedance tables
-  - Use typical value for your voltage level
+ - From short-circuit study
+ - From system impedance tables
+ - Use typical value for your voltage level
 - **Standard assumption**: Use 15 if unsure
 - **Why it matters**: Affects fault current phase angle
 
@@ -252,9 +252,9 @@ Each value has a source. Know the source, fill the value correctly.
 - **Example values**: 0.01 - 0.5 Ω/km
 - **Typical for cables**: 0.022 Ω/km (single-core Cu)
 - **How to get**: 
-  - Check cable manufacturer datasheet
-  - Use cable impedance tables
-  - Ask project engineer
+ - Check cable manufacturer datasheet
+ - Use cable impedance tables
+ - Ask project engineer
 - **Why it matters**: Affects distance relay zone calculations
 
 #### 2️⃣ X1 (Ω/km) - REQUIRED
@@ -288,14 +288,14 @@ Each value has a source. Know the source, fill the value correctly.
 - **What it is**: Total length of the protected feeder
 - **Unit**: Kilometers (km)
 - **Where to find**: 
-  - Power system one-line diagram
-  - Cable route schedule
-  - Physical measurement
+ - Power system one-line diagram
+ - Cable route schedule
+ - Physical measurement
 - **Example values**: 1.74km, 5km, 10km, 25km
 - **How to determine**:
-  - Measure on map
-  - Check project drawings
-  - Ask system engineer
+ - Measure on map
+ - Check project drawings
+ - Ask system engineer
 - **Why it matters**: Affects distance relay reach and fault current calculation
 
 ---
