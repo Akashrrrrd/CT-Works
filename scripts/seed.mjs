@@ -293,8 +293,8 @@ async function main() {
   if (!workspace) {
     const r = await workspaces.insertOne({
       organizationId: org._id,
-      name:        '2026 Substation – CT/VT Adequacy',
-      description: 'CT/VT Adequacy Check for 33kV Cable Feeders (2026)',
+      name:        '2026 CT/VT Adequacy Check',
+      description: '',
       ownerId:     adminId,
       members:     [],
       createdAt:   now,

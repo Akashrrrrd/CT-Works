@@ -75,7 +75,7 @@ const mockCollections: Record<string, MockCollection> = {
  { _id: 'org-1', name: 'Enterprise Power' }
  ]),
  workspaces: new MockCollection('workspaces', [
- { _id: 'ws-1', name: 'Substation Protection Project', description: '132kV Line & Transformer CT/VT Adequacy Analysis', organizationId: 'org-1' }
+ { _id: 'ws-1', name: '2026 CT/VT Adequacy Check', description: '', organizationId: 'org-1' }
  ]),
  substations: new MockCollection('substations', [
  { _id: 'sub-1', workspaceId: 'ws-1', name: 'Primary 132kV Substation', location: 'Site A' }

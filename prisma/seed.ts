@@ -327,8 +327,8 @@ async function main() {
  workspace = await prisma.workspace.create({
  data: {
  organizationId: org.id,
- name: '2026 Substation – CT/VT Adequacy',
- description: 'CT/VT Adequacy Check for 33kV Cable Feeders',
+ name: '2026 CT/VT Adequacy Check',
+ description: '',
  ownerId: adminUser.id,
  },
  });
