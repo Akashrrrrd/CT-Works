@@ -4,6 +4,9 @@ import { verifyJWT } from '@/lib/auth';
 import { NextRequest } from 'next/server';
 import { sanitizeWorkspaceName, sanitizeWorkspaceDescription } from '@/lib/workspace-sanitizer';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export async function GET(request: NextRequest) {
   try {
     const token = request.cookies.get('auth-token')?.value;

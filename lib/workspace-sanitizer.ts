@@ -7,31 +7,28 @@
 export function sanitizeWorkspaceName(name?: string | null): string {
   if (!name) return '2026 CT/VT Adequacy Check';
   
+  const str = String(name).trim();
+  
   if (
-    /df5w/i.test(name) ||
-    /33kv\s+df5w/i.test(name) ||
-    /substation\s*–?\s*ct\/vt\s*adequacy/i.test(name) ||
-    name.includes('33kV DF5W SS')
+    /df5w/i.test(str) ||
+    /199571/i.test(str) ||
+    /33kv/i.test(str) ||
+    /substation/i.test(str) ||
+    /adequacy/i.test(str) ||
+    /cable feeders/i.test(str) ||
+    /contract/i.test(str) ||
+    str.includes('33kV DF5W SS') ||
+    str.includes('2026 Substation') ||
+    str === 'Default Workspace' ||
+    str === 'Substation Protection Project'
   ) {
     return '2026 CT/VT Adequacy Check';
   }
   
-  return name;
+  return str;
 }
 
 export function sanitizeWorkspaceDescription(description?: string | null): string | undefined {
-  if (!description) return undefined;
-  
-  if (
-    /df5w/i.test(description) ||
-    /199571/i.test(description) ||
-    /n-199571/i.test(description) ||
-    /cable\s+feeders/i.test(description) ||
-    /contract/i.test(description) ||
-    /33kv cable feeders/i.test(description)
-  ) {
-    return undefined;
-  }
-  
-  return description;
+  // Always return undefined to ensure no description subtitle line is rendered on workspace cards
+  return undefined;
 }

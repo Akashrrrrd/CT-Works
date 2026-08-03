@@ -3,6 +3,9 @@ import { getUsers, getWorkspaces, getOrgs, ObjectId } from '@/lib/db';
 import { verifyJWT } from '@/lib/auth';
 import { sanitizeWorkspaceName, sanitizeWorkspaceDescription } from '@/lib/workspace-sanitizer';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 async function auth(request: NextRequest) {
   const token = request.cookies.get('auth-token')?.value;
   return token ? verifyJWT(token) : null;
